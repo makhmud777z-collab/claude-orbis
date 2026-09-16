@@ -1,0 +1,170 @@
+import type { Student, StudentProfile } from "../types";
+
+const p = (v: Partial<StudentProfile>): StudentProfile => ({
+  topik: 0,
+  topikExpiresAt: null,
+  ielts: null,
+  gpa: null,
+  education: "Средняя школа, 11 классов",
+  graduationYear: 2026,
+  budgetPerYear: 8000,
+  preferredCities: [],
+  preferredMajors: [],
+  preferredOwnership: ["private", "public", "national"],
+  degreeLevel: "bachelor",
+  intake: "2027 Весна",
+  needsDorm: true,
+  needsScholarship: false,
+  ...v,
+});
+
+export const STUDENTS: Student[] = [
+  {
+    id: "s_001", tenantId: "t_seoulway", branchId: "b_tas",
+    fullName: "Азиза Нурматова", latinName: "Aziza Nurmatova", birthDate: "2007-03-12",
+    phone: "+998 90 111-22-33", email: "aziza.n@gmail.com", city: "Ташкент",
+    source: "instagram", referredById: null, ownerId: "u_nilufar", status: "active",
+    profile: p({ topik: 4, topikExpiresAt: "2028-04-20", ielts: 6.5, gpa: 3.7, budgetPerYear: 12000, preferredCities: ["Сеул"], preferredMajors: ["Медицина"], preferredOwnership: ["private", "national"], intake: "2027 Весна" }),
+    tags: ["высокий приоритет", "медицина"], createdAt: "2026-06-02", lastTouchAt: "2026-09-15",
+  },
+  {
+    id: "s_002", tenantId: "t_seoulway", branchId: "b_tas",
+    fullName: "Санжар Умаров", latinName: "Sanjar Umarov", birthDate: "2006-11-05",
+    phone: "+998 93 404-55-10", email: "sanjar.umarov@mail.ru", city: "Ташкент",
+    source: "referral", referredById: null, ownerId: "u_bekzod", status: "active",
+    profile: p({ topik: 3, topikExpiresAt: "2027-11-15", ielts: null, gpa: 3.2, budgetPerYear: 6500, preferredCities: ["Пусан", "Тэгу"], preferredMajors: ["IT и Computer Science"], preferredOwnership: ["national", "public"], needsScholarship: true }),
+    tags: ["нужен грант"], createdAt: "2026-05-18", lastTouchAt: "2026-09-14",
+  },
+  {
+    id: "s_003", tenantId: "t_seoulway", branchId: "b_sam",
+    fullName: "Малика Ҳакимова", latinName: "Malika Hakimova", birthDate: "2005-07-22",
+    phone: "+998 91 222-88-44", email: "malika.h@gmail.com", city: "Самарканд",
+    source: "walk_in", referredById: null, ownerId: "u_shohruh", status: "active",
+    profile: p({ topik: 5, topikExpiresAt: "2028-02-10", ielts: 6.0, gpa: 3.9, budgetPerYear: 15000, preferredCities: ["Сеул"], preferredMajors: ["Медицина", "Естественные науки"], preferredOwnership: ["private"], degreeLevel: "bachelor", intake: "2027 Весна" }),
+    tags: ["TOPIK 5", "медицина"], createdAt: "2026-04-09", lastTouchAt: "2026-09-16",
+  },
+  {
+    id: "s_004", tenantId: "t_seoulway", branchId: "b_tas",
+    fullName: "Тимур Исроилов", latinName: "Timur Isroilov", birthDate: "2007-01-30",
+    phone: "+998 95 330-12-90", email: "timur.isr@gmail.com", city: "Ташкент",
+    source: "telegram", referredById: null, ownerId: "u_kamila", status: "lead",
+    profile: p({ topik: 0, budgetPerYear: 5000, preferredCities: ["Пусан"], preferredMajors: ["Языковая программа"], degreeLevel: "language", intake: "2027 Весна", needsScholarship: true }),
+    tags: ["язык. курсы"], createdAt: "2026-09-08", lastTouchAt: "2026-09-12",
+  },
+  {
+    id: "s_005", tenantId: "t_seoulway", branchId: "b_tas",
+    fullName: "Гулноза Абдуразакова", latinName: "Gulnoza Abdurazakova", birthDate: "2004-09-14",
+    phone: "+998 90 555-77-01", email: "g.abduraz@gmail.com", city: "Ташкент",
+    source: "website", referredById: null, ownerId: "u_nilufar", status: "active",
+    profile: p({ topik: 4, topikExpiresAt: "2027-12-01", ielts: 7.0, gpa: 3.5, budgetPerYear: 11000, preferredCities: ["Сеул", "Инчхон"], preferredMajors: ["Бизнес и менеджмент"], degreeLevel: "master", education: "Бакалавр, экономика", graduationYear: 2026 }),
+    tags: ["магистратура"], createdAt: "2026-03-25", lastTouchAt: "2026-09-13",
+  },
+  {
+    id: "s_006", tenantId: "t_seoulway", branchId: "b_sam",
+    fullName: "Жавохир Ражабов", latinName: "Javohir Rajabov", birthDate: "2006-05-19",
+    phone: "+998 94 780-33-21", email: "javohir.r@mail.ru", city: "Самарканд",
+    source: "partner", ownerId: "u_jasur", referredById: "u_partner1", status: "active",
+    profile: p({ topik: 2, topikExpiresAt: "2027-06-30", gpa: 2.9, budgetPerYear: 5500, preferredCities: ["Кванджу", "Чонджу"], preferredMajors: ["Инженерия"], preferredOwnership: ["private", "public"], needsScholarship: true }),
+    tags: ["бюджет до $6k"], createdAt: "2026-06-30", lastTouchAt: "2026-09-11",
+  },
+  {
+    id: "s_007", tenantId: "t_seoulway", branchId: "b_tas",
+    fullName: "Дилшод Каримов", latinName: "Dilshod Karimov", birthDate: "2005-12-02",
+    phone: "+998 97 145-90-06", email: "dilshod.k@gmail.com", city: "Ташкент",
+    source: "instagram", referredById: null, ownerId: "u_bekzod", status: "active",
+    profile: p({ topik: 3, topikExpiresAt: "2028-01-18", ielts: 5.5, gpa: 3.1, budgetPerYear: 9000, preferredCities: ["Сеул"], preferredMajors: ["IT и Computer Science"], intake: "2026 Осень" }),
+    tags: [], createdAt: "2026-02-14", lastTouchAt: "2026-09-16",
+  },
+  {
+    id: "s_008", tenantId: "t_seoulway", branchId: "b_tas",
+    fullName: "Феруза Шарипова", latinName: "Feruza Sharipova", birthDate: "2007-08-08",
+    phone: "+998 90 909-11-77", email: "feruza.sh@gmail.com", city: "Ташкент",
+    source: "referral", referredById: null, ownerId: "u_kamila", status: "lead",
+    profile: p({ topik: 1, ielts: 5.0, gpa: 3.3, budgetPerYear: 7500, preferredCities: ["Сеул"], preferredMajors: ["Дизайн и искусство"], preferredOwnership: ["private"] }),
+    tags: ["дизайн"], createdAt: "2026-09-01", lastTouchAt: "2026-09-15",
+  },
+  {
+    id: "s_009", tenantId: "t_seoulway", branchId: "b_sam",
+    fullName: "Ойбек Нормуродов", latinName: "Oybek Normurodov", birthDate: "2004-02-27",
+    phone: "+998 91 601-45-32", email: "oybek.n@mail.ru", city: "Самарканд",
+    source: "event", referredById: null, ownerId: "u_shohruh", status: "enrolled",
+    profile: p({ topik: 4, topikExpiresAt: "2027-09-09", gpa: 3.4, budgetPerYear: 8500, preferredCities: ["Тэджон"], preferredMajors: ["Инженерия"], intake: "2026 Осень" }),
+    tags: ["выехал"], createdAt: "2025-12-12", lastTouchAt: "2026-09-02",
+  },
+  {
+    id: "s_010", tenantId: "t_seoulway", branchId: "b_tas",
+    fullName: "Нигора Ахмедова", latinName: "Nigora Akhmedova", birthDate: "2006-10-16",
+    phone: "+998 93 222-19-84", email: "nigora.a@gmail.com", city: "Ташкент",
+    source: "instagram", referredById: null, ownerId: "u_nilufar", status: "active",
+    profile: p({ topik: 3, topikExpiresAt: "2027-10-30", ielts: 6.0, gpa: 3.6, budgetPerYear: 10000, preferredCities: ["Сеул", "Сувон"], preferredMajors: ["Медицина"], preferredOwnership: ["private"] }),
+    tags: ["медицина"], createdAt: "2026-05-05", lastTouchAt: "2026-09-16",
+  },
+  {
+    id: "s_011", tenantId: "t_seoulway", branchId: "b_tas",
+    fullName: "Аброр Юлдашев", latinName: "Abror Yuldashev", birthDate: "2005-04-03",
+    phone: "+998 90 344-56-78", email: "abror.y@gmail.com", city: "Ташкент",
+    source: "telegram", referredById: null, ownerId: "u_bekzod", status: "active",
+    profile: p({ topik: 2, ielts: null, gpa: 2.7, budgetPerYear: 4800, preferredCities: ["Пусан"], preferredMajors: ["Языковая программа", "IT и Computer Science"], degreeLevel: "language", needsScholarship: true }),
+    tags: ["язык. курсы"], createdAt: "2026-07-21", lastTouchAt: "2026-09-10",
+  },
+  {
+    id: "s_012", tenantId: "t_seoulway", branchId: "b_sam",
+    fullName: "Зарина Тошпулатова", latinName: "Zarina Toshpulatova", birthDate: "2007-06-25",
+    phone: "+998 94 118-72-60", email: "zarina.t@gmail.com", city: "Самарканд",
+    source: "walk_in", referredById: null, ownerId: "u_jasur", status: "active",
+    profile: p({ topik: 3, topikExpiresAt: "2028-03-05", gpa: 3.8, budgetPerYear: 7000, preferredCities: ["Чонджу", "Кванджу"], preferredMajors: ["Гуманитарные науки"], preferredOwnership: ["national"], needsScholarship: true }),
+    tags: ["отличница"], createdAt: "2026-06-11", lastTouchAt: "2026-09-14",
+  },
+  {
+    id: "s_013", tenantId: "t_seoulway", branchId: "b_tas",
+    fullName: "Шахзод Мирзаев", latinName: "Shahzod Mirzaev", birthDate: "2003-11-11",
+    phone: "+998 97 654-32-10", email: "shahzod.m@mail.ru", city: "Ташкент",
+    source: "referral", referredById: null, ownerId: "u_nilufar", status: "active",
+    profile: p({ topik: 5, topikExpiresAt: "2028-05-22", ielts: 6.5, gpa: 3.5, budgetPerYear: 13000, preferredCities: ["Сеул"], preferredMajors: ["IT и Computer Science"], degreeLevel: "master", education: "Бакалавр, информатика", graduationYear: 2025 }),
+    tags: ["магистратура", "TOPIK 5"], createdAt: "2026-01-28", lastTouchAt: "2026-09-15",
+  },
+  {
+    id: "s_014", tenantId: "t_seoulway", branchId: "b_tas",
+    fullName: "Лола Рахматуллаева", latinName: "Lola Rakhmatullaeva", birthDate: "2006-12-19",
+    phone: "+998 90 777-88-99", email: "lola.r@gmail.com", city: "Ташкент",
+    source: "website", referredById: null, ownerId: "u_kamila", status: "paused",
+    profile: p({ topik: 2, gpa: 3.0, budgetPerYear: 6000, preferredCities: ["Инчхон"], preferredMajors: ["Бизнес и менеджмент"] }),
+    tags: ["пауза до января"], createdAt: "2026-04-30", lastTouchAt: "2026-08-20",
+  },
+  {
+    id: "s_015", tenantId: "t_seoulway", branchId: "b_sam",
+    fullName: "Улугбек Сафаров", latinName: "Ulugbek Safarov", birthDate: "2005-09-09",
+    phone: "+998 91 555-01-23", email: "ulugbek.s@gmail.com", city: "Самарканд",
+    source: "partner", ownerId: "u_shohruh", referredById: "u_partner1", status: "active",
+    profile: p({ topik: 4, topikExpiresAt: "2027-08-14", gpa: 3.3, budgetPerYear: 7200, preferredCities: ["Тэгу", "Пусан"], preferredMajors: ["Инженерия", "IT и Computer Science"] }),
+    tags: [], createdAt: "2026-07-02", lastTouchAt: "2026-09-13",
+  },
+  {
+    id: "s_016", tenantId: "t_seoulway", branchId: "b_tas",
+    fullName: "Камрон Ибрагимов", latinName: "Kamron Ibragimov", birthDate: "2007-02-05",
+    phone: "+998 93 010-20-30", email: "kamron.i@gmail.com", city: "Ташкент",
+    source: "instagram", referredById: null, ownerId: "u_kamila", status: "lost",
+    profile: p({ topik: 0, budgetPerYear: 4000, preferredCities: ["Сеул"], preferredMajors: ["Бизнес и менеджмент"] }),
+    tags: ["не прошёл по бюджету"], createdAt: "2026-08-14", lastTouchAt: "2026-09-04",
+  },
+
+  // ── Agency X
+  { id: "sx_001", tenantId: "t_agencyx", branchId: "b_alm", fullName: "Айдана Бекова", latinName: "Aidana Bekova", birthDate: "2006-04-18", phone: "+7 701 555-12-34", email: "aidana.b@gmail.com", city: "Алматы", source: "instagram", referredById: null, ownerId: "u_x_case", status: "active", profile: p({ topik: 3, topikExpiresAt: "2027-12-20", ielts: 6.0, gpa: 3.4, budgetPerYear: 9000, preferredCities: ["Сеул"], preferredMajors: ["Дизайн и искусство"] }), tags: [], createdAt: "2026-05-10", lastTouchAt: "2026-09-15" },
+  { id: "sx_002", tenantId: "t_agencyx", branchId: "b_alm", fullName: "Нурлан Жумабаев", latinName: "Nurlan Zhumabaev", birthDate: "2005-08-30", phone: "+7 702 331-90-11", email: "nurlan.zh@mail.ru", city: "Алматы", source: "referral", referredById: null, ownerId: "u_x_case", status: "active", profile: p({ topik: 4, topikExpiresAt: "2028-01-11", gpa: 3.6, budgetPerYear: 7500, preferredCities: ["Пусан"], preferredMajors: ["Инженерия"] }), tags: [], createdAt: "2026-06-21", lastTouchAt: "2026-09-12" },
+  { id: "sx_003", tenantId: "t_agencyx", branchId: "b_alm", fullName: "Сабина Ким", latinName: "Sabina Kim", birthDate: "2007-01-14", phone: "+7 705 118-44-52", email: "sabina.kim@gmail.com", city: "Алматы", source: "walk_in", referredById: null, ownerId: "u_x_sales", status: "lead", profile: p({ topik: 2, budgetPerYear: 6000, preferredCities: ["Инчхон"], preferredMajors: ["Бизнес и менеджмент"] }), tags: [], createdAt: "2026-09-05", lastTouchAt: "2026-09-14" },
+  { id: "sx_004", tenantId: "t_agencyx", branchId: "b_alm", fullName: "Ерасыл Ныгметов", latinName: "Yerassyl Nygmetov", birthDate: "2004-06-07", phone: "+7 707 220-77-13", email: "erassyl.n@gmail.com", city: "Алматы", source: "telegram", referredById: null, ownerId: "u_x_case", status: "active", profile: p({ topik: 5, topikExpiresAt: "2028-04-02", ielts: 6.5, gpa: 3.8, budgetPerYear: 14000, preferredCities: ["Сеул"], preferredMajors: ["Медицина"] }), tags: ["медицина"], createdAt: "2026-03-17", lastTouchAt: "2026-09-16" },
+  { id: "sx_005", tenantId: "t_agencyx", branchId: "b_alm", fullName: "Дария Сериккызы", latinName: "Dariya Serikkyzy", birthDate: "2006-11-23", phone: "+7 701 909-33-08", email: "dariya.s@gmail.com", city: "Алматы", source: "website", referredById: null, ownerId: "u_x_sales", status: "active", profile: p({ topik: 3, topikExpiresAt: "2027-10-05", gpa: 3.2, budgetPerYear: 8000, preferredCities: ["Тэджон"], preferredMajors: ["IT и Computer Science"] }), tags: [], createdAt: "2026-07-08", lastTouchAt: "2026-09-11" },
+
+  // ── Hanbridge
+  { id: "sh_001", tenantId: "t_hanbridge", branchId: "b_bis", fullName: "Бегимай Асанова", latinName: "Begimai Asanova", birthDate: "2006-09-02", phone: "+996 700 11-22-33", email: "begimai.a@gmail.com", city: "Бишкек", source: "instagram", referredById: null, ownerId: "u_h_case", status: "active", profile: p({ topik: 3, topikExpiresAt: "2027-11-28", gpa: 3.5, budgetPerYear: 7000, preferredCities: ["Сеул"], preferredMajors: ["Гуманитарные науки"] }), tags: [], createdAt: "2026-09-02", lastTouchAt: "2026-09-15" },
+  { id: "sh_002", tenantId: "t_hanbridge", branchId: "b_bis", fullName: "Эрлан Мамытов", latinName: "Erlan Mamytov", birthDate: "2005-03-21", phone: "+996 555 44-55-66", email: "erlan.m@mail.ru", city: "Бишкек", source: "referral", referredById: null, ownerId: "u_h_case", status: "lead", profile: p({ topik: 1, budgetPerYear: 5000, preferredCities: ["Пусан"], preferredMajors: ["Языковая программа"], degreeLevel: "language" }), tags: [], createdAt: "2026-09-09", lastTouchAt: "2026-09-13" },
+  { id: "sh_003", tenantId: "t_hanbridge", branchId: "b_bis", fullName: "Нурзада Калыкова", latinName: "Nurzada Kalykova", birthDate: "2007-05-15", phone: "+996 702 77-88-99", email: "nurzada.k@gmail.com", city: "Бишкек", source: "walk_in", referredById: null, ownerId: "u_h_owner", status: "active", profile: p({ topik: 2, gpa: 3.1, budgetPerYear: 6500, preferredCities: ["Кванджу"], preferredMajors: ["Бизнес и менеджмент"], needsScholarship: true }), tags: [], createdAt: "2026-09-06", lastTouchAt: "2026-09-16" },
+];
+
+export function studentsOfTenant(tenantId: string) {
+  return STUDENTS.filter((s) => s.tenantId === tenantId);
+}
+
+export function studentById(id: string) {
+  return STUDENTS.find((s) => s.id === id);
+}
