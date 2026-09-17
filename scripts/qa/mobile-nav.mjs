@@ -33,3 +33,4 @@ if (!inner) fail.push("таблица студентов не имеет вну�
 console.log(fail.length ? "ПРОБЛЕМЫ:" : "Мобильная навигация работает");
 fail.forEach((f) => console.log(" - " + f));
 await browser.close();
+process.exit(fail.length ? 1 : 0);

@@ -9,7 +9,7 @@ import {
   StatusDot,
 } from "@/components/ui";
 import { UNIVERSITIES, universityById } from "@/lib/data/universities";
-import { formatters } from "@/lib/format";
+import { formatters, isPast } from "@/lib/format";
 import { translator } from "@/lib/i18n";
 import {
   CITY_LABEL,
@@ -279,10 +279,9 @@ export default async function UniversityPage({
                 value={
                   <span
                     style={{
-                      color:
-                        d.deadline < "2026-09-17"
-                          ? "var(--color-ink-faint)"
-                          : undefined,
+                      color: isPast(d.deadline)
+                        ? "var(--color-ink-faint)"
+                        : undefined,
                     }}
                   >
                     {f.date(d.deadline)} · {f.relativeDeadline(d.deadline)}

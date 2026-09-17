@@ -1,3 +1,4 @@
+import { TODAY_ISO } from "../format";
 import type { University } from "../types";
 
 /**
@@ -83,7 +84,7 @@ export const UNIVERSITIES: University[] = [
     admissionFee: 70,
     scholarshipMax: 70,
     requirements: {
-      topikMin: 4,
+      topikMin: 3,
       ieltsMin: 6.0,
       gpaMin: 3.4,
       bankBalance: 19000,
@@ -164,8 +165,9 @@ export const UNIVERSITIES: University[] = [
       bankBalance: 18000,
       graduationWithinYears: 3,
     },
-    intakes: ["2027 Весна"],
+    intakes: ["2026 Осень", "2027 Весна"],
     intakeDeadlines: [
+      { intake: "2026 Осень", deadline: "2026-05-23" },
       { intake: "2027 Весна", deadline: "2026-10-17" },
     ],
     fields: ["Инженерия", "IT и Computer Science", "Естественные науки"],
@@ -463,6 +465,7 @@ export const UNIVERSITIES: University[] = [
     programs: [
       { id: "p_hanul_gb", name: "Global Business (English track)", field: "Бизнес и менеджмент", degreeLevel: "bachelor", tuitionPerYear: 9600, language: "en", topikMin: 0, ieltsMin: 6.0 },
       { id: "p_hanul_cs", name: "Information Systems", field: "IT и Computer Science", degreeLevel: "bachelor", tuitionPerYear: 9200, language: "en", topikMin: 0, ieltsMin: 6.0 },
+      { id: "p_hanul_mba", name: "Global MBA", field: "Бизнес и менеджмент", degreeLevel: "master", tuitionPerYear: 10400, language: "en", topikMin: 0, ieltsMin: 6.0 },
     ],
     dataStatus: "draft",
     sourceUrl: null,
@@ -476,7 +479,7 @@ export function hasEnglishTrack(u: University): boolean {
 }
 
 /** Ближайший непрошедший дедлайн подачи. */
-export function nextDeadline(u: University, today = "2026-09-17") {
+export function nextDeadline(u: University, today: string = TODAY_ISO) {
   return (
     u.intakeDeadlines
       .filter((d) => d.deadline >= today)

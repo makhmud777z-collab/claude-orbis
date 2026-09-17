@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Avatar, Chip, StatusDot } from "./ui";
 import { IconSearch } from "./icons";
 import { formatters } from "@/lib/format";
@@ -39,6 +39,10 @@ export function StudentsTable({
   const f = formatters(locale);
 
   const [status, setStatus] = useState<string>(initialStatus ?? "all");
+
+  // Срез приходит из адреса (подпункты меню) — при переходе между срезами
+  // компонент не перемонтируется, поэтому состояние синхронизируем явно.
+  useEffect(() => setStatus(initialStatus ?? "all"), [initialStatus]);
   const [owner, setOwner] = useState<string>("all");
   const [topik, setTopik] = useState<string>("all");
   const [query, setQuery] = useState("");

@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { IconFilter, IconMore, IconPhone } from "./icons";
 import { Avatar, Chip, Progress, StatusDot } from "./ui";
 import { BOARD_STAGES, CITY_LABEL, INTAKE_LABEL, ref, stageMeta } from "@/lib/labels";
-import { formatters } from "@/lib/format";
+import { formatters, isPast, isSoon } from "@/lib/format";
 import { translator, type Locale } from "@/lib/i18n";
 import { S } from "@/lib/strings";
 import type { ApplicationStage } from "@/lib/types";
@@ -49,6 +49,9 @@ export function ApplicationsBoard({
   const [intake, setIntake] = useState("all");
   const [onlyUrgent, setOnlyUrgent] = useState(false);
   const [focus, setFocus] = useState<string>(initialStage ?? "all");
+
+  // То же самое для этапов: /applications?stage=visa из меню.
+  useEffect(() => setFocus(initialStage ?? "all"), [initialStage]);
 
   const filtered = useMemo(
     () =>
@@ -186,7 +189,7 @@ export function ApplicationsBoard({
                       <div className="mt-4 flex items-center justify-between gap-2">
                         <Chip
                           dot={
-                            c.deadline && c.deadline <= "2026-09-23"
+                            c.deadline && (isPast(c.deadline) || isSoon(c.deadline, 7))
                               ? "var(--color-status-risk)"
                               : "var(--color-status-hold)"
                           }

@@ -13,7 +13,6 @@ import {
 } from "@/components/ui";
 import { documentsOfStudent, dossierProgress } from "@/lib/data/documents";
 import { studentById } from "@/lib/data/students";
-import { TASKS } from "@/lib/data/tasks";
 import { universityById } from "@/lib/data/universities";
 import { userById } from "@/lib/data/users";
 import { formatters } from "@/lib/format";
@@ -29,7 +28,7 @@ import {
 } from "@/lib/labels";
 import { matchProgram, verdictDot, verdictLabel } from "@/lib/matching";
 import { can } from "@/lib/rbac";
-import { scopedApplications } from "@/lib/queries";
+import { scopedApplications, scopedTasks } from "@/lib/queries";
 import { getSession } from "@/lib/session";
 import { S } from "@/lib/strings";
 
@@ -60,7 +59,7 @@ export default async function ApplicationPage({
   const currentIndex = FLOW.findIndex((s) => s.key === app.stage);
   const docs = documentsOfStudent(app.studentId);
   const dossier = dossierProgress(app.studentId);
-  const tasks = TASKS.filter(
+  const tasks = scopedTasks(session).filter(
     (t) => t.relation?.type === "application" && t.relation.id === app.id,
   );
   const match =

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { editionMeta, type Edition } from "@/lib/edition";
 import { translator, type Locale } from "@/lib/i18n";
 import { S } from "@/lib/strings";
+import type { Loc } from "@/lib/i18n";
 
 /**
  * Модуль есть в системе, но не входит в версию агентства.
@@ -12,11 +13,18 @@ export function NotInEdition({
   required,
   current,
   locale,
+  home,
+  homeLabel,
+  canManageSettings,
 }: {
   module: string;
   required: Edition;
   current: Edition;
   locale: Locale;
+  /** куда вернуться — раздел, доступный именно этой роли */
+  home: string;
+  homeLabel: Loc;
+  canManageSettings: boolean;
 }) {
   const t = translator(locale);
   const req = editionMeta(required);
@@ -33,12 +41,17 @@ export function NotInEdition({
         {t(S.edition.yourEdition)}: {now.code} · {t(now.goal)}
       </p>
       <div className="mt-7 flex items-center justify-center gap-2">
-        <Link href="/universities" className="btn btn-secondary btn-sm">
-          {t(S.nav.universities)}
+        <Link
+          href={home}
+          className={`btn btn-sm ${canManageSettings ? "btn-secondary" : "btn-primary"}`}
+        >
+          {t(homeLabel)}
         </Link>
-        <Link href="/settings" className="btn btn-primary btn-sm">
-          {t(S.edition.upgrade)}
-        </Link>
+        {canManageSettings ? (
+          <Link href="/settings" className="btn btn-primary btn-sm">
+            {t(S.edition.upgrade)}
+          </Link>
+        ) : null}
       </div>
     </div>
   );

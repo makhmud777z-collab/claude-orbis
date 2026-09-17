@@ -6,6 +6,7 @@ import { applicationById } from "@/lib/data/applications";
 import { studentById } from "@/lib/data/students";
 import { userById } from "@/lib/data/users";
 import { translator } from "@/lib/i18n";
+import { isPast } from "@/lib/format";
 import { can } from "@/lib/rbac";
 import { S } from "@/lib/strings";
 import { scopedTasks, scopedTeam } from "@/lib/queries";
@@ -37,7 +38,7 @@ export default async function TasksPage() {
       assigneeName: userById(task.assigneeId)?.name ?? "—",
       creatorName: userById(task.creatorId)?.name ?? "—",
       relationLabel,
-      overdue: task.status !== "done" && task.dueAt < "2026-09-16",
+      overdue: task.status !== "done" && isPast(task.dueAt),
     };
   });
 

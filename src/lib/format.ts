@@ -5,7 +5,22 @@ const MONTHS: Record<Locale, string[]> = {
   uz: ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avg", "sen", "okt", "noy", "dek"],
 };
 
+/**
+ * Единственная точка отсчёта «сейчас» на всё приложение.
+ * В демо дата фиксирована, чтобы скриншоты и сроки были воспроизводимы;
+ * при переходе на живые данные здесь появится new Date().
+ */
 export const TODAY = new Date("2026-09-16T09:30:00");
+export const TODAY_ISO = "2026-09-16";
+
+/** Дата уже прошла. */
+export const isPast = (value: string) => value < TODAY_ISO;
+
+/** Срок наступает в ближайшие n дней (просроченные не считаются). */
+export const isSoon = (value: string, days: number) => {
+  const left = daysUntil(value);
+  return left >= 0 && left <= days;
+};
 
 export function parseDate(value: string): Date {
   return new Date(value.length <= 10 ? `${value}T00:00:00` : value);

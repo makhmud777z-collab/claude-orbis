@@ -64,6 +64,32 @@ await page.goto("http://localhost:3000/tasks", { waitUntil: "networkidle" });
 const uzTasks = await page.locator("aside").first().innerText();
 check(uzTasks.includes("Vazifalar"), "язык не сохранился при переходе между страницами");
 
+// 8. Срезы из бокового меню действительно переключают фильтр
+await page.goto("http://localhost:3000/students", { waitUntil: "networkidle" });
+const allRows = await page.locator("tbody tr").count();
+await page.goto("http://localhost:3000/students?status=lead", { waitUntil: "networkidle" });
+await page.waitForTimeout(300);
+const leadRows = await page.locator("tbody tr").count();
+check(leadRows > 0 && leadRows < allRows, `срез «Лиды»: всего ${allRows}, в срезе ${leadRows}`);
+
+await page.goto("http://localhost:3000/applications?stage=visa", { waitUntil: "networkidle" });
+await page.waitForTimeout(300);
+const columns = await page.locator("section > div.mb-3").count();
+check(columns === 1, `срез «На визе» должен оставить одну колонку, получено ${columns}`);
+
+// 9. Лента событий не показывает чужую активность роли «только свои»
+const own = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+await own.addCookies([
+  { name: "orbis_tenant", value: "seoulway", domain: "localhost", path: "/" },
+  { name: "orbis_user", value: "u_kamila", domain: "localhost", path: "/" },
+]);
+const ownPage = await own.newPage();
+await ownPage.goto("http://localhost:3000/", { waitUntil: "networkidle" });
+const feed = await ownPage.locator("body").innerText();
+check(!feed.includes("Рустам Эргашев"), "менеджер видит в ленте события чужих сотрудников");
+await own.close();
+
 console.log(fail.length ? "ПРОБЛЕМЫ В СЦЕНАРИЯХ:" : "Все сценарии прошли");
 fail.forEach((f) => console.log(" - " + f));
 await browser.close();
+process.exit(fail.length ? 1 : 0);

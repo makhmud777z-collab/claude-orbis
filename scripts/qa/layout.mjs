@@ -19,3 +19,4 @@ for (const width of [390, 810]) {
 }
 out.forEach((o) => console.log(o));
 await browser.close();
+process.exit(0 ? 1 : 0);

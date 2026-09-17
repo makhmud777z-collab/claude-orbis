@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import {
+  NO_STUDENT,
   parseShortlist,
   SHORTLIST_COOKIE,
   toggle,
@@ -54,7 +55,7 @@ export async function toggleShortlist(formData: FormData) {
 }
 
 export async function clearShortlist(formData: FormData) {
-  const studentId = String(formData.get("studentId") ?? "_");
+  const studentId = String(formData.get("studentId") || NO_STUDENT);
   const store = await cookies();
   const map: ShortlistMap = parseShortlist(store.get(SHORTLIST_COOKIE)?.value);
   delete map[studentId];

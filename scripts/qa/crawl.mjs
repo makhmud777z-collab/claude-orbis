@@ -4,6 +4,15 @@ const ROUTES = ["/", "/students", "/students/s_001", "/applications", "/applicat
   "/documents", "/tasks", "/deadlines", "/universities", "/universities/u_hallim",
   "/universities/compare", "/finance", "/team", "/settings"];
 const TENANTS = ["seoulway", "agencyx", "hanbridge"];
+
+/**
+ * Записи, которые принадлежат seoulway. Для других агентств 404 на них —
+ * не поломка, а работающая изоляция данных: именно так и должно быть.
+ */
+const FOREIGN = {
+  "/students/s_001": ["agencyx", "hanbridge"],
+  "/applications/a_001": ["agencyx", "hanbridge"],
+};
 const LOCALES = ["ru", "uz"];
 
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
@@ -31,6 +40,17 @@ for (const tenant of TENANTS) {
 
       const body = await page.locator("body").innerText();
       // признаки проблем
+      const foreign = (FOREIGN[route] ?? []).includes(tenant);
+      if (foreign) {
+        const txt = await page.locator("body").innerText();
+        // Чужая запись обязана дать 404 — либо, если модуль не входит в версию
+        // агентства, заглушку версии. В обоих случаях никаких данных в теле.
+        const blocked = status === 404 || /Модуль не входит|Modul sizning/.test(txt);
+        const leaked = /Азиза Нурматова|Hallim Medical|Санжар Умаров/.test(txt);
+        if (!blocked || leaked)
+          problems.push([tenant, locale, route, "УТЕЧКА", `статус ${status}${leaked ? ", видны данные" : ""}`]);
+        continue;
+      }
       if (status >= 400) problems.push([tenant, locale, route, "HTTP", status]);
       if (errors.length) problems.push([tenant, locale, route, "CONSOLE", errors[0]]);
       if (/undefined|NaN|\[object Object\]/.test(body)) {
@@ -39,7 +59,7 @@ for (const tenant of TENANTS) {
       }
       // непереведённые русские строки в узбекской локали — только в интерфейсных зонах
       if (locale === "uz") {
-        const nav = await page.locator("aside").innerText().catch(() => "");
+        const nav = await page.locator("aside").first().innerText().catch(() => "");
         if (/[А-Яа-я]/.test(nav)) problems.push([tenant, locale, route, "UNTRANSLATED_NAV", nav.match(/[А-Яа-я][^\n]*/)?.[0]]);
       }
     }
@@ -50,3 +70,4 @@ for (const tenant of TENANTS) {
 console.log(problems.length ? "ПРОБЛЕМЫ:" : "Проблем не найдено");
 for (const p of problems) console.log(p.join(" | "));
 await browser.close();
+process.exit(problems.length ? 1 : 0);

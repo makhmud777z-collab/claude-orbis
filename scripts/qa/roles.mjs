@@ -56,3 +56,4 @@ for (const [userId, exp] of Object.entries(EXPECT)) {
 console.log(issues.length ? "ПРОБЛЕМЫ С РОЛЯМИ:" : "Роли и доступы — совпадают с матрицей");
 issues.forEach((i) => console.log(" - " + i));
 await browser.close();
+process.exit(issues.length ? 1 : 0);

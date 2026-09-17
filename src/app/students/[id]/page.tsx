@@ -13,7 +13,6 @@ import {
 } from "@/components/ui";
 import { applicationsOfStudent } from "@/lib/data/applications";
 import { documentsOfStudent, dossierProgress } from "@/lib/data/documents";
-import { TASKS } from "@/lib/data/tasks";
 import { UNIVERSITIES, universityById } from "@/lib/data/universities";
 import { userById } from "@/lib/data/users";
 import { age, formatters } from "@/lib/format";
@@ -31,7 +30,7 @@ import {
   STUDENT_STATUS,
 } from "@/lib/labels";
 import { matchStudent, verdictDot, verdictLabel } from "@/lib/matching";
-import { scopedStudents } from "@/lib/queries";
+import { scopedStudents, scopedTasks } from "@/lib/queries";
 import { can } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
 import { S } from "@/lib/strings";
@@ -58,7 +57,7 @@ export default async function StudentPage({
   const docs = documentsOfStudent(student.id);
   const dossier = dossierProgress(student.id);
   const status = STUDENT_STATUS[student.status];
-  const tasks = TASKS.filter(
+  const tasks = scopedTasks(session).filter(
     (task) =>
       (task.relation?.type === "student" && task.relation.id === student.id) ||
       (task.relation?.type === "application" &&

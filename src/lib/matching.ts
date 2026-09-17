@@ -1,3 +1,4 @@
+import { TODAY } from "./format";
 import { loc, type Loc } from "./i18n";
 import type { Program, Student, University } from "./types";
 
@@ -199,6 +200,56 @@ export function matchProgram(
     reasons.push({ key: "dorm", label: loc("Нет общежития", "Yotoqxona yo‘q"), level: "warn" });
   }
 
+  // ── срок после выпуска: корейские вузы режут по нему жёстко
+  const limit = university.requirements.graduationWithinYears;
+  if (limit !== null) {
+    const sinceGraduation = TODAY.getFullYear() - p.graduationYear;
+    if (sinceGraduation > limit) {
+      score -= 30;
+      blocked = true;
+      reasons.push({
+        key: "graduation",
+        label: loc(
+          `Выпуск ${p.graduationYear}: прошло ${sinceGraduation} лет, вуз принимает до ${limit}`,
+          `Bitirgan ${p.graduationYear}: ${sinceGraduation} yil o‘tgan, universitet ${limit} yilgacha qabul qiladi`,
+        ),
+        level: "block",
+      });
+    } else {
+      reasons.push({
+        key: "graduation",
+        label: loc(
+          `Выпуск ${p.graduationYear} — в пределах ${limit} лет`,
+          `Bitirgan ${p.graduationYear} — ${limit} yil ichida`,
+        ),
+        level: "ok",
+      });
+    }
+  }
+
+  // ── подтверждение средств: справка из банка на счёт вуза
+  const bank = university.requirements.bankBalance;
+  if (bank > p.budgetPerYear) {
+    score -= 10;
+    reasons.push({
+      key: "bank",
+      label: loc(
+        `Нужна справка из банка на $${bank.toLocaleString("ru-RU")} — больше годового бюджета`,
+        `Bankdan $${bank.toLocaleString("ru-RU")} ma’lumotnoma kerak — yillik byudjetdan ko‘p`,
+      ),
+      level: "warn",
+    });
+  } else {
+    reasons.push({
+      key: "bank",
+      label: loc(
+        `Справка из банка: $${bank.toLocaleString("ru-RU")}`,
+        `Bankdan ma’lumotnoma: $${bank.toLocaleString("ru-RU")}`,
+      ),
+      level: "ok",
+    });
+  }
+
   // ── визовый рейтинг вуза
   if (university.visaGrade === "restricted") {
     score -= 20;
@@ -219,11 +270,20 @@ export function matchProgram(
   return { university, program, score, verdict, reasons, yearCost };
 }
 
+/**
+ * Подбор по всем вузам.
+ * Программы другого уровня обучения отбрасываются до скоринга: бакалавриат
+ * не «не подходит» магистру — он просто не про него, и в выдаче ему не место.
+ */
 export function matchStudent(
   student: Student,
   universities: University[],
 ): MatchResult[] {
   return universities
-    .flatMap((u) => u.programs.map((p) => matchProgram(student, u, p)))
+    .flatMap((u) =>
+      u.programs
+        .filter((p) => p.degreeLevel === student.profile.degreeLevel)
+        .map((p) => matchProgram(student, u, p)),
+    )
     .sort((a, b) => b.score - a.score);
 }

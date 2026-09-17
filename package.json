@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "qa": "node scripts/qa/crawl.mjs && node scripts/qa/roles.mjs && node scripts/qa/flows.mjs && node scripts/qa/layout.mjs && node scripts/qa/mobile-nav.mjs"
+    "qa": "npx tsx scripts/qa/integrity.ts && node scripts/qa/i18n.mjs && node scripts/qa/crawl.mjs && node scripts/qa/roles.mjs && node scripts/qa/flows.mjs && node scripts/qa/layout.mjs && node scripts/qa/mobile-nav.mjs"
   },
   "dependencies": {
     "next": "^16.3.5",
@@ -21,6 +21,7 @@
     "@types/react": "19.1.1",
     "@types/react-dom": "19.1.1",
     "tailwindcss": "4.1.13",
+    "tsx": "^4.23.13",
     "typescript": "5.8.3"
   }
 }

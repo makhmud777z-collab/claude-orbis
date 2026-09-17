@@ -64,8 +64,22 @@ export function scopedTeam(session: Session) {
     : staff;
 }
 
+/**
+ * Лента событий агентства. Раньше отдавалась целиком — сотрудник с зоной
+ * «только свои записи» видел, что делают коллеги. Теперь по той же зоне.
+ */
 export function scopedActivity(session: Session) {
-  return activityOfTenant(session.tenant.id);
+  const all = activityOfTenant(session.tenant.id);
+  if (session.scope === "tenant") return all;
+  if (session.scope === "branch") {
+    const staff = new Set(
+      usersOfTenant(session.tenant.id)
+        .filter((u) => u.branchId === session.user.branchId)
+        .map((u) => u.id),
+    );
+    return all.filter((e) => staff.has(e.actorId));
+  }
+  return all.filter((e) => e.actorId === session.user.id);
 }
 
 /**

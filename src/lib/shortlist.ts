@@ -26,11 +26,15 @@ export function parseShortlist(raw: string | undefined): ShortlistMap {
   }
 }
 
+/**
+ * Добавляет или убирает вуз. На пределе список не вытесняет ранее выбранное
+ * молча: лишний вуз просто не добавляется, оператор сам решает, кого убрать.
+ */
 export function toggle(map: ShortlistMap, studentId: string, universityId: string) {
   const key = studentId || NO_STUDENT;
   const current = map[key] ?? [];
-  const next = current.includes(universityId)
-    ? current.filter((id) => id !== universityId)
-    : [...current, universityId].slice(-SHORTLIST_LIMIT);
-  return { ...map, [key]: next };
+  if (current.includes(universityId))
+    return { ...map, [key]: current.filter((id) => id !== universityId) };
+  if (current.length >= SHORTLIST_LIMIT) return map;
+  return { ...map, [key]: [...current, universityId] };
 }

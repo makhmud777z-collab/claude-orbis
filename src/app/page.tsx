@@ -12,7 +12,7 @@ import {
   StatusDot,
 } from "@/components/ui";
 import { userById } from "@/lib/data/users";
-import { daysUntil, formatters } from "@/lib/format";
+import { formatters, isPast, isSoon } from "@/lib/format";
 import { translator } from "@/lib/i18n";
 import { BOARD_STAGES, DEADLINE_KIND, stageMeta } from "@/lib/labels";
 import {
@@ -59,7 +59,9 @@ export default async function DashboardPage() {
   const inPipeline = applications.filter(
     (a) => !["departed", "lost"].includes(a.stage),
   );
-  const soon = deadlines.filter((d) => daysUntil(d.date) <= 7);
+  // Просроченное — отдельная беда, в «ближайшие 7 дней» оно не входит.
+  const overdue = deadlines.filter((d) => isPast(d.date));
+  const soon = deadlines.filter((d) => isSoon(d.date, 7));
   const contracted = inPipeline.reduce((sum, a) => sum + a.contractValue, 0);
   const collected = inPipeline.reduce((sum, a) => sum + a.paid, 0);
 
@@ -120,9 +122,11 @@ export default async function DashboardPage() {
           label={t(S.dashboard.tileDeadlines)}
           value={soon.length}
           hint={
-            soon[0]
-              ? `${t(S.dashboard.tileNearest)} — ${f.shortDate(soon[0].date)}`
-              : t(S.dashboard.tileCalm)
+            overdue.length
+              ? `${overdue.length} ${t(S.deadlines.overdue)}`
+              : soon[0]
+                ? `${t(S.dashboard.tileNearest)} — ${f.shortDate(soon[0].date)}`
+                : t(S.dashboard.tileCalm)
           }
           accent="var(--color-status-progress)"
         />
@@ -241,10 +245,9 @@ export default async function DashboardPage() {
                       <span>·</span>
                       <span
                         style={{
-                          color:
-                            task.dueAt <= "2026-09-18"
-                              ? "var(--color-status-risk)"
-                              : undefined,
+                          color: isSoon(task.dueAt, 2) || isPast(task.dueAt)
+                            ? "var(--color-status-risk)"
+                            : undefined,
                         }}
                       >
                         {f.relativeDeadline(task.dueAt)}
