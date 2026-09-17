@@ -166,8 +166,8 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <div className="mt-9 grid gap-5 lg:grid-cols-[1.15fr_1fr]">
-        <section>
+      <div className="mt-9 grid min-w-0 gap-5 lg:grid-cols-[1.15fr_1fr]">
+        <section className="min-w-0">
           <SectionTitle
             action={
               <Link href="/deadlines" className="t-caption text-ink-muted hover:text-ink">
@@ -185,7 +185,7 @@ export default async function DashboardPage() {
                 <div key={d.id} className="flex items-center gap-4 px-5 py-3.5">
                   <StatusDot color={kind.dot} />
                   <div className="min-w-0 flex-1">
-                    <div className="t-body-sm truncate">{d.title}</div>
+                    <div className="t-body-sm truncate">{t(d.title)}</div>
                     <div className="t-micro mt-0.5 text-ink-faint">
                       {t(kind.label)} · {owner?.name ?? "—"}
                     </div>
@@ -217,7 +217,7 @@ export default async function DashboardPage() {
           </div>
         </section>
 
-        <section>
+        <section className="min-w-0">
           <SectionTitle
             action={
               <Link href="/tasks" className="t-caption text-ink-muted hover:text-ink">

@@ -5,6 +5,7 @@ import { studentsOfTenant } from "./data/students";
 import { tasksOfTenant } from "./data/tasks";
 import { usersOfTenant } from "./data/users";
 import { daysUntil } from "./format";
+import { loc } from "./i18n";
 import { DEADLINE_KIND } from "./labels";
 import type { Session } from "./session";
 import type { Application, Deadline, Student, StudentDocument, Task } from "./types";
@@ -78,13 +79,15 @@ export function scopedDeadlines(session: Session): Deadline[] {
   for (const app of scopedApplications(session)) {
     if (!app.deadline) continue;
     const student = students.get(app.studentId);
+    const name = student?.fullName ?? "—";
     items.push({
       id: `dl_app_${app.id}`,
       tenantId: app.tenantId,
       kind: app.stage === "visa" ? "visa" : "university",
-      title: `${student?.fullName ?? "Студент"} — ${
-        app.stage === "visa" ? "решение по визе" : "дедлайн подачи"
-      }`,
+      title:
+        app.stage === "visa"
+          ? loc(`${name} — решение по визе`, `${name} — viza bo‘yicha qaror`)
+          : loc(`${name} — дедлайн подачи`, `${name} — topshirish muddati`),
       date: app.deadline,
       ownerId: app.ownerId,
       relation: { type: "application", id: app.id },
@@ -94,12 +97,15 @@ export function scopedDeadlines(session: Session): Deadline[] {
   for (const doc of scopedDocuments(session)) {
     if (!doc.expiresAt) continue;
     if (daysUntil(doc.expiresAt) > 120) continue;
-    const student = students.get(doc.studentId);
+    const owner = students.get(doc.studentId)?.fullName ?? "—";
     items.push({
       id: `dl_doc_${doc.id}`,
       tenantId: doc.tenantId,
       kind: "document",
-      title: `${student?.fullName ?? "Студент"} — истекает «${doc.kind}»`,
+      title: loc(
+        `${owner} — истекает «${doc.kind.ru}»`,
+        `${owner} — «${doc.kind.uz}» muddati tugayapti`,
+      ),
       date: doc.expiresAt,
       ownerId: doc.uploadedById ?? session.user.id,
       relation: { type: "student", id: doc.studentId },
@@ -112,7 +118,7 @@ export function scopedDeadlines(session: Session): Deadline[] {
       id: `dl_task_${task.id}`,
       tenantId: task.tenantId,
       kind: "task",
-      title: task.title,
+      title: loc(task.title, task.title),
       date: task.dueAt,
       ownerId: task.assigneeId,
       relation:

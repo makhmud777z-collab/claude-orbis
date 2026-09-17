@@ -45,6 +45,12 @@ export const S = {
     scopeBranch: loc("свой филиал", "o‘z filiali"),
     scopeOwn: loc("только свои записи", "faqat o‘z yozuvlari"),
     accessDenied: loc("Раздел недоступен", "Bo‘lim mavjud emas"),
+    notFoundTitle: loc("Запись не найдена", "Yozuv topilmadi"),
+    notFoundHint: loc(
+      "Её нет либо она вне вашей зоны видимости: система не показывает записи чужого агентства, филиала или коллеги.",
+      "U mavjud emas yoki sizning ko‘rish doirangizdan tashqarida: tizim boshqa agentlik, filial yoki hamkasb yozuvlarini ko‘rsatmaydi.",
+    ),
+    toHome: loc("На главную", "Bosh sahifaga"),
     accessDeniedHint: loc(
       "У роли нет прав на этот модуль. Попросите директора агентства расширить доступ в разделе «Сотрудники».",
       "Bu rolda modulga huquq yo‘q. Agentlik direktoridan «Xodimlar» bo‘limida huquq berishini so‘rang.",
@@ -152,6 +158,9 @@ export const S = {
       "birinchi qo‘ng‘iroqdan jo‘nashgacha bo‘lgan voronka",
     ),
     allStages: loc("Все этапы", "Barcha bosqichlar"),
+    collectingShort: loc("Сбор документов", "Hujjat yig‘ish"),
+    submittedShort: loc("Поданные", "Topshirilgan"),
+    visaShort: loc("На визе", "Vizada"),
     allIntakes: loc("Все наборы", "Barcha qabullar"),
     onlyUrgent: loc("Только срочные", "Faqat shoshilinch"),
     inSelection: loc("заявок в выборке", "tanlovdagi ariza"),

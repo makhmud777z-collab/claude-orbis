@@ -86,8 +86,8 @@ export function DocumentsExplorer({
         </label>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
-        <div className="space-y-2.5 lg:max-h-[72vh] lg:overflow-y-auto lg:pr-1">
+      <div className="grid min-w-0 gap-5 lg:grid-cols-[320px_1fr]">
+        <div className="min-w-0 space-y-2.5 lg:max-h-[72vh] lg:overflow-y-auto lg:pr-1">
           {visible.map((folder) => (
             <button
               key={folder.studentId}
@@ -98,7 +98,7 @@ export function DocumentsExplorer({
                   : ""
               }`}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex min-w-0 items-center gap-3">
                 <Avatar name={folder.studentName} size={30} />
                 <div className="min-w-0 flex-1">
                   <div className="t-body-sm truncate">{folder.studentName}</div>
@@ -144,7 +144,7 @@ export function DocumentsExplorer({
         </div>
 
         {open ? (
-          <div className="card">
+          <div className="card min-w-0">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline-soft px-5 py-4">
               <div className="flex items-center gap-3">
                 <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-surface-2 text-ink-muted">

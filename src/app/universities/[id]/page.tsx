@@ -123,7 +123,7 @@ export default async function UniversityPage({
         }
       />
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_340px]">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[1fr_340px]">
         <div className="space-y-8">
           <section>
             <SectionTitle>{t(S.universities.programsTitle)}</SectionTitle>

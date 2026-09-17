@@ -4,6 +4,8 @@ import { useState } from "react";
 import { switchLocale, switchTenant, switchUser } from "@/app/actions";
 import { IconBell, IconChevron, IconMail, IconSearch } from "./icons";
 import { Avatar } from "./ui";
+import { MobileNav } from "./MobileNav";
+import type { Module } from "@/lib/rbac";
 import { LOCALES, translator, type Loc, type Locale } from "@/lib/i18n";
 import { S } from "@/lib/strings";
 import type { Tenant, User } from "@/lib/types";
@@ -20,6 +22,8 @@ export function Topbar({
   tenant,
   staff,
   locale,
+  modules,
+  home,
 }: {
   user: User;
   roleLabel: Loc;
@@ -27,12 +31,21 @@ export function Topbar({
   tenant: Tenant;
   staff: User[];
   locale: Locale;
+  modules: Module[];
+  home: string;
 }) {
   const [open, setOpen] = useState(false);
   const t = translator(locale);
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-hairline-soft bg-canvas/85 px-5 backdrop-blur-xl">
+      <MobileNav
+        modules={modules}
+        locale={locale}
+        tenantName={tenant.name}
+        home={home}
+      />
+
       <label className="relative hidden max-w-[320px] flex-1 items-center sm:flex">
         <span className="pointer-events-none absolute left-3 text-ink-faint">
           <IconSearch size={15} />

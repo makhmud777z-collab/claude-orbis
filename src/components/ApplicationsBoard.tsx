@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { IconFilter, IconMore } from "./icons";
+import { IconFilter, IconMore, IconPhone } from "./icons";
 import { Avatar, Chip, Progress, StatusDot } from "./ui";
 import { BOARD_STAGES, CITY_LABEL, INTAKE_LABEL, ref, stageMeta } from "@/lib/labels";
 import { formatters } from "@/lib/format";
@@ -158,6 +158,12 @@ export function ApplicationsBoard({
                           {c.programName} · {t(ref(CITY_LABEL, c.city))} ·{" "}
                           {t(ref(INTAKE_LABEL, c.intake))}
                         </div>
+                        {c.studentPhone ? (
+                          <div className="t-micro flex items-center gap-1.5 text-ink-faint">
+                            <IconPhone size={12} />
+                            {c.studentPhone}
+                          </div>
+                        ) : null}
                       </div>
 
                       <div className="mt-3.5">
@@ -187,9 +193,8 @@ export function ApplicationsBoard({
                         >
                           {f.relativeDeadline(c.deadline)}
                         </Chip>
-                        <span className="t-micro t-num text-ink-faint">
-                          {f.som(c.paid, { compact: true })} /{" "}
-                          {f.som(c.contractValue, { compact: true })}
+                        <span className="t-micro t-num whitespace-nowrap text-ink-faint">
+                          {f.somPair(c.paid, c.contractValue)}
                         </span>
                       </div>
                     </Link>

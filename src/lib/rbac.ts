@@ -99,8 +99,8 @@ export const ROLES: RoleDefinition[] = [
     key: "sales_manager",
     label: loc("Менеджер по продажам", "Sotuv menejeri"),
     description: loc(
-      "Работает с лидами и своими студентами: первичная консультация, договор, передача куратору.",
-      "Lidlar va o‘z talabalari bilan ishlaydi: konsultatsiya, shartnoma, kuratorga topshirish.",
+      "Лиды и свои студенты: консультация, договор, передача куратору. Документы — только просмотр.",
+      "Lidlar va o‘z talabalari: konsultatsiya, shartnoma, kuratorga topshirish. Hujjatlar — faqat ko‘rish.",
     ),
     scope: "own",
     permissions: {

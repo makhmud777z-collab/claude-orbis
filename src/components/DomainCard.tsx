@@ -31,12 +31,12 @@ export function DomainCard({
   const check = draft === slug ? { ok: true } : validateSlug(draft);
 
   return (
-    <div className="card p-6">
+    <div className="card min-w-0 p-6">
       <div className="mb-5 flex items-center gap-3">
         <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-surface-2 text-ink-muted">
           <IconGlobe size={17} />
         </span>
-        <div>
+        <div className="min-w-0">
           <div className="t-body-sm">{t(S.settings.addressTitle)}</div>
           <div className="t-micro text-ink-faint">{t(S.settings.addressHint)}</div>
         </div>
@@ -101,7 +101,7 @@ export function DomainCard({
           </span>
         </div>
 
-        <div className="rounded-[10px] border border-hairline-soft bg-canvas p-4">
+        <div className="min-w-0 overflow-hidden rounded-[10px] border border-hairline-soft bg-canvas p-4">
           <div className="t-micro mb-2 text-ink-faint">
             {t(S.settings.dnsTitle)}
           </div>

@@ -219,7 +219,8 @@ export interface Deadline {
   id: string;
   tenantId: string;
   kind: DeadlineKind;
-  title: string;
+  /** заголовок двуязычный: часть текста система строит сама */
+  title: Loc;
   date: string;
   ownerId: string;
   relation: { type: "student" | "application" | "university"; id: string } | null;

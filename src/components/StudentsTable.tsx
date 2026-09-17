@@ -28,15 +28,17 @@ export function StudentsTable({
   rows,
   owners,
   locale,
+  initialStatus,
 }: {
   rows: StudentRow[];
   owners: Pick<User, "id" | "name">[];
   locale: Locale;
+  initialStatus?: string;
 }) {
   const t = translator(locale);
   const f = formatters(locale);
 
-  const [status, setStatus] = useState<string>("all");
+  const [status, setStatus] = useState<string>(initialStatus ?? "all");
   const [owner, setOwner] = useState<string>("all");
   const [topik, setTopik] = useState<string>("all");
   const [query, setQuery] = useState("");

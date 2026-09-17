@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { GROUP_LABEL, NAV, type NavEntry } from "./nav";
-import { IconLogo } from "./icons";
+import { IconChevron, IconLogo } from "./icons";
 import { translator, type Locale } from "@/lib/i18n";
 import type { Module } from "@/lib/rbac";
 import type { Loc } from "@/lib/i18n";
@@ -15,6 +16,7 @@ export function Sidebar({
   modules,
   roleLabel,
   locale,
+  home,
 }: {
   tenantName: string;
   tenantMark: string;
@@ -22,9 +24,13 @@ export function Sidebar({
   modules: Module[];
   roleLabel: Loc;
   locale: Locale;
+  /** куда ведёт логотип: у MVP и у ролей без дашборда это не «/» */
+  home: string;
 }) {
   const pathname = usePathname();
+  const params = useSearchParams();
   const t = translator(locale);
+  const [opened, setOpened] = useState<string | null>(null);
   const allowed = new Set(modules);
   const entries = NAV.filter((e) => allowed.has(e.module));
   const groups: NavEntry["group"][] = ["work", "base", "admin"];
@@ -32,9 +38,11 @@ export function Sidebar({
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
+  const current = `${pathname}${params.toString() ? `?${params}` : ""}`;
+
   return (
     <aside className="sticky top-0 hidden h-screen w-[244px] flex-none flex-col border-r border-hairline-soft bg-canvas px-4 py-5 lg:flex">
-      <Link href="/" className="mb-7 flex items-center gap-3 px-2">
+      <Link href={home} className="mb-7 flex items-center gap-3 px-2">
         <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-ink text-canvas">
           <IconLogo size={18} />
         </span>
@@ -54,16 +62,63 @@ export function Sidebar({
                 {t(GROUP_LABEL[group])}
               </div>
               <div className="space-y-0.5">
-                {items.map(({ href, label, icon: Icon }) => (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={`nav-item ${isActive(href) ? "nav-item-active" : ""}`}
-                  >
-                    <Icon size={17} />
-                    {t(label)}
-                  </Link>
-                ))}
+                {items.map(({ href, label, icon: Icon, children }) => {
+                  const active = isActive(href);
+                  const expanded = children ? (opened ?? (active ? href : null)) === href : false;
+                  return (
+                    <div key={href}>
+                      <div className="flex items-center">
+                        <Link
+                          href={href}
+                          className={`nav-item flex-1 ${active ? "nav-item-active" : ""}`}
+                        >
+                          <Icon size={17} />
+                          {t(label)}
+                        </Link>
+                        {children ? (
+                          <button
+                            onClick={() => setOpened(expanded ? "" : href)}
+                            className="btn-icon h-7 w-7"
+                            aria-label={t(label)}
+                            aria-expanded={expanded}
+                          >
+                            <IconChevron
+                              size={13}
+                              style={{
+                                transform: expanded ? "rotate(180deg)" : "none",
+                                transition: "transform 160ms ease",
+                              }}
+                            />
+                          </button>
+                        ) : null}
+                      </div>
+
+                      {children && expanded ? (
+                        <div className="ml-[22px] mt-0.5 space-y-0.5 border-l border-hairline-soft pl-3">
+                          {children.map((child) => (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              className="t-caption block rounded-[8px] px-2.5 py-1.5 transition-colors"
+                              style={{
+                                color:
+                                  current === child.href
+                                    ? "var(--color-ink)"
+                                    : "var(--color-ink-faint)",
+                                background:
+                                  current === child.href
+                                    ? "var(--color-surface-1)"
+                                    : "transparent",
+                              }}
+                            >
+                              {t(child.label)}
+                            </Link>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );

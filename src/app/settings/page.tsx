@@ -63,8 +63,8 @@ export default async function SettingsPage() {
         }
       />
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
-        <div className="space-y-5">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[1fr_360px]">
+        <div className="min-w-0 space-y-5">
           <DomainCard
             slug={tenant.slug}
             rootDomain={ROOT_DOMAIN}

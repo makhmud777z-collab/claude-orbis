@@ -160,7 +160,7 @@ export default async function ApplicationPage({
         <div className="t-micro mt-3 text-ink-faint">{t(meta.hint)}</div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_340px]">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[1fr_340px]">
         <div className="space-y-8">
           <section>
             <SectionTitle

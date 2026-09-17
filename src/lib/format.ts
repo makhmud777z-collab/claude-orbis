@@ -96,6 +96,8 @@ export interface Formatters {
   usd: typeof usd;
   /** «$7 800 · 101 млн сум» — цена вуза с пересчётом по курсу арендатора */
   usdWithSom: (value: number, rate: number) => string;
+  /** «4 / 14 млн сум» — оплачено и сумма договора без повтора валюты */
+  somPair: (paid: number, total: number) => string;
 }
 
 export function formatters(locale: Locale): Formatters {
@@ -164,5 +166,12 @@ export function formatters(locale: Locale): Formatters {
     usd,
     usdWithSom: (value: number, rate: number) =>
       `${usd(value)} · ${som(usdToSom(value, rate), { compact: true, locale })}`,
+    somPair: (paid: number, total: number) => {
+      const w = SOM_WORDS[locale];
+      const mln = (v: number) => Math.round(v / 1_000_000);
+      return total >= 1_000_000
+        ? `${mln(paid)} / ${mln(total)} ${w.mln} ${w.unit}`
+        : `${som(paid, { locale })} / ${som(total, { locale })}`;
+    },
   };
 }

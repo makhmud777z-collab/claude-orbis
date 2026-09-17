@@ -111,7 +111,7 @@ export default async function StudentPage({
         }
       />
 
-      <div className="grid gap-5 xl:grid-cols-[340px_1fr]">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[340px_1fr]">
         <div className="space-y-5">
           <div className="card p-5">
             <div className="mb-4 flex items-center gap-3">
@@ -260,9 +260,8 @@ export default async function StudentPage({
                       <div className="t-caption t-num w-28 text-right text-ink-muted">
                         {f.relativeDeadline(a.deadline)}
                       </div>
-                      <div className="t-caption t-num w-36 text-right">
-                        {f.som(a.paid, { compact: true })} /{" "}
-                        {f.som(a.contractValue, { compact: true })}
+                      <div className="t-caption t-num w-36 whitespace-nowrap text-right">
+                        {f.somPair(a.paid, a.contractValue)}
                       </div>
                     </Link>
                   );

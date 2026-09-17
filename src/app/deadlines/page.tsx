@@ -85,7 +85,7 @@ export default async function DeadlinesPage() {
                     >
                       <StatusDot color={kind.dot} />
                       <div className="min-w-[220px] flex-1">
-                        <div className="t-body-sm">{d.title}</div>
+                        <div className="t-body-sm">{t(d.title)}</div>
                         <div className="t-micro text-ink-faint">{t(kind.label)}</div>
                       </div>
                       <div className="flex items-center gap-2">

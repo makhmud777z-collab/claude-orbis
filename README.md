@@ -26,7 +26,9 @@ npm install
 npm run dev      # http://localhost:3000
 ```
 
-Проверки: `npm run typecheck`, `npm run build`.
+Проверки: `npm run typecheck`, `npm run build`, `npm run qa`
+(браузерный прогон: маршруты, роли, сценарии, адаптив — см.
+[scripts/qa](scripts/qa/README.md)).
 
 ### Проверить мультиарендность локально
 

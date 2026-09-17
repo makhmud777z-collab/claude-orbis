@@ -222,7 +222,7 @@ export function CatalogExplorer({
     ].filter(Boolean).length;
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[272px_1fr]">
+    <div className="grid min-w-0 gap-5 lg:grid-cols-[272px_1fr]">
       <aside className="lg:sticky lg:top-20 lg:h-fit">
         <div className="card p-5">
           <div className="mb-4">

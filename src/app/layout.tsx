@@ -4,7 +4,8 @@ import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { usersOfTenant } from "@/lib/data/users";
-import { editionModules } from "@/lib/edition";
+import { editionModules, homeHref } from "@/lib/edition";
+import { NAV } from "@/components/nav";
 import { roleLabel, visibleModules } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
 import { ROOT_DOMAIN, TENANTS } from "@/lib/tenants";
@@ -31,6 +32,11 @@ export default async function RootLayout({
   // Навигация = права роли ∩ модули версии продукта.
   const allowed = new Set(editionModules(session.tenant.edition));
   const modules = visibleModules(session.role).filter((m) => allowed.has(m));
+  // Дашборд есть не у всех ролей и не во всех версиях — логотип ведёт туда,
+  // куда сотрудник реально может попасть.
+  const home = modules.includes("dashboard")
+    ? homeHref(session.tenant.edition)
+    : (NAV.find((n) => n.href !== "/" && modules.includes(n.module))?.href ?? "/students");
 
   return (
     <html lang={session.locale} className={inter.variable}>
@@ -43,6 +49,7 @@ export default async function RootLayout({
             modules={modules}
             roleLabel={roleLabel(session.role)}
             locale={session.locale}
+            home={home}
           />
           <div className="relative z-10 flex min-w-0 flex-1 flex-col">
             <Topbar
@@ -52,8 +59,10 @@ export default async function RootLayout({
               tenants={TENANTS.map((t) => ({ slug: t.slug, name: t.name }))}
               staff={usersOfTenant(session.tenant.id)}
               locale={session.locale}
+              modules={modules}
+              home={home}
             />
-            <main className="flex-1 px-5 py-7 lg:px-8">{children}</main>
+            <main className="min-w-0 flex-1 px-5 py-7 lg:px-8">{children}</main>
           </div>
         </div>
       </body>

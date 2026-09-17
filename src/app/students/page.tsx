@@ -12,8 +12,13 @@ import { S } from "@/lib/strings";
 import { scopedStudents, scopedTeam } from "@/lib/queries";
 import { getSession } from "@/lib/session";
 
-export default async function StudentsPage() {
+export default async function StudentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
   const session = await getSession();
+  const { status } = await searchParams;
   const t = translator(session.locale);
   const gate = moduleGate(session, "students", t(S.nav.students));
   if (gate) return gate;
@@ -70,6 +75,7 @@ export default async function StudentsPage() {
         rows={rows}
         owners={scopedTeam(session).map((u) => ({ id: u.id, name: u.name }))}
         locale={session.locale}
+        initialStatus={status}
       />
     </>
   );
