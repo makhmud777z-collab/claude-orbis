@@ -1,6 +1,6 @@
 import { checklistKey, DOCUMENT_CHECKLIST } from "../labels";
 import type { DocumentStatus, StudentDocument } from "../types";
-import { APPLICATIONS } from "./applications";
+import { DEALS } from "./deals";
 import { STUDENTS } from "./students";
 
 /**
@@ -26,7 +26,7 @@ function statusFor(index: number, progress: number, noise: number): DocumentStat
 }
 
 export const DOCUMENTS: StudentDocument[] = STUDENTS.flatMap((student) => {
-  const apps = APPLICATIONS.filter((a) => a.studentId === student.id);
+  const apps = DEALS.filter((a) => a.studentId === student.id);
   const progress = Math.max(0, ...apps.map((a) => STAGE_WEIGHT[a.stage] ?? 0));
   const primaryApp = apps[0]?.id ?? null;
 
@@ -45,7 +45,7 @@ export const DOCUMENTS: StudentDocument[] = STUDENTS.flatMap((student) => {
       id: `d_${student.id}_${index}`,
       tenantId: student.tenantId,
       studentId: student.id,
-      applicationId: index < 4 ? primaryApp : null,
+      dealId: index < 4 ? primaryApp : null,
       kind: item.kind,
       fileName: hasFile
         ? `${student.latinName.toLowerCase().replace(/\s+/g, "_")}_${index + 1}.pdf`

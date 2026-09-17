@@ -1,6 +1,5 @@
 import { loc, type Loc } from "./i18n";
 import type {
-  ApplicationStage,
   DeadlineKind,
   DegreeLevel,
   DocumentStatus,
@@ -9,134 +8,11 @@ import type {
   TaskStatus,
 } from "./types";
 
-export interface StageMeta {
-  key: ApplicationStage;
-  label: Loc;
-  short: Loc;
-  /** цвет точки-индикатора; заливки остаются монохромными */
-  dot: string;
-  hint: Loc;
-}
-
-/** Воронка заявки: от первого контакта до вылета. */
-export const STAGES: StageMeta[] = [
-  {
-    key: "new",
-    label: loc("Новая заявка", "Yangi ariza"),
-    short: loc("Новые", "Yangi"),
-    dot: "var(--color-status-new)",
-    hint: loc(
-      "Лид оставил контакт, первый звонок не сделан",
-      "Lid kontakt qoldirdi, hali qo‘ng‘iroq qilinmadi",
-    ),
-  },
-  {
-    key: "consultation",
-    label: loc("Консультация", "Konsultatsiya"),
-    short: loc("Консультация", "Konsultatsiya"),
-    dot: "var(--color-status-open)",
-    hint: loc(
-      "Профиль собран, бюджет и цели обсуждены",
-      "Profil yig‘ilgan, byudjet va maqsadlar muhokama qilingan",
-    ),
-  },
-  {
-    key: "matching",
-    label: loc("Подбор вузов", "Universitet tanlash"),
-    short: loc("Подбор вуза", "Tanlov"),
-    dot: "var(--color-status-violet)",
-    hint: loc(
-      "Куратор формирует шорт-лист из каталога",
-      "Kurator katalogdan qisqa ro‘yxat tuzmoqda",
-    ),
-  },
-  {
-    key: "documents",
-    label: loc("Сбор документов", "Hujjat yig‘ish"),
-    short: loc("Документы", "Hujjatlar"),
-    dot: "var(--color-status-progress)",
-    hint: loc(
-      "Апостиль, переводы, справка из банка",
-      "Apostil, tarjimalar, bankdan ma’lumotnoma",
-    ),
-  },
-  {
-    key: "submitted",
-    label: loc("Подано в вуз", "Universitetga topshirildi"),
-    short: loc("Подача", "Topshirildi"),
-    dot: "var(--color-status-magenta)",
-    hint: loc(
-      "Пакет отправлен, оплачен вступительный взнос",
-      "Hujjatlar yuborildi, ariza to‘lovi to‘landi",
-    ),
-  },
-  {
-    key: "university_review",
-    label: loc("Ожидание вуза", "Universitet javobi"),
-    short: loc("Ожидание", "Kutilmoqda"),
-    dot: "var(--color-status-hold)",
-    hint: loc(
-      "Вуз рассматривает, возможно интервью",
-      "Universitet ko‘rib chiqmoqda, suhbat bo‘lishi mumkin",
-    ),
-  },
-  {
-    key: "offer",
-    label: loc("Получен offer", "Offer olindi"),
-    short: loc("Offer", "Offer"),
-    dot: "var(--color-status-deal)",
-    hint: loc(
-      "Пришло письмо о зачислении / CoA",
-      "Qabul xati / CoA keldi",
-    ),
-  },
-  {
-    key: "visa",
-    label: loc("Виза D-2 / D-4", "Viza D-2 / D-4"),
-    short: loc("Виза", "Viza"),
-    dot: "var(--color-status-open)",
-    hint: loc(
-      "Подача в консульство, ожидание решения",
-      "Konsullikka topshirildi, qaror kutilmoqda",
-    ),
-  },
-  {
-    key: "departed",
-    label: loc("Выехал", "Jo‘nab ketdi"),
-    short: loc("Выехал", "Jo‘nadi"),
-    dot: "var(--color-status-deal)",
-    hint: loc(
-      "Студент в Корее, кейс закрыт успешно",
-      "Talaba Koreyada, ish muvaffaqiyatli yopildi",
-    ),
-  },
-  {
-    key: "lost",
-    label: loc("Отказ / потерян", "Rad javobi"),
-    short: loc("Отказ", "Rad"),
-    dot: "var(--color-status-risk)",
-    hint: loc(
-      "Отказ вуза, консульства или самого студента",
-      "Universitet, konsullik yoki talabaning rad javobi",
-    ),
-  },
-];
-
-/** Колонки канбан-доски: активная операционка без архивных стадий. */
-export const BOARD_STAGES: ApplicationStage[] = [
-  "new",
-  "consultation",
-  "matching",
-  "documents",
-  "submitted",
-  "university_review",
-  "offer",
-  "visa",
-];
-
-export function stageMeta(stage: ApplicationStage): StageMeta {
-  return STAGES.find((s) => s.key === stage) ?? STAGES[0];
-}
+/**
+ * Стадии воронок больше не константы: они лежат в данных воронки (Pipeline),
+ * потому что агентство переименовывает их и меняет цвета в настройках CRM.
+ * Здесь остаются только справочники, которые не настраиваются.
+ */
 
 export const DOCUMENT_STATUS: Record<DocumentStatus, { label: Loc; dot: string }> = {
   missing: { label: loc("Нет файла", "Fayl yo‘q"), dot: "var(--color-status-risk)" },

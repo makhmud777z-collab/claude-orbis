@@ -63,10 +63,14 @@ export interface User {
   role: Role;
   email: string;
   phone: string;
+  /** второй номер: рабочий и личный держим отдельно — так просит карточка сотрудника */
+  phone2: string | null;
+  birthDate: string;
   branchId: string;
   title: string;
   status: "active" | "invited" | "suspended";
   lastActiveAt: string;
+  /** дата приёма на работу */
   joinedAt: string;
 }
 
@@ -117,6 +121,10 @@ export interface Student {
   ownerId: string;
   /** агент-партнёр, приведший студента; он видит только своих приведённых */
   referredById: string | null;
+  /** лид, из которого появился контакт */
+  leadId: string | null;
+  /** номер паспорта — третий ключ дедупликации после телефона и почты */
+  passport: string | null;
   status: "lead" | "active" | "enrolled" | "paused" | "lost";
   profile: StudentProfile;
   tags: string[];
@@ -124,9 +132,38 @@ export interface Student {
   lastTouchAt: string;
 }
 
-/* ── Заявки ──────────────────────────────────────────────────── */
+/* ── Лиды ────────────────────────────────────────────────────── */
 
-export type ApplicationStage =
+export type LeadStage = "new" | "qualification" | "in_progress" | "converted" | "junk";
+
+/**
+ * Лид — необработанное обращение. Живёт до квалификации: после конвертации
+ * появляется контакт (студент) и первая сделка, а лид закрывается.
+ * На один номер телефона активный лид может быть только один.
+ */
+export interface Lead {
+  id: string;
+  tenantId: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  source: LeadSource;
+  /** канал, из которого пришло обращение */
+  channelId: string | null;
+  comment: string;
+  stage: LeadStage;
+  stageEnteredAt: string;
+  ownerId: string;
+  branchId: string;
+  createdAt: string;
+  convertedContactId: string | null;
+  convertedDealId: string | null;
+  junkReason: string | null;
+}
+
+/* ── Сделки ──────────────────────────────────────────────────── */
+
+export type DealStage =
   | "new"
   | "consultation"
   | "matching"
@@ -138,15 +175,18 @@ export type ApplicationStage =
   | "departed"
   | "lost";
 
-export interface Application {
+export interface Deal {
   id: string;
   tenantId: string;
+  /** воронка, в которой идёт сделка */
+  pipelineId: string;
+  /** контакт (студент); сделок у контакта может быть несколько — по одной на вуз */
   studentId: string;
   universityId: string;
   programId: string;
   degreeLevel: DegreeLevel;
   intake: string;
-  stage: ApplicationStage;
+  stage: DealStage;
   stageEnteredAt: string;
   ownerId: string;
   priority: "low" | "normal" | "high";
@@ -158,6 +198,118 @@ export interface Application {
   paid: number;
   createdAt: string;
   note: string;
+  /** лид, из которого выросла сделка */
+  leadId: string | null;
+}
+
+/* ── Воронки ─────────────────────────────────────────────────── */
+
+export interface Stage {
+  key: string;
+  label: Loc;
+  /** цвет стадии: палитра или произвольный HEX, задаётся в настройках воронки */
+  color: string;
+  hint: Loc;
+  /** финальные стадии не показываются на доске отдельной колонкой */
+  final?: "won" | "lost";
+}
+
+export interface Pipeline {
+  id: string;
+  tenantId: string;
+  entity: "lead" | "deal";
+  name: Loc;
+  stages: Stage[];
+  isDefault: boolean;
+}
+
+/* ── История действий ────────────────────────────────────────── */
+
+export type TimelineKind =
+  | "stage"
+  | "comment"
+  | "activity"
+  | "reminder"
+  | "message"
+  | "task"
+  | "payment"
+  | "document"
+  | "system";
+
+export interface TimelineEvent {
+  id: string;
+  tenantId: string;
+  entity: "lead" | "deal" | "contact" | "employee";
+  entityId: string;
+  kind: TimelineKind;
+  title: Loc;
+  body: string | null;
+  authorId: string;
+  at: string;
+  /** откуда пришло событие: «Чат открытой линии — Instagram Direct» */
+  source: Loc | null;
+  dueAt: string | null;
+  done: boolean | null;
+}
+
+/* ── Каналы продаж ───────────────────────────────────────────── */
+
+export interface Channel {
+  id: string;
+  tenantId: string;
+  kind: "instagram" | "telegram" | "email" | "phone";
+  title: string;
+  handle: string;
+  status: "connected" | "pending" | "off";
+  connectedAt: string | null;
+  /** сколько лидов пришло из канала за месяц */
+  leadsPerMonth: number;
+}
+
+/* ── Структура компании и рабочий день ───────────────────────── */
+
+export interface Department {
+  id: string;
+  tenantId: string;
+  name: Loc;
+  parentId: string | null;
+  headId: string | null;
+}
+
+export interface WorkSession {
+  id: string;
+  tenantId: string;
+  userId: string;
+  date: string;
+  startedAt: string;
+  endedAt: string | null;
+  /** суммарная пауза в минутах */
+  breakMinutes: number;
+  /** пауза идёт прямо сейчас */
+  onBreakSince: string | null;
+}
+
+/* ── Проекты и шаблоны задач ─────────────────────────────────── */
+
+export interface Project {
+  id: string;
+  tenantId: string;
+  name: Loc;
+  description: string;
+  memberIds: string[];
+  leadId: string;
+  dueAt: string;
+  status: "active" | "done" | "paused";
+  createdAt: string;
+}
+
+export interface TaskTemplate {
+  id: string;
+  tenantId: string;
+  title: Loc;
+  description: Loc;
+  checklist: Loc[];
+  defaultAssigneeRole: Role;
 }
 
 /* ── Документы ───────────────────────────────────────────────── */
@@ -174,7 +326,7 @@ export interface StudentDocument {
   id: string;
   tenantId: string;
   studentId: string;
-  applicationId: string | null;
+  dealId: string | null;
   kind: Loc;
   fileName: string | null;
   sizeKb: number | null;
@@ -194,6 +346,7 @@ export type TaskStatus = "todo" | "in_progress" | "review" | "done";
 export interface Task {
   id: string;
   tenantId: string;
+  projectId: string | null;
   title: string;
   description: string;
   assigneeId: string;
@@ -202,7 +355,7 @@ export interface Task {
   priority: "low" | "normal" | "high";
   dueAt: string;
   createdAt: string;
-  relation: { type: "student" | "application" | "document" | "none"; id: string } | null;
+  relation: { type: "student" | "deal" | "lead" | "document" | "none"; id: string } | null;
 }
 
 /* ── Дедлайны ────────────────────────────────────────────────── */
@@ -223,7 +376,7 @@ export interface Deadline {
   title: Loc;
   date: string;
   ownerId: string;
-  relation: { type: "student" | "application" | "university"; id: string } | null;
+  relation: { type: "student" | "deal" | "university"; id: string } | null;
 }
 
 /* ── Каталог вузов ───────────────────────────────────────────── */

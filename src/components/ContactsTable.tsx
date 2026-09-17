@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Avatar, Chip, StatusDot } from "./ui";
 import { IconSearch } from "./icons";
+import { Select } from "./controls";
 import { formatters } from "@/lib/format";
 import { translator, type Loc, type Locale } from "@/lib/i18n";
 import {
@@ -17,20 +18,20 @@ import {
 import { S } from "@/lib/strings";
 import type { Student, User } from "@/lib/types";
 
-export interface StudentRow extends Student {
+export interface ContactRow extends Student {
   ownerName: string;
   branchName: string;
-  applicationsCount: number;
+  dealsCount: number;
   dossierPercent: number;
 }
 
-export function StudentsTable({
+export function ContactsTable({
   rows,
   owners,
   locale,
   initialStatus,
 }: {
-  rows: StudentRow[];
+  rows: ContactRow[];
   owners: Pick<User, "id" | "name">[];
   locale: Locale;
   initialStatus?: string;
@@ -101,30 +102,26 @@ export function StudentsTable({
         </div>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <select
+          <Select
+            locale={locale}
+            width={170}
             value={owner}
-            onChange={(e) => setOwner(e.target.value)}
-            className="field h-[30px] w-auto rounded-full py-0 text-[12px]"
-          >
-            <option value="all">{t(S.students.allCurators)}</option>
-            {owners.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
-          <select
+            onChange={setOwner}
+            options={[
+              { value: "all", label: t(S.students.allCurators) },
+              ...owners.map((o) => ({ value: o.id, label: o.name })),
+            ]}
+          />
+          <Select
+            locale={locale}
+            width={130}
             value={topik}
-            onChange={(e) => setTopik(e.target.value)}
-            className="field h-[30px] w-auto rounded-full py-0 text-[12px]"
-          >
-            <option value="all">{t(S.students.anyTopik)}</option>
-            {[1, 2, 3, 4, 5, 6].map((lvl) => (
-              <option key={lvl} value={lvl}>
-                TOPIK {lvl}+
-              </option>
-            ))}
-          </select>
+            onChange={setTopik}
+            options={[
+              { value: "all", label: t(S.students.anyTopik) },
+              ...[1, 2, 3, 4, 5, 6].map((lvl) => ({ value: String(lvl), label: `TOPIK ${lvl}+` })),
+            ]}
+          />
           <label className="relative flex items-center">
             <span className="pointer-events-none absolute left-3 text-ink-faint">
               <IconSearch size={13} />
@@ -163,7 +160,7 @@ export function StudentsTable({
                     className="group border-b border-hairline-soft transition-colors last:border-b-0 hover:bg-surface-2"
                   >
                     <td className="px-4 py-3.5">
-                      <Link href={`/students/${s.id}`} className="flex items-center gap-3">
+                      <Link href={`/crm/contacts/${s.id}`} className="flex items-center gap-3">
                         <Avatar name={s.fullName} size={32} />
                         <span className="min-w-0">
                           <span className="t-body-sm block truncate">{s.fullName}</span>
@@ -213,7 +210,7 @@ export function StudentsTable({
                     <td className="px-4 py-3.5">
                       <div className="t-caption t-num">{s.dossierPercent}%</div>
                       <div className="t-micro whitespace-nowrap text-ink-faint">
-                        {s.applicationsCount} {t(S.students.applicationsShort)}
+                        {s.dealsCount} {t(S.crm.dealsShort)}
                       </div>
                     </td>
                     <td className="px-4 py-3.5">

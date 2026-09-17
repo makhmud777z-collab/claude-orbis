@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Select } from "./controls";
 import { Avatar, Chip, StatusDot } from "./ui";
 import { TASK_STATUS } from "@/lib/labels";
 import { formatters } from "@/lib/format";
@@ -56,24 +57,22 @@ export function TasksBoard({
         <button onClick={() => setMine((v) => !v)}>
           <Chip active={mine}>{t(S.tasks.onlyMine)}</Chip>
         </button>
-        <select
+        <Select
+          locale={locale}
+          width={190}
           value={assignee}
-          onChange={(e) => setAssignee(e.target.value)}
-          className="field h-[30px] w-auto rounded-full py-0 text-[12px]"
-        >
-          <option value="all">{t(S.tasks.allAssignees)}</option>
-          {assignees.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </select>
+          onChange={setAssignee}
+          options={[
+            { value: "all", label: t(S.tasks.allAssignees) },
+            ...assignees.map((a) => ({ value: a.id, label: a.name })),
+          ]}
+        />
         <span className="t-micro ml-auto text-ink-faint">
           {filtered.filter((task) => task.overdue).length} {t(S.tasks.overdue)}
         </span>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {COLUMNS.map((status) => {
           const meta = TASK_STATUS[status];
           const items = filtered.filter((task) => task.status === status);

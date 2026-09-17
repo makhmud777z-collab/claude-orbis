@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { NAV } from "@/components/nav";
+import { navFor } from "@/components/nav";
+import { openModules } from "@/components/guard";
 import { IconArrowUpRight, IconExport, IconPlus } from "@/components/icons";
 import {
   Avatar,
@@ -14,17 +15,18 @@ import {
 import { userById } from "@/lib/data/users";
 import { formatters, isPast, isSoon } from "@/lib/format";
 import { translator } from "@/lib/i18n";
-import { BOARD_STAGES, DEADLINE_KIND, stageMeta } from "@/lib/labels";
+import { DEADLINE_KIND } from "@/lib/labels";
 import {
   scopedActivity,
-  scopedApplications,
+  scopedDeals,
   scopedDeadlines,
-  scopedStudents,
+  scopedContacts,
   scopedTasks,
 } from "@/lib/queries";
-import { editionModules, hasModule, homeHref } from "@/lib/edition";
-import { can, visibleModules } from "@/lib/rbac";
+import { hasModule, homeHref } from "@/lib/edition";
+import { allow } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
+import { defaultPipeline } from "@/lib/store";
 import { S } from "@/lib/strings";
 
 export default async function DashboardPage() {
@@ -37,20 +39,16 @@ export default async function DashboardPage() {
 
   // У роли может не быть дашборда (например, у агента-партнёра) —
   // уводим на первый доступный ей раздел вместо пустого экрана.
-  if (!can(session.role, "dashboard")) {
-    const inEdition = new Set(editionModules(session.tenant.edition));
-    const allowed = new Set(
-      visibleModules(session.role).filter((m) => inEdition.has(m)),
-    );
-    const first = NAV.find((n) => n.href !== "/" && allowed.has(n.module));
+  if (!allow(session.tenant.id, session.role, "dashboard")) {
+    const first = navFor(new Set(openModules(session))).find((n) => n.href !== "/");
     redirect(first?.href ?? "/universities");
   }
 
   const t = translator(session.locale);
   const f = formatters(session.locale);
 
-  const students = scopedStudents(session);
-  const applications = scopedApplications(session);
+  const students = scopedContacts(session);
+  const applications = scopedDeals(session);
   const deadlines = scopedDeadlines(session);
   const tasks = scopedTasks(session);
   const activity = scopedActivity(session);
@@ -65,11 +63,16 @@ export default async function DashboardPage() {
   const contracted = inPipeline.reduce((sum, a) => sum + a.contractValue, 0);
   const collected = inPipeline.reduce((sum, a) => sum + a.paid, 0);
 
-  const byStage = BOARD_STAGES.map((stage) => ({
-    stage,
-    meta: stageMeta(stage),
-    count: applications.filter((a) => a.stage === stage).length,
-  }));
+  // Воронка на дашборде повторяет настройки воронки сделок: те же стадии и цвета.
+  const pipeline = defaultPipeline(session.tenant.id, "deal");
+  const byStage = (pipeline?.stages ?? [])
+    .filter((stage) => !stage.final)
+    .map((stage) => ({
+      stage: stage.key,
+      label: t(stage.label),
+      dot: stage.color,
+      count: applications.filter((a) => a.stage === stage.key).length,
+    }));
   const maxStage = Math.max(1, ...byStage.map((s) => s.count));
 
   const myTasks = tasks
@@ -98,14 +101,14 @@ export default async function DashboardPage() {
             <button className="btn btn-secondary btn-sm">
               <IconExport size={15} /> {t(S.common.export)}
             </button>
-            <Link href="/applications" className="btn btn-primary btn-sm">
+            <Link href="/crm/deals" className="btn btn-primary btn-sm">
               <IconPlus size={15} /> {t(S.dashboard.newApplication)}
             </Link>
           </>
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
           label={t(S.dashboard.tileStudents)}
           value={active}
@@ -141,7 +144,7 @@ export default async function DashboardPage() {
       <section className="mt-9">
         <SectionTitle
           action={
-            <Link href="/applications" className="t-caption text-ink-muted hover:text-ink">
+            <Link href="/crm/deals" className="t-caption text-ink-muted hover:text-ink">
               {t(S.dashboard.openBoard)} <IconArrowUpRight size={13} className="inline" />
             </Link>
           }
@@ -149,21 +152,21 @@ export default async function DashboardPage() {
           {t(S.dashboard.funnel)}
         </SectionTitle>
         <div className="card grid grid-cols-2 divide-y divide-hairline-soft sm:grid-cols-4 sm:divide-y-0 xl:grid-cols-8">
-          {byStage.map(({ stage, meta, count }) => (
+          {byStage.map(({ stage, label, dot, count }) => (
             <Link
               key={stage}
-              href={`/applications?stage=${stage}`}
+              href={`/crm/deals?stage=${stage}`}
               className="group px-5 py-5 transition-colors hover:bg-surface-2 sm:border-r sm:border-hairline-soft sm:last:border-r-0"
             >
               <div className="t-micro flex items-center gap-2 whitespace-nowrap text-ink-muted">
-                <StatusDot color={meta.dot} />
-                {t(meta.short)}
+                <StatusDot color={dot} />
+                {label}
               </div>
               <div className="t-num mt-3 text-[26px] font-medium tracking-[-1.2px]">
                 {count}
               </div>
               <div className="mt-3">
-                <Progress percent={(count / maxStage) * 100} tone={meta.dot} />
+                <Progress percent={(count / maxStage) * 100} tone={dot} />
               </div>
             </Link>
           ))}
@@ -265,14 +268,14 @@ export default async function DashboardPage() {
           <SectionTitle>{t(S.dashboard.feed)}</SectionTitle>
           <div className="card divide-y divide-hairline-soft">
             {activity.slice(0, 7).map((e) => {
-              const actor = userById(e.actorId);
+              const actor = userById(e.authorId);
               return (
                 <div key={e.id} className="flex items-start gap-3 px-5 py-3">
                   <Avatar name={actor?.name ?? "—"} size={26} />
                   <div className="min-w-0 flex-1">
                     <div className="t-body-sm">
                       <span className="text-ink">{actor?.name}</span>{" "}
-                      <span className="text-ink-muted">{e.verb}</span> {e.object}
+                      <span className="text-ink-muted">{t(e.title)}</span>
                     </div>
                     <div className="t-micro mt-0.5 text-ink-faint">
                       {f.relativeTime(e.at)}

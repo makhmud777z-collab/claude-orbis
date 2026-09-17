@@ -2,9 +2,17 @@ import { chromium } from "playwright";
 
 const BASE = process.env.QA_BASE_URL ?? "http://localhost:3000";
 
-const ROUTES = ["/", "/students", "/students/s_001", "/applications", "/applications/a_001",
-  "/documents", "/tasks", "/deadlines", "/universities", "/universities/u_hallim",
-  "/universities/compare", "/finance", "/team", "/settings"];
+const ROUTES = [
+  "/",
+  "/crm/leads", "/crm/leads/l_001", "/crm/deals", "/crm/deals/d_001",
+  "/crm/contacts", "/crm/contacts/s_001", "/crm/pipelines", "/crm/channels", "/crm/settings",
+  "/tasks", "/tasks/projects", "/tasks/reports", "/tasks/templates",
+  "/documents", "/deadlines",
+  "/universities", "/universities/u_hallim", "/universities/compare",
+  "/finance",
+  "/team", "/team/u_nilufar", "/team/structure", "/team/reports",
+  "/admin/users", "/admin/permissions", "/settings",
+];
 const TENANTS = ["seoulway", "agencyx", "hanbridge"];
 
 /**
@@ -12,8 +20,10 @@ const TENANTS = ["seoulway", "agencyx", "hanbridge"];
  * не поломка, а работающая изоляция данных: именно так и должно быть.
  */
 const FOREIGN = {
-  "/students/s_001": ["agencyx", "hanbridge"],
-  "/applications/a_001": ["agencyx", "hanbridge"],
+  "/crm/contacts/s_001": ["agencyx", "hanbridge"],
+  "/crm/deals/d_001": ["agencyx", "hanbridge"],
+  "/crm/leads/l_001": ["agencyx", "hanbridge"],
+  "/team/u_nilufar": ["agencyx", "hanbridge"],
 };
 const LOCALES = ["ru", "uz"];
 
@@ -48,7 +58,7 @@ for (const tenant of TENANTS) {
         // Чужая запись обязана дать 404 — либо, если модуль не входит в версию
         // агентства, заглушку версии. В обоих случаях никаких данных в теле.
         const blocked = status === 404 || /Модуль не входит|Modul sizning/.test(txt);
-        const leaked = /Азиза Нурматова|Hallim Medical|Санжар Умаров/.test(txt);
+        const leaked = /Азиза Нурматова|Отабек Нурматов|Нилуфар Саидова/.test(txt);
         if (!blocked || leaked)
           problems.push([tenant, locale, route, "УТЕЧКА", `статус ${status}${leaked ? ", видны данные" : ""}`]);
         continue;

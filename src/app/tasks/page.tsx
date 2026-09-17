@@ -1,13 +1,14 @@
+import Link from "next/link";
 import { moduleGate } from "@/components/guard";
 import { IconPlus } from "@/components/icons";
 import { TasksBoard, type TaskCard } from "@/components/TasksBoard";
 import { PageHeader } from "@/components/ui";
-import { applicationById } from "@/lib/data/applications";
+import { dealById } from "@/lib/store";
 import { studentById } from "@/lib/data/students";
 import { userById } from "@/lib/data/users";
 import { translator } from "@/lib/i18n";
 import { isPast } from "@/lib/format";
-import { can } from "@/lib/rbac";
+import { allow } from "@/lib/rbac";
 import { S } from "@/lib/strings";
 import { scopedTasks, scopedTeam } from "@/lib/queries";
 import { getSession } from "@/lib/session";
@@ -22,9 +23,9 @@ export default async function TasksPage() {
     let relationLabel: string | null = null;
     if (task.relation?.type === "student") {
       relationLabel = studentById(task.relation.id)?.fullName ?? null;
-    } else if (task.relation?.type === "application") {
-      const app = applicationById(task.relation.id);
-      relationLabel = app ? `${t(S.applications.application)} ${app.id.toUpperCase()}` : null;
+    } else if (task.relation?.type === "deal") {
+      const deal = dealById(task.relation.id);
+      relationLabel = deal ? `${t(S.crm.deal)} ${deal.id.toUpperCase()}` : null;
     }
 
     return {
@@ -52,11 +53,13 @@ export default async function TasksPage() {
               {cards.filter((c) => c.status !== "done").length} {t(S.tasks.inProgress)}
             </span>
             <span className="text-ink-faint">·</span>
-            <span>{t(S.tasks.subtitle)}</span>
+            <Link href="/tasks/projects" className="hover:text-ink">{t(S.projects.title)}</Link>
+            <Link href="/tasks/reports" className="hover:text-ink">{t(S.projects.reports)}</Link>
+            <Link href="/tasks/templates" className="hover:text-ink">{t(S.projects.templates)}</Link>
           </>
         }
         actions={
-          can(session.role, "tasks", "create") ? (
+          allow(session.tenant.id, session.role, "tasks", "create") ? (
             <button className="btn btn-primary btn-sm">
               <IconPlus size={15} /> {t(S.tasks.create)}
             </button>

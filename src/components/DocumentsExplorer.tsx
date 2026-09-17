@@ -86,7 +86,7 @@ export function DocumentsExplorer({
         </label>
       </div>
 
-      <div className="grid min-w-0 gap-5 lg:grid-cols-[320px_1fr]">
+      <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-[320px_1fr]">
         <div className="min-w-0 space-y-2.5 lg:max-h-[72vh] lg:overflow-y-auto lg:pr-1">
           {visible.map((folder) => (
             <button
@@ -163,7 +163,7 @@ export function DocumentsExplorer({
               </div>
               <div className="flex items-center gap-2">
                 <Link
-                  href={`/students/${open.studentId}`}
+                  href={`/crm/contacts/${open.studentId}`}
                   className="btn btn-secondary btn-sm"
                 >
                   {t(S.applications.studentCard)}

@@ -11,7 +11,8 @@ import {
   SectionTitle,
   StatusDot,
 } from "@/components/ui";
-import { applicationsOfStudent } from "@/lib/data/applications";
+import { EditableFields } from "@/components/EditableFields";
+import { Timeline } from "@/components/Timeline";
 import { documentsOfStudent, dossierProgress } from "@/lib/data/documents";
 import { UNIVERSITIES, universityById } from "@/lib/data/universities";
 import { userById } from "@/lib/data/users";
@@ -26,16 +27,21 @@ import {
   OWNERSHIP_LABEL,
   ref,
   SOURCE_LABEL,
-  stageMeta,
   STUDENT_STATUS,
 } from "@/lib/labels";
 import { matchStudent, verdictDot, verdictLabel } from "@/lib/matching";
-import { scopedStudents, scopedTasks } from "@/lib/queries";
-import { can } from "@/lib/rbac";
+import { scopedContacts, scopedDeals, scopedTasks } from "@/lib/queries";
+import { allow } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
+import { pipelineById, stageOf } from "@/lib/store";
 import { S } from "@/lib/strings";
+import { timelineItems } from "@/lib/timeline-view";
 
-export default async function StudentPage({
+/**
+ * Карточка контакта. Человек в системе один: сюда стекается его история,
+ * а подачи в вузы живут отдельными сделками — их у одного контакта много.
+ */
+export default async function ContactPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -46,21 +52,22 @@ export default async function StudentPage({
   const f = formatters(session.locale);
   const rate = session.tenant.usdRate;
 
-  const gate = moduleGate(session, "students", t(S.nav.students));
+  const gate = moduleGate(session, "contacts", t(S.crm.contacts));
   if (gate) return gate;
 
-  const student = scopedStudents(session).find((s) => s.id === id);
+  const student = scopedContacts(session).find((s) => s.id === id);
   if (!student) notFound();
 
+  const canEdit = allow(session.tenant.id, session.role, "contacts", "edit");
   const owner = userById(student.ownerId);
-  const apps = applicationsOfStudent(student.id);
+  const apps = scopedDeals(session).filter((d) => d.studentId === student.id);
   const docs = documentsOfStudent(student.id);
   const dossier = dossierProgress(student.id);
   const status = STUDENT_STATUS[student.status];
   const tasks = scopedTasks(session).filter(
     (task) =>
       (task.relation?.type === "student" && task.relation.id === student.id) ||
-      (task.relation?.type === "application" &&
+      (task.relation?.type === "deal" &&
         apps.some((a) => a.id === task.relation?.id)),
   );
   const shortlist = matchStudent(student, UNIVERSITIES)
@@ -70,8 +77,8 @@ export default async function StudentPage({
   return (
     <>
       <div className="t-caption mb-4 flex items-center gap-2 text-ink-faint">
-        <Link href="/students" className="hover:text-ink">
-          {t(S.nav.students)}
+        <Link href="/crm/contacts" className="hover:text-ink">
+          {t(S.crm.contacts)}
         </Link>
         <span>/</span>
         <span className="text-ink-muted">{student.fullName}</span>
@@ -110,23 +117,66 @@ export default async function StudentPage({
         }
       />
 
-      <div className="grid min-w-0 gap-5 xl:grid-cols-[340px_1fr]">
+      <div className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-[340px_1fr]">
         <div className="space-y-5">
+          <EditableFields
+            entity="contact"
+            id={student.id}
+            title={t(S.crm.mainFields)}
+            locale={session.locale}
+            canEdit={canEdit}
+            fields={[
+              { name: "fullName", label: t(S.common.fullName), value: student.fullName, display: student.fullName },
+              { name: "latinName", label: t(S.common.latinName), value: student.latinName, display: student.latinName },
+              { name: "phone", label: t(S.crm.phone), value: student.phone, display: student.phone },
+              { name: "email", label: "Email", value: student.email, display: student.email },
+              {
+                name: "birthDate",
+                label: t(S.students.birthDate),
+                value: student.birthDate,
+                display: f.date(student.birthDate),
+                kind: "date",
+              },
+              {
+                name: "city",
+                label: t(S.students.colStudent),
+                value: student.city,
+                display: t(ref(CITY_LABEL, student.city)),
+              },
+              {
+                name: "passport",
+                label: t(S.students.passport),
+                value: student.passport ?? "",
+                display: student.passport ?? "—",
+              },
+            ]}
+          />
+
           <div className="card p-5">
-            <div className="mb-4 flex items-center gap-3">
-              <Avatar name={student.fullName} size={44} />
-              <div className="min-w-0">
-                <div className="t-body-sm truncate">{student.phone}</div>
-                <div className="t-micro truncate text-ink-faint">{student.email}</div>
-              </div>
-            </div>
-            <Field label={t(S.students.birthDate)} value={f.date(student.birthDate)} />
             <Field label={t(S.students.education)} value={student.profile.education} />
             <Field label={t(S.students.gradYear)} value={student.profile.graduationYear} />
             <Field label={t(S.students.colCurator)} value={owner?.name ?? "—"} />
             <Field label={t(S.students.inBaseSince)} value={f.date(student.createdAt)} />
             <Field label={t(S.students.lastTouch)} value={f.date(student.lastTouchAt)} />
+            {student.leadId ? (
+              <Field
+                label={t(S.crm.createdFromLead)}
+                value={
+                  <Link href={`/crm/leads/${student.leadId}`} className="hover:underline">
+                    {student.leadId.toUpperCase()}
+                  </Link>
+                }
+              />
+            ) : null}
           </div>
+
+          <Timeline
+            entity="contact"
+            entityId={student.id}
+            items={timelineItems("contact", student.id, t)}
+            locale={session.locale}
+            canWrite={canEdit}
+          />
 
           <div className="card p-5">
             <div className="t-caption mb-3 uppercase tracking-[0.07em] text-ink-faint">
@@ -233,28 +283,28 @@ export default async function StudentPage({
           </section>
 
           <section>
-            <SectionTitle>{t(S.students.applications)}</SectionTitle>
+            <SectionTitle>{t(S.crm.dealsOfContact)}</SectionTitle>
             <div className="card divide-y divide-hairline-soft">
               {apps.length ? (
                 apps.map((a) => {
                   const uni = universityById(a.universityId);
-                  const meta = stageMeta(a.stage);
+                  const stage = stageOf(pipelineById(a.pipelineId), a.stage);
                   return (
                     <Link
                       key={a.id}
-                      href={`/applications/${a.id}`}
+                      href={`/crm/deals/${a.id}`}
                       className="flex flex-wrap items-center gap-4 px-5 py-4 transition-colors hover:bg-surface-2"
                     >
                       <div className="min-w-[220px] flex-1">
-                        <div className="t-body-sm">{uni?.name}</div>
+                        <div className="t-body-sm">{uni?.name ?? t(S.common.notSet)}</div>
                         <div className="t-micro text-ink-faint">
-                          {uni?.programs.find((p) => p.id === a.programId)?.name} ·{" "}
+                          {uni?.programs.find((p) => p.id === a.programId)?.name ?? "—"} ·{" "}
                           {t(ref(INTAKE_LABEL, a.intake))}
                         </div>
                       </div>
                       <span className="chip">
-                        <StatusDot color={meta.dot} />
-                        {t(meta.label)}
+                        <StatusDot color={stage?.color ?? "var(--color-ink-faint)"} />
+                        {stage ? t(stage.label) : a.stage}
                       </span>
                       <div className="t-caption t-num w-28 text-right text-ink-muted">
                         {f.relativeDeadline(a.deadline)}
@@ -267,7 +317,7 @@ export default async function StudentPage({
                 })
               ) : (
                 <div className="t-body-sm px-5 py-8 text-center text-ink-muted">
-                  {t(S.common.noApplications)}
+                  {t(S.crm.noDeals)}
                 </div>
               )}
             </div>
@@ -284,7 +334,7 @@ export default async function StudentPage({
             >
               {t(S.students.recommended)}
             </SectionTitle>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {shortlist.map((m) => (
                 <Link
                   key={`${m.university.id}_${m.program.id}`}

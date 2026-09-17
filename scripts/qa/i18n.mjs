@@ -8,6 +8,12 @@ import { join } from "node:path";
 
 const ALLOW = /^(Instagram|Telegram|TOPIK|IELTS|GPA|Pro|Standard|Enterprise|CRM|Advanced|University Finder|Offer|Viza|Admission guideline|[\d\s—·%+.,:/-]*)$/;
 
+/**
+ * Строка без кириллицы — имя собственное: название агентства, бренд, латиница.
+ * Переводить её не нужно, совпадение здесь нормально.
+ */
+const isProperName = (value) => !/[А-Яа-яЁё]/.test(value);
+
 function files(dir) {
   return readdirSync(dir).flatMap((name) => {
     const p = join(dir, name);
@@ -22,7 +28,7 @@ for (const file of files("src")) {
   let m;
   while ((m = re.exec(src))) {
     const [, ru, uz] = m;
-    if (ru === uz && !ALLOW.test(ru.trim())) {
+    if (ru === uz && !ALLOW.test(ru.trim()) && !isProperName(ru)) {
       suspicious.push(`${file}: «${ru}»`);
     }
   }
@@ -30,3 +36,5 @@ for (const file of files("src")) {
 
 console.log(suspicious.length ? `Совпадающие переводы (${suspicious.length}):` : "Переводы на месте: узбекские строки отличаются от русских");
 suspicious.forEach((s) => console.log(" - " + s));
+
+process.exit(suspicious.length ? 1 : 0);

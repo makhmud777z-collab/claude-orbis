@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { IconSearch } from "./icons";
+import { Select } from "./controls";
 import { Chip, StatusDot } from "./ui";
 import { formatters } from "@/lib/format";
 import { translator, type Locale } from "@/lib/i18n";
@@ -222,25 +223,23 @@ export function CatalogExplorer({
     ].filter(Boolean).length;
 
   return (
-    <div className="grid min-w-0 gap-5 lg:grid-cols-[272px_1fr]">
+    <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-[272px_1fr]">
       <aside className="lg:sticky lg:top-20 lg:h-fit">
         <div className="card p-5">
           <div className="mb-4">
             <div className="t-micro mb-2 uppercase tracking-[0.07em] text-ink-faint">
               {t(S.universities.pickForStudent)}
             </div>
-            <select
+            <Select
+              locale={locale}
+              width="100%"
               value={studentId}
-              onChange={(e) => applyStudent(e.target.value)}
-              className="field text-[13px]"
-            >
-              <option value="none">{t(S.universities.chooseStudent)}</option>
-              {students.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.fullName}
-                </option>
-              ))}
-            </select>
+              onChange={applyStudent}
+              options={[
+                { value: "none", label: t(S.universities.chooseStudent) },
+                ...students.map((s) => ({ value: s.id, label: s.fullName })),
+              ]}
+            />
             {student ? (
               <>
                 <button onClick={toggleStrict} className="mt-2.5 block">
@@ -305,85 +304,78 @@ export function CatalogExplorer({
             </FilterGroup>
 
             <FilterGroup title={t(S.universities.degree)}>
-              <select
+              <Select
+                locale={locale}
+                width="100%"
                 value={filters.degree}
-                onChange={(e) => set("degree", e.target.value as Filters["degree"])}
-                className="field text-[13px]"
-              >
-                <option value="all">{t(S.universities.any)}</option>
-                {DEGREES.map((d) => (
-                  <option key={d} value={d}>
-                    {t(DEGREE_LABEL[d])}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => set("degree", v as Filters["degree"])}
+                options={[
+                  { value: "all", label: t(S.universities.any) },
+                  ...DEGREES.map((d) => ({ value: d, label: t(DEGREE_LABEL[d]) })),
+                ]}
+              />
             </FilterGroup>
 
             <FilterGroup title={t(S.universities.studentTopik)}>
-              <select
+              <Select
+                locale={locale}
+                width="100%"
                 value={String(filters.topik)}
-                onChange={(e) =>
-                  set("topik", e.target.value === "all" ? "all" : Number(e.target.value))
-                }
-                className="field text-[13px]"
-              >
-                <option value="all">{t(S.universities.notImportant)}</option>
-                {[0, 1, 2, 3, 4, 5, 6].map((l) => (
-                  <option key={l} value={l}>
-                    {l === 0 ? t(S.universities.noCertificate) : `TOPIK ${l}`}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => set("topik", v === "all" ? "all" : Number(v))}
+                options={[
+                  { value: "all", label: t(S.universities.notImportant) },
+                  ...[0, 1, 2, 3, 4, 5, 6].map((l) => ({
+                    value: String(l),
+                    label: l === 0 ? t(S.universities.noCertificate) : `TOPIK ${l}`,
+                  })),
+                ]}
+              />
             </FilterGroup>
 
             <FilterGroup title={t(S.universities.studentIelts)}>
-              <select
+              <Select
+                locale={locale}
+                width="100%"
                 value={String(filters.ielts)}
-                onChange={(e) =>
-                  set("ielts", e.target.value === "all" ? "all" : Number(e.target.value))
-                }
-                className="field text-[13px]"
-              >
-                <option value="all">{t(S.universities.notImportant)}</option>
-                {[5, 5.5, 6, 6.5, 7].map((l) => (
-                  <option key={l} value={l}>
-                    IELTS {l}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => set("ielts", v === "all" ? "all" : Number(v))}
+                options={[
+                  { value: "all", label: t(S.universities.notImportant) },
+                  ...[5, 5.5, 6, 6.5, 7].map((l) => ({
+                    value: String(l),
+                    label: `IELTS ${l}`,
+                  })),
+                ]}
+              />
             </FilterGroup>
 
             <FilterGroup title={t(S.universities.budgetPerYear)}>
-              <select
+              <Select
+                locale={locale}
+                width="100%"
                 value={String(filters.budget)}
-                onChange={(e) =>
-                  set("budget", e.target.value === "all" ? "all" : Number(e.target.value))
-                }
-                className="field text-[13px]"
-              >
-                <option value="all">{t(S.universities.any)}</option>
-                {BUDGETS.map((b) => (
-                  <option key={b} value={b}>
-                    {t(S.universities.upTo)} {f.usd(b)} ·{" "}
-                    {f.som(b * usdRate, { compact: true })}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => set("budget", v === "all" ? "all" : Number(v))}
+                options={[
+                  { value: "all", label: t(S.universities.any) },
+                  ...BUDGETS.map((b) => ({
+                    value: String(b),
+                    label: `${t(S.universities.upTo)} ${f.usd(b)}`,
+                    hint: f.som(b * usdRate, { compact: true }),
+                  })),
+                ]}
+              />
             </FilterGroup>
 
             <FilterGroup title={t(S.universities.intake)}>
-              <select
+              <Select
+                locale={locale}
+                width="100%"
                 value={filters.intake}
-                onChange={(e) => set("intake", e.target.value)}
-                className="field text-[13px]"
-              >
-                <option value="all">{t(S.universities.any)}</option>
-                {intakes.map((i) => (
-                  <option key={i} value={i}>
-                    {t(ref(INTAKE_LABEL, i))}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => set("intake", v)}
+                options={[
+                  { value: "all", label: t(S.universities.any) },
+                  ...intakes.map((i) => ({ value: i, label: t(ref(INTAKE_LABEL, i)) })),
+                ]}
+              />
             </FilterGroup>
 
             <FilterGroup title={t(S.universities.conditions)}>

@@ -1,17 +1,24 @@
 import { loc, type Loc } from "./i18n";
+import { permissionOverrides } from "./store";
 import type { Role } from "./types";
 
-/** Модули системы = разделы навигации + объекты прав. */
+/** Модули системы = разделы навигации + объекты прав, как в Битриксе. */
 export type Module =
   | "dashboard"
-  | "students"
-  | "applications"
+  | "leads"
+  | "deals"
+  | "contacts"
+  | "crmSettings"
   | "universities"
   | "documents"
   | "tasks"
+  | "projects"
   | "deadlines"
   | "team"
+  | "structure"
+  | "staffReports"
   | "finance"
+  | "admin"
   | "settings";
 
 export type Action = "view" | "create" | "edit" | "delete" | "export" | "assign";
@@ -31,6 +38,34 @@ const ALL: Action[] = ["view", "create", "edit", "delete", "export", "assign"];
 const RW: Action[] = ["view", "create", "edit"];
 const RO: Action[] = ["view"];
 
+export const MODULE_LABEL: Record<Module, Loc> = {
+  dashboard: loc("Дашборд", "Boshqaruv paneli"),
+  leads: loc("Лиды", "Lidlar"),
+  deals: loc("Сделки", "Bitimlar"),
+  contacts: loc("Контакты", "Kontaktlar"),
+  crmSettings: loc("Настройки CRM", "CRM sozlamalari"),
+  universities: loc("Каталог вузов", "Universitetlar katalogi"),
+  documents: loc("Документы", "Hujjatlar"),
+  tasks: loc("Задачи", "Vazifalar"),
+  projects: loc("Проекты", "Loyihalar"),
+  deadlines: loc("Дедлайны", "Muddatlar"),
+  team: loc("Сотрудники", "Xodimlar"),
+  structure: loc("Структура компании", "Kompaniya tuzilmasi"),
+  staffReports: loc("Отчётность", "Hisobot"),
+  finance: loc("Финансы", "Moliya"),
+  admin: loc("Администрирование", "Boshqaruv"),
+  settings: loc("Настройки", "Sozlamalar"),
+};
+
+export const ACTION_LABEL: Record<Action, Loc> = {
+  view: loc("Просмотр", "Ko‘rish"),
+  create: loc("Создание", "Yaratish"),
+  edit: loc("Изменение", "O‘zgartirish"),
+  delete: loc("Удаление", "O‘chirish"),
+  export: loc("Выгрузка", "Yuklab olish"),
+  assign: loc("Назначение", "Tayinlash"),
+};
+
 export const ROLES: RoleDefinition[] = [
   {
     key: "owner",
@@ -41,16 +76,9 @@ export const ROLES: RoleDefinition[] = [
     ),
     scope: "tenant",
     permissions: {
-      dashboard: RO,
-      students: ALL,
-      applications: ALL,
-      universities: ALL,
-      documents: ALL,
-      tasks: ALL,
-      deadlines: ALL,
-      team: ALL,
-      finance: ALL,
-      settings: ALL,
+      dashboard: RO, leads: ALL, deals: ALL, contacts: ALL, crmSettings: ALL,
+      universities: ALL, documents: ALL, tasks: ALL, projects: ALL, deadlines: ALL,
+      team: ALL, structure: ALL, staffReports: ALL, finance: ALL, admin: ALL, settings: ALL,
     },
   },
   {
@@ -62,16 +90,10 @@ export const ROLES: RoleDefinition[] = [
     ),
     scope: "tenant",
     permissions: {
-      dashboard: RO,
-      students: ALL,
-      applications: ALL,
-      universities: [...RW, "export"],
-      documents: ALL,
-      tasks: ALL,
-      deadlines: ALL,
-      team: [...RW, "assign"],
-      finance: [...RO, "export"],
-      settings: RW,
+      dashboard: RO, leads: ALL, deals: ALL, contacts: ALL, crmSettings: ALL,
+      universities: [...RW, "export"], documents: ALL, tasks: ALL, projects: ALL,
+      deadlines: ALL, team: [...RW, "assign"], structure: RW, staffReports: [...RO, "export"],
+      finance: [...RO, "export"], admin: RW, settings: RW,
     },
   },
   {
@@ -83,52 +105,36 @@ export const ROLES: RoleDefinition[] = [
     ),
     scope: "branch",
     permissions: {
-      dashboard: RO,
-      students: [...RW, "assign", "export"],
-      applications: [...RW, "assign", "export"],
-      universities: RO,
-      documents: RW,
-      tasks: [...RW, "assign", "delete"],
-      deadlines: RO,
-      team: RO,
-      finance: RO,
-      settings: RO,
+      dashboard: RO, leads: [...RW, "assign"], deals: [...RW, "assign", "export"],
+      contacts: [...RW, "assign", "export"], universities: RO, documents: RW,
+      tasks: [...RW, "assign", "delete"], projects: RW, deadlines: RO,
+      team: RO, structure: RO, staffReports: RO, finance: RO, settings: RO,
     },
   },
   {
     key: "sales_manager",
     label: loc("Менеджер по продажам", "Sotuv menejeri"),
     description: loc(
-      "Лиды и свои студенты: консультация, договор, передача куратору. Документы — только просмотр.",
-      "Lidlar va o‘z talabalari: konsultatsiya, shartnoma, kuratorga topshirish. Hujjatlar — faqat ko‘rish.",
+      "Лиды и свои контакты: обращение, квалификация, договор, передача куратору. Документы — только просмотр.",
+      "Lidlar va o‘z kontaktlari: murojaat, malaka, shartnoma, kuratorga topshirish.",
     ),
     scope: "own",
     permissions: {
-      dashboard: RO,
-      students: RW,
-      applications: RW,
-      universities: RO,
-      documents: RO,
-      tasks: RW,
-      deadlines: RO,
+      dashboard: RO, leads: RW, deals: RW, contacts: RW, universities: RO,
+      documents: RO, tasks: RW, projects: RO, deadlines: RO,
     },
   },
   {
     key: "case_manager",
     label: loc("Куратор (оператор)", "Kurator (operator)"),
     description: loc(
-      "Ведёт заявку от подбора вуза до выезда: подбор, документы, подача, переписка с вузом.",
-      "Arizani tanlovdan jo‘nashgacha olib boradi: tanlov, hujjatlar, topshirish, yozishmalar.",
+      "Ведёт сделку от подбора вуза до выезда: подбор, документы, подача, переписка с вузом.",
+      "Bitimni tanlovdan jo‘nashgacha olib boradi.",
     ),
     scope: "own",
     permissions: {
-      dashboard: RO,
-      students: RW,
-      applications: RW,
-      universities: RO,
-      documents: RW,
-      tasks: RW,
-      deadlines: RO,
+      dashboard: RO, leads: RO, deals: RW, contacts: RW, universities: RO,
+      documents: RW, tasks: RW, projects: RO, deadlines: RO,
     },
   },
   {
@@ -136,48 +142,36 @@ export const ROLES: RoleDefinition[] = [
     label: loc("Специалист по документам", "Hujjatlar bo‘yicha mutaxassis"),
     description: loc(
       "Проверка, апостиль, переводы, сроки годности справок и сертификатов.",
-      "Tekshiruv, apostil, tarjimalar, ma’lumotnoma va sertifikat muddatlari.",
+      "Tekshiruv, apostil, tarjimalar, hujjat muddatlari.",
     ),
     scope: "branch",
     permissions: {
-      dashboard: RO,
-      students: RO,
-      applications: RO,
-      documents: [...RW, "delete"],
-      tasks: RW,
-      deadlines: RO,
+      dashboard: RO, deals: RO, contacts: RO, documents: [...RW, "delete"],
+      tasks: RW, projects: RO, deadlines: RO,
     },
   },
   {
     key: "finance",
     label: loc("Финансы", "Moliyachi"),
     description: loc(
-      "Платежи, договоры, сверка оплат. Профили студентов — только чтение.",
-      "To‘lovlar, shartnomalar, solishtirish. Talaba profillari — faqat o‘qish.",
+      "Платежи, договоры, сверка оплат. Карточки контактов — только чтение.",
+      "To‘lovlar, shartnomalar, solishtirish. Kontaktlar — faqat o‘qish.",
     ),
     scope: "tenant",
     permissions: {
-      dashboard: RO,
-      students: RO,
-      applications: RO,
-      finance: [...RW, "export"],
-      tasks: RO,
-      deadlines: RO,
+      dashboard: RO, deals: RO, contacts: RO, finance: [...RW, "export"],
+      tasks: RO, deadlines: RO, staffReports: RO,
     },
   },
   {
     key: "partner",
     label: loc("Агент-партнёр", "Hamkor agent"),
     description: loc(
-      "Внешний партнёр: видит только приведённых им студентов и статус их заявок.",
-      "Tashqi hamkor: faqat o‘zi olib kelgan talabalarni va ularning holatini ko‘radi.",
+      "Внешний партнёр: видит только приведённых им студентов и статус их сделок.",
+      "Tashqi hamkor: faqat o‘zi olib kelgan talabalarni ko‘radi.",
     ),
     scope: "own",
-    permissions: {
-      students: RO,
-      applications: RO,
-      tasks: RO,
-    },
+    permissions: { contacts: RO, deals: RO, tasks: RO },
   },
 ];
 
@@ -193,13 +187,30 @@ export function roleLabel(role: Role): Loc {
   return roleDef(role).label;
 }
 
+/**
+ * Права роли с учётом настроек агентства: администратор меняет матрицу
+ * в разделе «Права доступа», её переопределения лежат в хранилище.
+ */
+export function effectivePermissions(
+  tenantId: string,
+  role: Role,
+): Partial<Record<Module, Action[]>> {
+  return { ...roleDef(role).permissions, ...(permissionOverrides(tenantId)[role] ?? {}) };
+}
+
+/** Проверка по умолчанию, без настроек агентства. */
 export function can(role: Role, module: Module, action: Action = "view"): boolean {
   return roleDef(role).permissions[module]?.includes(action) ?? false;
 }
 
-export function visibleModules(role: Role): Module[] {
-  const def = roleDef(role);
-  return (Object.keys(def.permissions) as Module[]).filter((m) =>
-    can(role, m, "view"),
-  );
+/** Проверка с учётом настроек агентства — её и следует использовать в разделах. */
+export function allow(
+  tenantId: string, role: Role, module: Module, action: Action = "view",
+): boolean {
+  return effectivePermissions(tenantId, role)[module]?.includes(action) ?? false;
+}
+
+export function visibleModules(tenantId: string, role: Role): Module[] {
+  const perms = effectivePermissions(tenantId, role);
+  return (Object.keys(perms) as Module[]).filter((m) => perms[m]?.includes("view"));
 }

@@ -19,7 +19,7 @@ import {
   VISA_GRADE_LABEL,
 } from "@/lib/labels";
 import { matchStudent, verdictDot, verdictLabel } from "@/lib/matching";
-import { scopedStudents } from "@/lib/queries";
+import { scopedContacts } from "@/lib/queries";
 import { getSession } from "@/lib/session";
 import { NO_STUDENT } from "@/lib/shortlist";
 import { shortlistFor } from "@/lib/shortlist.server";
@@ -40,7 +40,7 @@ export default async function ComparePage({
   if (gate) return gate;
 
   const { student: studentParam } = await searchParams;
-  const students = scopedStudents(session);
+  const students = scopedContacts(session);
   const student = students.find((s) => s.id === studentParam) ?? null;
 
   const ids = await shortlistFor(student?.id ?? NO_STUDENT);

@@ -11,7 +11,7 @@ import {
 import { formatters } from "@/lib/format";
 import { translator, LOCALES, type Loc } from "@/lib/i18n";
 import { BRANCH_LABEL, CITY_LABEL, ref } from "@/lib/labels";
-import { can, ROLES } from "@/lib/rbac";
+import { allow, ROLES } from "@/lib/rbac";
 import { S } from "@/lib/strings";
 import { getSession } from "@/lib/session";
 import { ROOT_DOMAIN } from "@/lib/tenants";
@@ -55,7 +55,7 @@ export default async function SettingsPage() {
           </>
         }
         actions={
-          can(session.role, "settings", "edit") ? (
+          allow(session.tenant.id, session.role, "settings", "edit") ? (
             <button className="btn btn-primary btn-sm">
               {t(S.settings.saveChanges)}
             </button>
@@ -63,7 +63,7 @@ export default async function SettingsPage() {
         }
       />
 
-      <div className="grid min-w-0 gap-5 xl:grid-cols-[1fr_360px]">
+      <div className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-[1fr_360px]">
         <div className="min-w-0 space-y-5">
           <DomainCard
             slug={tenant.slug}

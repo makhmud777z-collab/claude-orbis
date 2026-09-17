@@ -1,0 +1,425 @@
+import { CHANNELS } from "./data/channels";
+import { DEALS } from "./data/deals";
+import { LEADS, digits, isActiveLead } from "./data/leads";
+import { DEPARTMENT_OF, PROJECTS, WORK_SESSIONS } from "./data/org";
+import { PIPELINES } from "./data/pipelines";
+import { STUDENTS } from "./data/students";
+import { TASKS } from "./data/tasks";
+import { TIMELINE } from "./data/timeline";
+import { USERS } from "./data/users";
+import { loc, type Loc } from "./i18n";
+import type { Action, Module } from "./rbac";
+import type {
+  Deal, Department, Lead, Pipeline, Project, Role, Stage, Student, Task,
+  TimelineEvent, User, WorkSession,
+} from "./types";
+
+/**
+ * Изменяемое хранилище поверх демо-данных.
+ *
+ * Пока нет базы, действия пользователя (перенос карточки, отметка рабочего дня,
+ * переименование стадии, конвертация лида) должны где-то сохраняться — иначе
+ * интерфейс притворяется рабочим. Состояние живёт в памяти процесса и
+ * сбрасывается при перезапуске сервера; при переходе на Postgres этот модуль
+ * заменяется репозиториями с теми же сигнатурами.
+ */
+
+interface State {
+  leads: Lead[];
+  deals: Deal[];
+  students: Student[];
+  tasks: Task[];
+  pipelines: Pipeline[];
+  timeline: TimelineEvent[];
+  sessions: WorkSession[];
+  projects: Project[];
+  /** переопределения прав по арендаторам: tenantId → роль → модуль → действия */
+  permissions: Record<string, Partial<Record<Role, Partial<Record<Module, Action[]>>>>>;
+  /** какие поля показывать на карточке канбана: userId → список полей */
+  cardFields: Record<string, string[]>;
+  seq: number;
+}
+
+const globalStore = globalThis as unknown as { __orbisStore?: State };
+
+function createState(): State {
+  return {
+    leads: LEADS.map((x) => ({ ...x })),
+    deals: DEALS.map((x) => ({ ...x })),
+    students: STUDENTS.map((x) => ({ ...x })),
+    tasks: TASKS.map((x) => ({ ...x })),
+    pipelines: PIPELINES.map((p) => ({ ...p, stages: p.stages.map((s) => ({ ...s })) })),
+    timeline: TIMELINE.map((x) => ({ ...x })),
+    sessions: WORK_SESSIONS.map((x) => ({ ...x })),
+    projects: PROJECTS.map((x) => ({ ...x })),
+    permissions: {},
+    cardFields: {},
+    seq: 1000,
+  };
+}
+
+const state: State = (globalStore.__orbisStore ??= createState());
+
+const nextId = (prefix: string) => `${prefix}_${++state.seq}`;
+const now = () => "2026-09-16T09:30:00";
+const today = () => "2026-09-16";
+
+/* ── чтение ──────────────────────────────────────────────────── */
+export const allLeads = (tenantId: string) => state.leads.filter((l) => l.tenantId === tenantId);
+export const allDeals = (tenantId: string) => state.deals.filter((d) => d.tenantId === tenantId);
+export const allStudents = (tenantId: string) => state.students.filter((s) => s.tenantId === tenantId);
+export const allTasks = (tenantId: string) => state.tasks.filter((t) => t.tenantId === tenantId);
+export const allProjects = (tenantId: string) => state.projects.filter((p) => p.tenantId === tenantId);
+export const leadById = (id: string) => state.leads.find((l) => l.id === id);
+export const dealById = (id: string) => state.deals.find((d) => d.id === id);
+export const studentById = (id: string) => state.students.find((s) => s.id === id);
+
+export const pipelinesOf = (tenantId: string, entity: "lead" | "deal") =>
+  state.pipelines.filter((p) => p.tenantId === tenantId && p.entity === entity);
+export const pipelineById = (id: string) => state.pipelines.find((p) => p.id === id);
+export function defaultPipeline(tenantId: string, entity: "lead" | "deal"): Pipeline {
+  const list = pipelinesOf(tenantId, entity);
+  return list.find((p) => p.isDefault) ?? list[0];
+}
+export const stageOf = (pipeline: Pipeline | undefined, key: string): Stage | undefined =>
+  pipeline?.stages.find((s) => s.key === key);
+
+export const timelineAll = (tenantId: string) =>
+  state.timeline.filter((e) => e.tenantId === tenantId);
+
+export const timelineOf = (entity: TimelineEvent["entity"], entityId: string) =>
+  state.timeline
+    .filter((e) => e.entity === entity && e.entityId === entityId)
+    .sort((a, b) => b.at.localeCompare(a.at));
+
+export const sessionsOf = (tenantId: string) => state.sessions.filter((s) => s.tenantId === tenantId);
+export const openSession = (userId: string) =>
+  state.sessions.find((s) => s.userId === userId && !s.endedAt);
+
+export const departmentOf = (userId: string) => DEPARTMENT_OF[userId] ?? null;
+export const channelsOf = (tenantId: string) => CHANNELS.filter((c) => c.tenantId === tenantId);
+
+/* ── права ───────────────────────────────────────────────────── */
+export const permissionOverrides = (tenantId: string) => state.permissions[tenantId] ?? {};
+export function setPermission(
+  tenantId: string, role: Role, module: Module, actions: Action[],
+) {
+  state.permissions[tenantId] ??= {};
+  state.permissions[tenantId][role] ??= {};
+  state.permissions[tenantId][role]![module] = actions;
+}
+
+/* ── настройка карточки канбана ──────────────────────────────── */
+export const CARD_FIELDS = ["phone", "source", "comment", "university", "program", "intake", "dossier", "amount", "deadline", "owner"] as const;
+export type CardField = (typeof CARD_FIELDS)[number];
+// Вуз уже стоит подзаголовком карточки, поэтому по умолчанию его не дублируем.
+export const DEFAULT_CARD_FIELDS: CardField[] = ["phone", "dossier", "deadline", "amount"];
+
+export const cardFieldsOf = (userId: string): CardField[] =>
+  (state.cardFields[userId] as CardField[] | undefined) ?? DEFAULT_CARD_FIELDS;
+export function setCardFields(userId: string, fields: string[]) {
+  state.cardFields[userId] = fields;
+}
+
+/* ── запись в историю ────────────────────────────────────────── */
+export function addTimeline(event: Omit<TimelineEvent, "id" | "at"> & { at?: string }) {
+  const item: TimelineEvent = { ...event, id: nextId("tl"), at: event.at ?? now() };
+  state.timeline.push(item);
+  return item;
+}
+
+/* ── перенос карточки по стадиям ─────────────────────────────── */
+export function moveCard(
+  entity: "lead" | "deal", id: string, toStage: string, actorId: string, tenantId: string,
+) {
+  const record = entity === "deal" ? dealById(id) : leadById(id);
+  if (!record) return { ok: false as const, reason: "not_found" as const };
+
+  const pipeline = entity === "deal"
+    ? pipelineById((record as Deal).pipelineId)
+    : defaultPipeline(tenantId, "lead");
+  const from = stageOf(pipeline, record.stage);
+  const to = stageOf(pipeline, toStage);
+  if (!to || record.stage === toStage) return { ok: false as const, reason: "same" as const };
+
+  record.stage = toStage as Deal["stage"] & Lead["stage"];
+  record.stageEnteredAt = today();
+  addTimeline({
+    tenantId, entity, entityId: id, kind: "stage",
+    title: loc(
+      `Стадия изменена: ${from?.label.ru ?? "—"} → ${to.label.ru}`,
+      `Bosqich o‘zgardi: ${from?.label.uz ?? "—"} → ${to.label.uz}`,
+    ),
+    body: null, authorId: actorId, source: null, dueAt: null, done: null,
+  });
+  return { ok: true as const };
+}
+
+/* ── настройки воронки ───────────────────────────────────────── */
+export function renameStage(pipelineId: string, stageKey: string, label: Loc) {
+  const stage = stageOf(pipelineById(pipelineId), stageKey);
+  if (stage) stage.label = label;
+}
+export function setStageColor(pipelineId: string, stageKey: string, color: string) {
+  const stage = stageOf(pipelineById(pipelineId), stageKey);
+  if (stage) stage.color = color;
+}
+
+/* ── дедупликация: один человек — один контакт и один активный лид ── */
+export interface DuplicateHit {
+  kind: "contact" | "lead";
+  id: string;
+  name: string;
+  matchedBy: "phone" | "email" | "passport";
+}
+
+export function findDuplicate(
+  tenantId: string,
+  probe: { phone?: string; email?: string | null; passport?: string | null },
+  ignore?: { leadId?: string; studentId?: string },
+): DuplicateHit | null {
+  const phone = probe.phone ? digits(probe.phone) : "";
+  const email = probe.email?.trim().toLowerCase() ?? "";
+  const passport = probe.passport?.trim().toUpperCase() ?? "";
+
+  for (const s of allStudents(tenantId)) {
+    if (ignore?.studentId === s.id) continue;
+    if (phone && digits(s.phone) === phone) return { kind: "contact", id: s.id, name: s.fullName, matchedBy: "phone" };
+    if (email && s.email.toLowerCase() === email) return { kind: "contact", id: s.id, name: s.fullName, matchedBy: "email" };
+    if (passport && s.passport?.toUpperCase() === passport) return { kind: "contact", id: s.id, name: s.fullName, matchedBy: "passport" };
+  }
+  for (const l of allLeads(tenantId)) {
+    if (!isActiveLead(l) || ignore?.leadId === l.id) continue;
+    if (phone && digits(l.phone) === phone) return { kind: "lead", id: l.id, name: l.name, matchedBy: "phone" };
+    if (email && l.email?.toLowerCase() === email) return { kind: "lead", id: l.id, name: l.name, matchedBy: "email" };
+  }
+  return null;
+}
+
+/** Создание лида с проверкой дубля: повторное обращение уходит в существующую карточку. */
+export function createLead(input: Omit<Lead, "id" | "createdAt" | "stageEnteredAt" | "stage" | "convertedContactId" | "convertedDealId" | "junkReason">) {
+  const duplicate = findDuplicate(input.tenantId, { phone: input.phone, email: input.email });
+  if (duplicate) {
+    addTimeline({
+      tenantId: input.tenantId,
+      entity: duplicate.kind === "contact" ? "contact" : "lead",
+      entityId: duplicate.id, kind: "message",
+      title: loc("Повторное обращение", "Takroriy murojaat"),
+      body: input.comment || null, authorId: input.ownerId,
+      source: loc("Определено как дубль по номеру телефона", "Telefon raqami bo‘yicha dublikat deb aniqlandi"),
+      dueAt: null, done: null,
+    });
+    return { ok: false as const, duplicate };
+  }
+  const lead: Lead = {
+    ...input, id: nextId("l"), stage: "new", stageEnteredAt: today(),
+    createdAt: today(), convertedContactId: null, convertedDealId: null, junkReason: null,
+  };
+  state.leads.push(lead);
+  addTimeline({
+    tenantId: lead.tenantId, entity: "lead", entityId: lead.id, kind: "system",
+    title: loc("Лид создан", "Lid yaratildi"), body: lead.comment || null,
+    authorId: lead.ownerId, source: null, dueAt: null, done: null,
+  });
+  return { ok: true as const, lead };
+}
+
+/** Конвертация лида: появляется контакт и первая сделка, лид закрывается. */
+export function convertLead(leadId: string, actorId: string) {
+  const lead = leadById(leadId);
+  if (!lead || lead.stage === "converted") return { ok: false as const };
+
+  const existing = findDuplicate(lead.tenantId, { phone: lead.phone, email: lead.email }, { leadId });
+  let studentId: string;
+
+  if (existing?.kind === "contact") {
+    studentId = existing.id;
+  } else {
+    const student: Student = {
+      id: nextId("s"), tenantId: lead.tenantId, branchId: lead.branchId,
+      fullName: lead.name, latinName: lead.name, birthDate: "2006-01-01",
+      phone: lead.phone, email: lead.email ?? "", city: "Ташкент",
+      source: lead.source, ownerId: lead.ownerId, referredById: null,
+      leadId: lead.id, passport: null, status: "active",
+      profile: {
+        topik: 0, topikExpiresAt: null, ielts: null, gpa: null,
+        education: "—", graduationYear: 2026, budgetPerYear: 8000,
+        preferredCities: [], preferredMajors: [], preferredOwnership: ["private", "public", "national"],
+        degreeLevel: "bachelor", intake: "2027 Весна", needsDorm: true, needsScholarship: false,
+      },
+      tags: [], createdAt: today(), lastTouchAt: today(),
+    };
+    state.students.push(student);
+    studentId = student.id;
+    addTimeline({
+      tenantId: lead.tenantId, entity: "contact", entityId: studentId, kind: "system",
+      title: loc("Контакт создан из лида", "Kontakt liddan yaratildi"), body: null,
+      authorId: actorId, source: loc(`Лид ${lead.id.toUpperCase()}`, `Lid ${lead.id.toUpperCase()}`),
+      dueAt: null, done: null,
+    });
+  }
+
+  const pipeline = defaultPipeline(lead.tenantId, "deal");
+  const deal: Deal = {
+    id: nextId("d"), tenantId: lead.tenantId, pipelineId: pipeline.id, studentId,
+    universityId: "", programId: "", degreeLevel: "bachelor", intake: "2027 Весна",
+    stage: "new", stageEnteredAt: today(), ownerId: lead.ownerId, priority: "normal",
+    deadline: null, contractValue: 0, paid: 0, createdAt: today(),
+    note: lead.comment, leadId: lead.id,
+  };
+  state.deals.push(deal);
+
+  lead.stage = "converted";
+  lead.stageEnteredAt = today();
+  lead.convertedContactId = studentId;
+  lead.convertedDealId = deal.id;
+
+  addTimeline({
+    tenantId: lead.tenantId, entity: "lead", entityId: lead.id, kind: "system",
+    title: loc("Лид конвертирован", "Lid konvertatsiya qilindi"),
+    body: existing?.kind === "contact"
+      ? "Контакт уже существовал — создана только сделка."
+      : "Созданы контакт и первая сделка.",
+    authorId: actorId, source: null, dueAt: null, done: null,
+  });
+  return { ok: true as const, studentId, dealId: deal.id, reusedContact: existing?.kind === "contact" };
+}
+
+/* ── рабочий день ────────────────────────────────────────────── */
+export function startWorkDay(tenantId: string, userId: string) {
+  if (openSession(userId)) return;
+  state.sessions.push({
+    id: nextId("ws"), tenantId, userId, date: today(),
+    startedAt: now(), endedAt: null, breakMinutes: 0, onBreakSince: null,
+  });
+}
+export function endWorkDay(userId: string) {
+  const session = openSession(userId);
+  if (!session) return;
+  if (session.onBreakSince) session.onBreakSince = null;
+  session.endedAt = now();
+}
+export function toggleBreak(userId: string) {
+  const session = openSession(userId);
+  if (!session) return;
+  if (session.onBreakSince) {
+    session.breakMinutes += 15;
+    session.onBreakSince = null;
+  } else {
+    session.onBreakSince = now();
+  }
+}
+
+/** Отработанные минуты за сессию: конец (или «сейчас») минус начало и перерывы. */
+export function sessionMinutes(s: WorkSession): number {
+  const end = s.endedAt ? new Date(s.endedAt) : new Date(now());
+  const raw = Math.max(0, Math.round((end.getTime() - new Date(s.startedAt).getTime()) / 60000));
+  return Math.max(0, raw - s.breakMinutes);
+}
+
+/* ── редактирование полей карточки ───────────────────────────── */
+
+/** Какие поля карточки сотрудник правит прямо из карточки, кнопкой «Изменить». */
+export const EDITABLE: Record<"lead" | "deal" | "contact", string[]> = {
+  lead: ["name", "phone", "email", "comment"],
+  deal: ["intake", "deadline", "contractValue", "paid", "priority", "note"],
+  contact: ["fullName", "latinName", "phone", "email", "city", "passport", "birthDate"],
+};
+
+const NUMERIC = new Set(["contractValue", "paid"]);
+
+/**
+ * Точечное изменение полей карточки с записью в её историю.
+ * Дубли проверяются здесь же: телефон нельзя переписать на чужой,
+ * иначе в базе появятся два человека с одним номером.
+ */
+export function updateCard(
+  entity: "lead" | "deal" | "contact",
+  id: string,
+  patch: Record<string, string>,
+  actorId: string,
+): { ok: true } | { ok: false; duplicate: DuplicateHit } {
+  const found = entity === "lead" ? leadById(id) : entity === "deal" ? dealById(id) : studentById(id);
+  if (!found) return { ok: true };
+  // Точечная правка по именам полей: белый список EDITABLE уже ограничил набор.
+  const record = found as unknown as Record<string, unknown>;
+
+  const tenantId = String(record.tenantId);
+  const allowed = EDITABLE[entity];
+
+  if (entity !== "deal" && (patch.phone || patch.email)) {
+    const hit = findDuplicate(
+      tenantId,
+      { phone: patch.phone, email: patch.email ?? null, passport: patch.passport ?? null },
+      entity === "lead" ? { leadId: id } : { studentId: id },
+    );
+    if (hit) return { ok: false, duplicate: hit };
+  }
+
+  const changed: string[] = [];
+  for (const [key, raw] of Object.entries(patch)) {
+    if (!allowed.includes(key)) continue;
+    const value = NUMERIC.has(key) ? Number(raw.replace(/\s/g, "")) || 0 : raw.trim();
+    if (record[key] === value) continue;
+    record[key] = value === "" && key !== "comment" && key !== "note" ? null : value;
+    changed.push(key);
+  }
+  if (!changed.length) return { ok: true };
+
+  addTimeline({
+    tenantId,
+    entity,
+    entityId: id,
+    kind: "system",
+    title: loc(
+      `Изменены поля: ${changed.join(", ")}`,
+      `Maydonlar o‘zgardi: ${changed.join(", ")}`,
+    ),
+    body: null,
+    authorId: actorId,
+    source: null,
+    dueAt: null,
+    done: null,
+  });
+  return { ok: true };
+}
+
+/* ── сотрудники ──────────────────────────────────────────────── */
+
+/**
+ * Сотрудники правятся на месте, в самом массиве USERS: их читают десятки
+ * мест через userById, и отдельная копия в хранилище развела бы две версии
+ * одного человека. При переходе на базу здесь останется UPDATE по id.
+ */
+export function setUserRole(userId: string, role: Role, actorId: string) {
+  const user = USERS.find((u) => u.id === userId);
+  if (!user || user.role === role) return { ok: false as const };
+
+  // Владелец должен остаться хотя бы один — иначе агентство теряет доступ
+  // к тарифу и домену, и вернуть его будет некому.
+  const owners = USERS.filter((u) => u.tenantId === user.tenantId && u.role === "owner");
+  if (user.role === "owner" && owners.length === 1) {
+    return { ok: false as const, reason: "last_owner" as const };
+  }
+
+  user.role = role;
+  addTimeline({
+    tenantId: user.tenantId, entity: "employee", entityId: user.id, kind: "system",
+    title: loc("Роль изменена", "Rol o‘zgartirildi"), body: role,
+    authorId: actorId, source: null, dueAt: null, done: null,
+  });
+  return { ok: true as const };
+}
+
+export function setUserStatus(userId: string, status: User["status"], actorId: string) {
+  const user = USERS.find((u) => u.id === userId);
+  if (!user || user.status === status) return;
+  user.status = status;
+  addTimeline({
+    tenantId: user.tenantId, entity: "employee", entityId: user.id, kind: "system",
+    title: status === "suspended"
+      ? loc("Доступ заблокирован", "Kirish bloklandi")
+      : loc("Доступ восстановлен", "Kirish tiklandi"),
+    body: null, authorId: actorId, source: null, dueAt: null, done: null,
+  });
+}

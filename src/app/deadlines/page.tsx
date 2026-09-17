@@ -31,10 +31,10 @@ export default async function DeadlinesPage() {
   const overdue = deadlines.filter((d) => daysUntil(d.date) < 0).length;
 
   const href = (d: Deadline) =>
-    d.relation?.type === "application"
-      ? `/applications/${d.relation.id}`
+    d.relation?.type === "deal"
+      ? `/crm/deals/${d.relation.id}`
       : d.relation?.type === "student"
-        ? `/students/${d.relation.id}`
+        ? `/crm/contacts/${d.relation.id}`
         : "/tasks";
 
   return (

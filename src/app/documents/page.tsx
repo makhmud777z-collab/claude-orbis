@@ -4,9 +4,9 @@ import { IconPlus } from "@/components/icons";
 import { PageHeader } from "@/components/ui";
 import { userById } from "@/lib/data/users";
 import { translator } from "@/lib/i18n";
-import { can } from "@/lib/rbac";
+import { allow } from "@/lib/rbac";
 import { S } from "@/lib/strings";
-import { scopedDocuments, scopedStudents } from "@/lib/queries";
+import { scopedDocuments, scopedContacts } from "@/lib/queries";
 import { getSession } from "@/lib/session";
 
 export default async function DocumentsPage() {
@@ -16,7 +16,7 @@ export default async function DocumentsPage() {
   if (gate) return gate;
 
   const docs = scopedDocuments(session);
-  const folders: DossierFolder[] = scopedStudents(session)
+  const folders: DossierFolder[] = scopedContacts(session)
     .map((s) => {
       const items = docs.filter((d) => d.studentId === s.id);
       const verified = items.filter((d) => d.status === "verified").length;
@@ -69,7 +69,7 @@ export default async function DocumentsPage() {
           </>
         }
         actions={
-          can(session.role, "documents", "create") ? (
+          allow(session.tenant.id, session.role, "documents", "create") ? (
             <button className="btn btn-primary btn-sm">
               <IconPlus size={15} /> {t(S.documents.upload)}
             </button>

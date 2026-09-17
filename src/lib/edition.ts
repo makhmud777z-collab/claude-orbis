@@ -49,15 +49,14 @@ export const EDITIONS: {
 
 /** Модули, которые появляются в каждой версии (версии накапливаются). */
 const MODULES_BY_EDITION: Record<Edition, Module[]> = {
-  mvp: ["universities", "students", "settings"],
+  // MVP — только подбор вузов и карточки контактов, ничего лишнего.
+  mvp: ["universities", "contacts", "settings"],
+  // Всё, что добавляется вместе с CRM: лиды, сделки, воронки, задачи,
+  // проекты, структура компании и отчётность по часам.
   crm: [
-    "dashboard",
-    "applications",
-    "documents",
-    "tasks",
-    "deadlines",
-    "team",
-    "finance",
+    "dashboard", "leads", "deals", "crmSettings", "documents",
+    "tasks", "projects", "deadlines", "team", "structure",
+    "staffReports", "finance", "admin",
   ],
   advanced: [],
 };

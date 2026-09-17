@@ -13,10 +13,11 @@ import { universityById } from "@/lib/data/universities";
 import { userById } from "@/lib/data/users";
 import { formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
-import { CITY_LABEL, ref, stageMeta } from "@/lib/labels";
+import { CITY_LABEL, ref } from "@/lib/labels";
 import { can } from "@/lib/rbac";
-import { scopedApplications, scopedTeam } from "@/lib/queries";
+import { scopedDeals, scopedTeam } from "@/lib/queries";
 import { getSession } from "@/lib/session";
+import { pipelineById, stageOf } from "@/lib/store";
 import { S } from "@/lib/strings";
 
 export default async function FinancePage() {
@@ -26,7 +27,7 @@ export default async function FinancePage() {
   const gate = moduleGate(session, "finance", t(S.nav.finance));
   if (gate) return gate;
 
-  const apps = scopedApplications(session).filter((a) => a.contractValue > 0);
+  const apps = scopedDeals(session).filter((a) => a.contractValue > 0);
   const contracted = apps.reduce((n, a) => n + a.contractValue, 0);
   const paid = apps.reduce((n, a) => n + a.paid, 0);
   const debt = contracted - paid;
@@ -69,7 +70,7 @@ export default async function FinancePage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
           label={t(S.finance.contracted)}
           value={f.som(contracted, { compact: true })}
@@ -147,7 +148,7 @@ export default async function FinancePage() {
               </thead>
               <tbody>
                 {apps.map((a) => {
-                  const meta = stageMeta(a.stage);
+                  const stage = stageOf(pipelineById(a.pipelineId), a.stage);
                   return (
                     <tr key={a.id} className="border-b border-hairline-soft last:border-b-0">
                       <td className="t-body-sm px-5 py-3">
@@ -158,8 +159,8 @@ export default async function FinancePage() {
                       </td>
                       <td className="px-5 py-3">
                         <span className="chip">
-                          <StatusDot color={meta.dot} />
-                          {t(meta.short)}
+                          <StatusDot color={stage?.color ?? "var(--color-ink-faint)"} />
+                          {stage ? t(stage.label) : a.stage}
                         </span>
                       </td>
                       <td className="t-body-sm t-num px-5 py-3">

@@ -1,29 +1,22 @@
+import Link from "next/link";
 import { moduleGate } from "@/components/guard";
 import { IconPlus } from "@/components/icons";
-import { Avatar, Chip, PageHeader, SectionTitle, StatusDot } from "@/components/ui";
-import { formatters } from "@/lib/format";
-import { translator, type Loc } from "@/lib/i18n";
+import { Avatar, Chip, PageHeader, StatusDot } from "@/components/ui";
+import { DEPARTMENTS } from "@/lib/data/org";
+import { age, formatters } from "@/lib/format";
+import { translator } from "@/lib/i18n";
 import { CITY_LABEL, ref } from "@/lib/labels";
-import { can, ROLES } from "@/lib/rbac";
-import { scopedApplications, scopedStudents, scopedTasks, scopedTeam } from "@/lib/queries";
+import { scopedContacts, scopedDeals, scopedTasks, scopedTeam } from "@/lib/queries";
+import { allow, ROLES } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
+import { departmentOf, openSession, sessionMinutes } from "@/lib/store";
 import { S } from "@/lib/strings";
 
-const MODULE_LABEL: Record<string, Loc> = {
-  dashboard: S.nav.dashboard,
-  students: S.nav.students,
-  applications: S.nav.applications,
-  universities: S.nav.universities,
-  documents: S.nav.documents,
-  tasks: S.nav.tasks,
-  deadlines: S.nav.deadlines,
-  team: S.nav.team,
-  finance: S.nav.finance,
-  settings: S.nav.settings,
-};
-
-const MODULES = Object.keys(MODULE_LABEL);
-
+/**
+ * Сотрудники агентства. Карточка каждого — отдельная страница: там личные
+ * данные, подразделение, рабочие дни и нагрузка. Матрица прав живёт
+ * в «Администрировании», потому что там её можно менять, а не только смотреть.
+ */
 export default async function TeamPage() {
   const session = await getSession();
   const t = translator(session.locale);
@@ -32,10 +25,11 @@ export default async function TeamPage() {
   if (gate) return gate;
 
   const team = scopedTeam(session);
-  const students = scopedStudents(session);
-  const apps = scopedApplications(session);
+  const contacts = scopedContacts(session);
+  const deals = scopedDeals(session);
   const tasks = scopedTasks(session);
   const branches = new Map(session.tenant.branches.map((b) => [b.id, b]));
+  const departments = new Map(DEPARTMENTS.map((d) => [d.id, d]));
 
   return (
     <>
@@ -44,34 +38,46 @@ export default async function TeamPage() {
         meta={
           <>
             <span>
-              {team.length} {t(S.team.people)} · {session.tenant.seatsUsed}{" "}
-              {t(S.team.of)} {session.tenant.seatsLimit} {t(S.team.seats)}
+              {team.length} {t(S.team.people)} · {session.tenant.seatsUsed} {t(S.team.of)}{" "}
+              {session.tenant.seatsLimit} {t(S.team.seats)}
             </span>
             <span className="text-ink-faint">·</span>
-            <span>{t(S.team.subtitle)}</span>
+            <Link href="/team/structure" className="hover:text-ink">{t(S.structure.title)}</Link>
+            <span className="text-ink-faint">·</span>
+            <Link href="/team/reports" className="hover:text-ink">{t(S.staffReports.title)}</Link>
           </>
         }
         actions={
-          can(session.role, "team", "create") ? (
-            <button className="btn btn-primary btn-sm">
+          allow(session.tenant.id, session.role, "team", "create") ? (
+            <Link href="/admin/users" className="btn btn-primary btn-sm">
               <IconPlus size={15} /> {t(S.team.invite)}
-            </button>
+            </Link>
           ) : null
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {team.map((u) => {
           const role = ROLES.find((r) => r.key === u.role)!;
-          const myStudents = students.filter((s) => s.ownerId === u.id).length;
-          const myApps = apps.filter((a) => a.ownerId === u.id).length;
-          const myTasks = tasks.filter(
-            (t) => t.assigneeId === u.id && t.status !== "done",
-          ).length;
+          const work = openSession(u.id);
+          const department = departments.get(departmentOf(u.id) ?? "");
           return (
-            <article key={u.id} className="card card-hover p-5">
+            <Link key={u.id} href={`/team/${u.id}`} className="card card-hover block p-5">
               <div className="flex items-start gap-3">
-                <Avatar name={u.name} size={40} />
+                <span className="relative flex-none">
+                  <Avatar name={u.name} size={40} />
+                  <span
+                    className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2"
+                    style={{
+                      borderColor: "var(--color-surface-1)",
+                      background: work
+                        ? work.onBreakSince
+                          ? "var(--color-status-progress)"
+                          : "var(--color-status-deal)"
+                        : "var(--color-hairline)",
+                    }}
+                  />
+                </span>
                 <div className="min-w-0 flex-1">
                   <div className="t-body-sm truncate">{u.name}</div>
                   <div className="t-micro truncate text-ink-faint">{u.title}</div>
@@ -98,98 +104,45 @@ export default async function TeamPage() {
 
               <div className="mt-4 flex flex-wrap gap-1.5">
                 <Chip active>{t(role.label)}</Chip>
-                <Chip>
-                  {t(
-                    role.scope === "tenant"
-                      ? S.common.scopeTenant
-                      : role.scope === "branch"
-                        ? S.common.scopeBranch
-                        : S.common.scopeOwn,
-                  )}
-                </Chip>
+                {department ? <Chip>{t(department.name)}</Chip> : null}
               </div>
 
               <div className="mt-4 grid grid-cols-3 gap-2 border-t border-hairline-soft pt-4">
-                <Stat label={t(S.team.studentsShort)} value={myStudents} />
-                <Stat label={t(S.team.applicationsShort)} value={myApps} />
-                <Stat label={t(S.team.tasksShort)} value={myTasks} />
+                <Stat
+                  label={t(S.team.studentsShort)}
+                  value={contacts.filter((s) => s.ownerId === u.id).length}
+                />
+                <Stat
+                  label={t(S.team.dealsShort)}
+                  value={deals.filter((d) => d.ownerId === u.id).length}
+                />
+                <Stat
+                  label={t(S.team.tasksShort)}
+                  value={tasks.filter((x) => x.assigneeId === u.id && x.status !== "done").length}
+                />
               </div>
 
               <div className="t-micro mt-4 text-ink-faint">
                 {branches.get(u.branchId)
                   ? t(ref(CITY_LABEL, branches.get(u.branchId)!.city))
                   : "—"}{" "}
-                · {t(S.team.inSystemSince)} {f.date(u.joinedAt)} · {t(S.team.lastSeen)}{" "}
-                {f.relativeTime(u.lastActiveAt)}
+                · {age(u.birthDate)} {t(S.students.age)} · {t(S.team.inSystemSince)}{" "}
+                {f.date(u.joinedAt)}
+                {work ? (
+                  <>
+                    {" · "}
+                    <span className="t-num">
+                      {Math.floor(sessionMinutes(work) / 60)}:
+                      {String(sessionMinutes(work) % 60).padStart(2, "0")}
+                    </span>{" "}
+                    {t(S.staffReports.stillWorking)}
+                  </>
+                ) : null}
               </div>
-            </article>
+            </Link>
           );
         })}
       </div>
-
-      <section className="mt-10">
-        <SectionTitle>{t(S.team.matrix)}</SectionTitle>
-        <div className="card overflow-hidden">
-          <div className="scroll-x">
-            <table className="w-full min-w-[900px] border-collapse">
-              <thead>
-                <tr className="border-b border-hairline-soft">
-                  <th className="t-micro px-5 py-3 text-left font-medium uppercase tracking-[0.07em] text-ink-faint">
-                    {t(S.team.role)}
-                  </th>
-                  {MODULES.map((m) => (
-                    <th
-                      key={m}
-                      className="t-micro px-2 py-3 text-center font-medium uppercase tracking-[0.07em] text-ink-faint"
-                    >
-                      {t(MODULE_LABEL[m])}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {ROLES.map((r) => (
-                  <tr key={r.key} className="border-b border-hairline-soft last:border-b-0">
-                    <td className="px-5 py-3">
-                      <div className="t-body-sm">{t(r.label)}</div>
-                      <div className="t-micro max-w-[260px] text-ink-faint">
-                        {t(r.description)}
-                      </div>
-                    </td>
-                    {MODULES.map((m) => {
-                      const perms = r.permissions[m as keyof typeof r.permissions];
-                      const level = !perms
-                        ? "—"
-                        : perms.includes("delete")
-                          ? t(S.team.levelFull)
-                          : perms.includes("edit")
-                            ? t(S.team.levelEdit)
-                            : t(S.team.levelRead);
-                      return (
-                        <td key={m} className="px-2 py-3 text-center">
-                          <span
-                            className="t-micro"
-                            style={{
-                              color:
-                                level === "—"
-                                  ? "var(--color-hairline)"
-                                  : level === t(S.team.levelRead)
-                                    ? "var(--color-ink-faint)"
-                                    : "var(--color-ink-muted)",
-                            }}
-                          >
-                            {level}
-                          </span>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
     </>
   );
 }

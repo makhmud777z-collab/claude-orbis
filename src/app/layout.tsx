@@ -3,11 +3,13 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
+import { openModules } from "@/components/guard";
+import { navFor } from "@/components/nav";
 import { usersOfTenant } from "@/lib/data/users";
-import { editionModules, homeHref } from "@/lib/edition";
-import { NAV } from "@/components/nav";
-import { roleLabel, visibleModules } from "@/lib/rbac";
+import { homeHref } from "@/lib/edition";
+import { roleLabel } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
+import { openSession, sessionMinutes } from "@/lib/store";
 import { ROOT_DOMAIN, TENANTS } from "@/lib/tenants";
 
 const inter = Inter({
@@ -19,7 +21,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Orbis System",
   description:
-    "Система для консалтинговых агентств: студенты, заявки, документы, задачи, дедлайны и подбор корейских вузов.",
+    "Портал для консалтинговых агентств: CRM, документы, задачи и проекты, сотрудники и подбор корейских вузов.",
 };
 
 export default async function RootLayout({
@@ -30,13 +32,14 @@ export default async function RootLayout({
   const session = await getSession();
   const host = session.host || `${session.tenant.slug}.${ROOT_DOMAIN}`;
   // Навигация = права роли ∩ модули версии продукта.
-  const allowed = new Set(editionModules(session.tenant.edition));
-  const modules = visibleModules(session.role).filter((m) => allowed.has(m));
+  const modules = openModules(session);
   // Дашборд есть не у всех ролей и не во всех версиях — логотип ведёт туда,
   // куда сотрудник реально может попасть.
   const home = modules.includes("dashboard")
     ? homeHref(session.tenant.edition)
-    : (NAV.find((n) => n.href !== "/" && modules.includes(n.module))?.href ?? "/students");
+    : (navFor(new Set(modules))[0]?.href ?? "/universities");
+
+  const work = openSession(session.user.id);
 
   return (
     <html lang={session.locale} className={inter.variable}>
@@ -61,6 +64,12 @@ export default async function RootLayout({
               locale={session.locale}
               modules={modules}
               home={home}
+              workday={{
+                started: Boolean(work),
+                onBreak: Boolean(work?.onBreakSince),
+                startedAt: work?.startedAt ?? null,
+                minutes: work ? sessionMinutes(work) : 0,
+              }}
             />
             <main className="min-w-0 flex-1 px-5 py-7 lg:px-8">{children}</main>
           </div>

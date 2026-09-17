@@ -23,7 +23,7 @@ import {
 } from "@/lib/labels";
 import { matchProgram, verdictDot, verdictLabel } from "@/lib/matching";
 import { can } from "@/lib/rbac";
-import { scopedApplications, scopedStudents } from "@/lib/queries";
+import { scopedDeals, scopedContacts } from "@/lib/queries";
 import { getSession } from "@/lib/session";
 import { NO_STUDENT } from "@/lib/shortlist";
 import { shortlistFor } from "@/lib/shortlist.server";
@@ -52,8 +52,8 @@ export default async function UniversityPage({
   if (!uni) notFound();
 
   const picked = await shortlistFor(NO_STUDENT);
-  const apps = scopedApplications(session).filter((a) => a.universityId === uni.id);
-  const students = scopedStudents(session);
+  const apps = scopedDeals(session).filter((a) => a.universityId === uni.id);
+  const students = scopedContacts(session);
   /** Кому из базы этот вуз подходит прямо сейчас — обратный подбор. */
   const fits = students
     .map((s) => {
@@ -123,7 +123,7 @@ export default async function UniversityPage({
         }
       />
 
-      <div className="grid min-w-0 gap-5 xl:grid-cols-[1fr_340px]">
+      <div className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-[1fr_340px]">
         <div className="space-y-8">
           <section>
             <SectionTitle>{t(S.universities.programsTitle)}</SectionTitle>
@@ -158,7 +158,7 @@ export default async function UniversityPage({
                 fits.map(({ student, match }) => (
                   <Link
                     key={student.id}
-                    href={`/students/${student.id}`}
+                    href={`/crm/contacts/${student.id}`}
                     className="flex flex-wrap items-center gap-4 px-5 py-3.5 transition-colors hover:bg-surface-2"
                   >
                     <div className="min-w-[180px] flex-1">
@@ -192,7 +192,7 @@ export default async function UniversityPage({
                 {apps.map((a) => (
                   <Link
                     key={a.id}
-                    href={`/applications/${a.id}`}
+                    href={`/crm/deals/${a.id}`}
                     className="flex items-center justify-between px-5 py-3.5 transition-colors hover:bg-surface-2"
                   >
                     <span className="t-body-sm">

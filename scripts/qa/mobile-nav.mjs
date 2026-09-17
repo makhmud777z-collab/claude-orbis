@@ -28,9 +28,9 @@ if (menuStillOpen) fail.push("меню не закрылось после пер
 await page.screenshot({ path: "shots/mobile-catalog.png" });
 
 // таблицы на мобильном должны скроллиться внутри, а не ломать страницу
-await page.goto("http://localhost:3000/students", { waitUntil: "networkidle" });
+await page.goto("http://localhost:3000/crm/contacts", { waitUntil: "networkidle" });
 const inner = await page.locator(".scroll-x").first().evaluate((el) => el.scrollWidth > el.clientWidth);
-if (!inner) fail.push("таблица студентов не имеет внутренней прокрутки");
+if (!inner) fail.push("таблица контактов не имеет внутренней прокрутки");
 
 console.log(fail.length ? "ПРОБЛЕМЫ:" : "Мобильная навигация работает");
 fail.forEach((f) => console.log(" - " + f));

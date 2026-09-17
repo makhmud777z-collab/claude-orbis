@@ -1,78 +1,122 @@
 import type { Loc } from "@/lib/i18n";
-import { S } from "@/lib/strings";
+import { loc } from "@/lib/i18n";
 import type { Module } from "@/lib/rbac";
 import {
-  IconApplications,
-  IconDashboard,
-  IconDeadline,
-  IconDocuments,
-  IconFinance,
-  IconSettings,
-  IconStudents,
-  IconTasks,
-  IconTeam,
-  IconUniversity,
+  IconApplications, IconDashboard, IconDeadline, IconDocuments, IconFinance,
+  IconSettings, IconStudents, IconTasks, IconTeam, IconUniversity,
 } from "./icons";
 
 export interface NavChild {
   href: string;
   label: Loc;
+  module: Module;
 }
 
 export interface NavEntry {
-  module: Module;
+  key: string;
   href: string;
   label: Loc;
   icon: typeof IconDashboard;
   group: "work" | "base" | "admin";
-  /** быстрые срезы раздела: раскрываются под пунктом меню */
+  /** модуль самого пункта; у раздела-контейнера его нет — права берутся у детей */
+  module?: Module;
   children?: NavChild[];
 }
 
+/** Структура меню повторяет портал Битрикс24: разделы с раскрывающимися пунктами. */
 export const NAV: NavEntry[] = [
-  { module: "dashboard", href: "/", label: S.nav.dashboard, icon: IconDashboard, group: "work" },
   {
-    module: "students",
-    href: "/students",
-    label: S.nav.students,
-    icon: IconStudents,
-    group: "work",
+    key: "dashboard", href: "/", label: loc("Дашборд", "Boshqaruv paneli"),
+    icon: IconDashboard, group: "work", module: "dashboard",
+  },
+  {
+    key: "crm", href: "/crm/deals", label: loc("CRM", "CRM"),
+    icon: IconApplications, group: "work",
     children: [
-      { href: "/students?status=lead", label: S.students.filterLead },
-      { href: "/students?status=active", label: S.students.filterActive },
-      { href: "/students?status=enrolled", label: S.students.filterEnrolled },
+      { href: "/crm/leads", label: loc("Лиды", "Lidlar"), module: "leads" },
+      { href: "/crm/deals", label: loc("Сделки", "Bitimlar"), module: "deals" },
+      { href: "/crm/contacts", label: loc("Контакты", "Kontaktlar"), module: "contacts" },
+      { href: "/crm/pipelines", label: loc("Воронки", "Voronkalar"), module: "crmSettings" },
+      { href: "/crm/channels", label: loc("Каналы продаж", "Sotuv kanallari"), module: "crmSettings" },
+      { href: "/crm/settings", label: loc("Настройки CRM", "CRM sozlamalari"), module: "crmSettings" },
     ],
   },
   {
-    module: "applications",
-    href: "/applications",
-    label: S.nav.applications,
-    icon: IconApplications,
-    group: "work",
+    key: "tasks", href: "/tasks", label: loc("Задачи и проекты", "Vazifalar va loyihalar"),
+    icon: IconTasks, group: "work", module: "tasks",
     children: [
-      { href: "/applications?stage=documents", label: S.applications.collectingShort },
-      { href: "/applications?stage=submitted", label: S.applications.submittedShort },
-      { href: "/applications?stage=visa", label: S.applications.visaShort },
+      { href: "/tasks", label: loc("Задачи", "Vazifalar"), module: "tasks" },
+      { href: "/tasks/projects", label: loc("Проекты", "Loyihalar"), module: "projects" },
+      { href: "/tasks/reports", label: loc("Отчёты", "Hisobotlar"), module: "tasks" },
+      { href: "/tasks/templates", label: loc("Шаблоны", "Shablonlar"), module: "tasks" },
     ],
   },
-  { module: "documents", href: "/documents", label: S.nav.documents, icon: IconDocuments, group: "work" },
-  { module: "tasks", href: "/tasks", label: S.nav.tasks, icon: IconTasks, group: "work" },
-  { module: "deadlines", href: "/deadlines", label: S.nav.deadlines, icon: IconDeadline, group: "work" },
   {
-    module: "universities",
-    href: "/universities",
-    label: S.nav.universities,
-    icon: IconUniversity,
-    group: "base",
-    children: [{ href: "/universities/compare", label: S.shortlist.title }],
+    key: "documents", href: "/documents", label: loc("Документы", "Hujjatlar"),
+    icon: IconDocuments, group: "work", module: "documents",
   },
-  { module: "finance", href: "/finance", label: S.nav.finance, icon: IconFinance, group: "base" },
-  { module: "team", href: "/team", label: S.nav.team, icon: IconTeam, group: "admin" },
-  { module: "settings", href: "/settings", label: S.nav.settings, icon: IconSettings, group: "admin" },
+  {
+    key: "deadlines", href: "/deadlines", label: loc("Дедлайны", "Muddatlar"),
+    icon: IconDeadline, group: "work", module: "deadlines",
+  },
+  {
+    key: "universities", href: "/universities", label: loc("Каталог вузов", "Universitetlar katalogi"),
+    icon: IconUniversity, group: "base", module: "universities",
+    children: [
+      { href: "/universities", label: loc("Каталог", "Katalog"), module: "universities" },
+      { href: "/universities/compare", label: loc("Шорт-лист", "Qisqa ro‘yxat"), module: "universities" },
+    ],
+  },
+  {
+    key: "finance", href: "/finance", label: loc("Финансы", "Moliya"),
+    icon: IconFinance, group: "base", module: "finance",
+  },
+  {
+    key: "team", href: "/team", label: loc("Сотрудники", "Xodimlar"),
+    icon: IconTeam, group: "admin", module: "team",
+    children: [
+      { href: "/team", label: loc("Сотрудники", "Xodimlar"), module: "team" },
+      { href: "/team/structure", label: loc("Структура компании", "Kompaniya tuzilmasi"), module: "structure" },
+      { href: "/team/reports", label: loc("Отчётность", "Hisobot"), module: "staffReports" },
+    ],
+  },
+  {
+    key: "admin", href: "/admin/users", label: loc("Администрирование", "Boshqaruv"),
+    icon: IconSettings, group: "admin",
+    children: [
+      { href: "/admin/users", label: loc("Пользователи", "Foydalanuvchilar"), module: "admin" },
+      { href: "/admin/permissions", label: loc("Права доступа", "Kirish huquqlari"), module: "admin" },
+      { href: "/settings", label: loc("Настройки портала", "Portal sozlamalari"), module: "settings" },
+    ],
+  },
+  {
+    key: "settings", href: "/settings", label: loc("Настройки", "Sozlamalar"),
+    icon: IconSettings, group: "admin", module: "settings",
+  },
 ];
 
 export const GROUP_LABEL: Record<NavEntry["group"], Loc> = {
-  work: S.nav.groupWork,
-  base: S.nav.groupBase,
-  admin: S.nav.groupAdmin,
+  work: loc("Операционка", "Kundalik ish"),
+  base: loc("База знаний", "Bilimlar bazasi"),
+  admin: loc("Агентство", "Agentlik"),
 };
+
+/**
+ * Пункты меню для сотрудника: пересечение прав роли и модулей версии продукта.
+ * Раздел-контейнер остаётся, если доступен хотя бы один его пункт.
+ * Отдельный пункт «Настройки» показывается только там, где нет раздела
+ * «Администрирование» — иначе портал дублировал бы одну и ту же страницу.
+ */
+export function navFor(allowed: Set<Module>): NavEntry[] {
+  const visible = NAV.map((entry) => {
+    const children = entry.children?.filter((c) => allowed.has(c.module));
+    if (entry.children) {
+      if (!children?.length) return null;
+      return { ...entry, children, href: children[0].href };
+    }
+    return entry.module && allowed.has(entry.module) ? entry : null;
+  }).filter((x): x is NavEntry => x !== null);
+
+  const hasAdmin = visible.some((e) => e.key === "admin");
+  return visible.filter((e) => !(hasAdmin && e.key === "settings"));
+}

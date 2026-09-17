@@ -4,9 +4,9 @@ import { IconExport, IconPlus } from "@/components/icons";
 import { Banner, PageHeader } from "@/components/ui";
 import { UNIVERSITIES } from "@/lib/data/universities";
 import { translator } from "@/lib/i18n";
-import { can } from "@/lib/rbac";
+import { allow } from "@/lib/rbac";
 import { S } from "@/lib/strings";
-import { scopedStudents } from "@/lib/queries";
+import { scopedContacts } from "@/lib/queries";
 import { getSession } from "@/lib/session";
 import { readShortlist } from "@/lib/shortlist.server";
 
@@ -21,7 +21,7 @@ export default async function UniversitiesPage() {
   const intakes = [...new Set(UNIVERSITIES.flatMap((u) => u.intakes))].sort();
 
   const shortlist = await readShortlist();
-  const students = scopedStudents(session)
+  const students = scopedContacts(session)
     .filter((s) => s.status !== "lost")
     .map((s) => ({ id: s.id, fullName: s.fullName, profile: s.profile }));
 
@@ -47,7 +47,7 @@ export default async function UniversitiesPage() {
             <button className="btn btn-secondary btn-sm">
               <IconExport size={15} /> {t(S.universities.exportShortlist)}
             </button>
-            {can(session.role, "universities", "create") ? (
+            {allow(session.tenant.id, session.role, "universities", "create") ? (
               <button className="btn btn-primary btn-sm">
                 <IconPlus size={15} /> {t(S.universities.add)}
               </button>

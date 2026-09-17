@@ -1,16 +1,22 @@
 import type { ReactNode } from "react";
 import { NoAccess } from "./NoAccess";
 import { NotInEdition } from "./NotInEdition";
-import { NAV } from "./nav";
+import { navFor } from "./nav";
 import { editionModules, hasModule, moduleEdition } from "@/lib/edition";
-import { can, visibleModules, type Module } from "@/lib/rbac";
+import { allow, visibleModules, type Module } from "@/lib/rbac";
 import type { Session } from "@/lib/session";
 import { S } from "@/lib/strings";
+
+/** Модули, которые реально открыты сотруднику: права роли ∩ версия продукта. */
+export function openModules(session: Session): Module[] {
+  const inEdition = new Set(editionModules(session.tenant.edition));
+  return visibleModules(session.tenant.id, session.role).filter((m) => inEdition.has(m));
+}
 
 /**
  * Два барьера перед разделом, в одном месте:
  * 1) версия продукта агентства — куплен ли модуль;
- * 2) роль сотрудника — есть ли у него права.
+ * 2) роль сотрудника — есть ли у него права (с учётом настроек агентства).
  * Возвращает экран-заглушку либо null, если проходить можно.
  */
 export function moduleGate(
@@ -21,9 +27,8 @@ export function moduleGate(
   if (!hasModule(session.tenant.edition, module)) {
     // Кнопка «назад» ведёт в первый раздел, доступный этой роли на этой версии,
     // иначе экран-заглушка отправляет сотрудника в другую заглушку.
-    const inEdition = new Set(editionModules(session.tenant.edition));
-    const open = visibleModules(session.role).filter((m) => inEdition.has(m));
-    const fallback = NAV.find((n) => open.includes(n.module));
+    const open = openModules(session);
+    const fallback = navFor(new Set(open))[0];
     return (
       <NotInEdition
         module={label}
@@ -32,11 +37,13 @@ export function moduleGate(
         locale={session.locale}
         home={fallback?.href ?? "/"}
         homeLabel={fallback?.label ?? S.common.toHome}
-        canManageSettings={open.includes("settings") && can(session.role, "settings", "edit")}
+        canManageSettings={
+          open.includes("settings") && allow(session.tenant.id, session.role, "settings", "edit")
+        }
       />
     );
   }
-  if (!can(session.role, module)) {
+  if (!allow(session.tenant.id, session.role, module)) {
     return <NoAccess role={session.role} module={label} locale={session.locale} />;
   }
   return null;

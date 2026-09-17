@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { GROUP_LABEL, NAV, type NavEntry } from "./nav";
+import { GROUP_LABEL, navFor, type NavEntry } from "./nav";
 import { IconLogo } from "./icons";
 import { translator, type Locale } from "@/lib/i18n";
 import type { Module } from "@/lib/rbac";
@@ -41,11 +41,10 @@ export function MobileNav({
     };
   }, [open]);
 
-  const allowed = new Set(modules);
-  const entries = NAV.filter((e) => allowed.has(e.module));
+  const entries = navFor(new Set(modules));
   const groups: NavEntry["group"][] = ["work", "base", "admin"];
   const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
+    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <>
@@ -108,15 +107,38 @@ export function MobileNav({
                           {t(GROUP_LABEL[group])}
                         </div>
                         <div className="space-y-0.5">
-                          {items.map(({ href, label, icon: Icon }) => (
-                            <Link
-                              key={href}
-                              href={href}
-                              className={`nav-item ${isActive(href) ? "nav-item-active" : ""}`}
-                            >
-                              <Icon size={17} />
-                              {t(label)}
-                            </Link>
+                          {items.map(({ href, label, icon: Icon, children }) => (
+                            <div key={href}>
+                              <Link
+                                href={href}
+                                className={`nav-item ${isActive(href) ? "nav-item-active" : ""}`}
+                              >
+                                <Icon size={17} />
+                                {t(label)}
+                              </Link>
+                              {/* на телефоне разделы не сворачиваются: тапать по стрелке неудобно */}
+                              {children?.length ? (
+                                <div className="ml-[22px] mt-0.5 space-y-0.5 border-l border-hairline-soft pl-3">
+                                  {children.map((child) => (
+                                    <Link
+                                      key={child.href}
+                                      href={child.href}
+                                      className="t-caption block rounded-[8px] px-2.5 py-1.5"
+                                      style={{
+                                        color: isActive(child.href)
+                                          ? "var(--color-ink)"
+                                          : "var(--color-ink-faint)",
+                                        background: isActive(child.href)
+                                          ? "var(--color-surface-1)"
+                                          : "transparent",
+                                      }}
+                                    >
+                                      {t(child.label)}
+                                    </Link>
+                                  ))}
+                                </div>
+                              ) : null}
+                            </div>
                           ))}
                         </div>
                       </div>
