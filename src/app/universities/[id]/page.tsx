@@ -9,18 +9,23 @@ import {
   StatusDot,
 } from "@/components/ui";
 import { UNIVERSITIES, universityById } from "@/lib/data/universities";
-import { formatDate, money } from "@/lib/format";
-import { DEGREE_LABEL, OWNERSHIP_LABEL } from "@/lib/labels";
+import { formatters } from "@/lib/format";
+import { translator } from "@/lib/i18n";
+import {
+  CITY_LABEL,
+  DEGREE_LABEL,
+  INTAKE_LABEL,
+  OWNERSHIP_LABEL,
+  PROGRAM_LANGUAGE,
+  ref,
+  REGION_LABEL,
+  VISA_GRADE_LABEL,
+} from "@/lib/labels";
 import { matchProgram, verdictDot, verdictLabel } from "@/lib/matching";
 import { can } from "@/lib/rbac";
 import { scopedApplications, scopedStudents } from "@/lib/queries";
 import { getSession } from "@/lib/session";
-
-const VISA_GRADE: Record<string, string> = {
-  certified: "Сертифицированный (упрощённая виза)",
-  general: "Обычный",
-  restricted: "С ограничениями",
-};
+import { S } from "@/lib/strings";
 
 export async function generateStaticParams() {
   return UNIVERSITIES.map((u) => ({ id: u.id }));
@@ -33,8 +38,18 @@ export default async function UniversityPage({
 }) {
   const { id } = await params;
   const session = await getSession();
+  const t = translator(session.locale);
+  const f = formatters(session.locale);
+  const rate = session.tenant.usdRate;
+
   if (!can(session.role, "universities")) {
-    return <NoAccess role={session.role} module="Каталог вузов" />;
+    return (
+      <NoAccess
+        role={session.role}
+        module={t(S.nav.universities)}
+        locale={session.locale}
+      />
+    );
   }
 
   const uni = universityById(id);
@@ -58,7 +73,7 @@ export default async function UniversityPage({
     <>
       <div className="t-caption mb-4 flex items-center gap-2 text-ink-faint">
         <Link href="/universities" className="hover:text-ink">
-          Каталог вузов
+          {t(S.nav.universities)}
         </Link>
         <span>/</span>
         <span className="text-ink-muted">{uni.name}</span>
@@ -71,10 +86,10 @@ export default async function UniversityPage({
             <span>{uni.nameKo}</span>
             <span className="text-ink-faint">·</span>
             <span>
-              {uni.city}, {uni.region}
+              {t(ref(CITY_LABEL, uni.city))}, {t(ref(REGION_LABEL, uni.region))}
             </span>
             <span className="text-ink-faint">·</span>
-            <span>{OWNERSHIP_LABEL[uni.ownership]}</span>
+            <span>{t(OWNERSHIP_LABEL[uni.ownership])}</span>
             <span className="chip">
               <StatusDot
                 color={
@@ -83,14 +98,22 @@ export default async function UniversityPage({
                     : "var(--color-status-progress)"
                 }
               />
-              {uni.dataStatus === "verified" ? "данные проверены" : "черновик данных"}
+              {t(
+                uni.dataStatus === "verified"
+                  ? S.universities.verified
+                  : S.universities.draft,
+              )}
             </span>
           </>
         }
         actions={
           <>
-            <button className="btn btn-secondary btn-sm">Сравнить</button>
-            <button className="btn btn-primary btn-sm">Добавить в шорт-лист</button>
+            <button className="btn btn-secondary btn-sm">
+              {t(S.universities.compare)}
+            </button>
+            <button className="btn btn-primary btn-sm">
+              {t(S.universities.addToShortlist)}
+            </button>
           </>
         }
       />
@@ -98,22 +121,25 @@ export default async function UniversityPage({
       <div className="grid gap-5 xl:grid-cols-[1fr_340px]">
         <div className="space-y-8">
           <section>
-            <SectionTitle>Программы</SectionTitle>
+            <SectionTitle>{t(S.universities.programsTitle)}</SectionTitle>
             <div className="card divide-y divide-hairline-soft">
               {uni.programs.map((p) => (
                 <div key={p.id} className="flex flex-wrap items-center gap-4 px-5 py-4">
                   <div className="min-w-[220px] flex-1">
                     <div className="t-body-sm">{p.name}</div>
                     <div className="t-micro text-ink-faint">
-                      {p.field} · {DEGREE_LABEL[p.degreeLevel]} · язык:{" "}
-                      {p.language === "ko" ? "корейский" : p.language === "en" ? "английский" : "корейский / английский"}
+                      {p.field} · {t(DEGREE_LABEL[p.degreeLevel])} ·{" "}
+                      {t(S.universities.languageOfStudy)}: {t(PROGRAM_LANGUAGE[p.language])}
                     </div>
                   </div>
-                  <Chip>TOPIK {p.topikMin || "не нужен"}</Chip>
+                  <Chip>TOPIK {p.topikMin || t(S.common.notRequired)}</Chip>
                   {p.ieltsMin ? <Chip>IELTS {p.ieltsMin}</Chip> : null}
-                  <div className="t-body-sm t-num w-28 text-right">
-                    {money(p.tuitionPerYear)}
-                    <span className="t-micro block text-ink-faint">в год</span>
+                  <div className="t-body-sm t-num w-40 text-right">
+                    {f.usd(p.tuitionPerYear)}
+                    <span className="t-micro block text-ink-faint">
+                      {f.som(p.tuitionPerYear * rate, { compact: true })} ·{" "}
+                      {t(S.common.perYear)}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -121,7 +147,7 @@ export default async function UniversityPage({
           </section>
 
           <section>
-            <SectionTitle>Кому из базы подходит</SectionTitle>
+            <SectionTitle>{t(S.universities.whoFits)}</SectionTitle>
             <div className="card divide-y divide-hairline-soft">
               {fits.length ? (
                 fits.map(({ student, match }) => (
@@ -133,8 +159,8 @@ export default async function UniversityPage({
                     <div className="min-w-[180px] flex-1">
                       <div className="t-body-sm">{student.fullName}</div>
                       <div className="t-micro text-ink-faint">
-                        TOPIK {student.profile.topik || "—"} · бюджет{" "}
-                        {money(student.profile.budgetPerYear)}
+                        TOPIK {student.profile.topik || "—"} ·{" "}
+                        {t(S.universities.budget)} {f.usd(student.profile.budgetPerYear)}
                       </div>
                     </div>
                     <div className="t-caption min-w-[200px] flex-1 text-ink-muted">
@@ -142,13 +168,13 @@ export default async function UniversityPage({
                     </div>
                     <span className="chip">
                       <StatusDot color={verdictDot(match.verdict)} />
-                      {verdictLabel(match.verdict)} · {match.score}
+                      {t(verdictLabel(match.verdict))} · {match.score}
                     </span>
                   </Link>
                 ))
               ) : (
                 <div className="t-body-sm px-5 py-8 text-center text-ink-muted">
-                  Подходящих студентов в вашей зоне видимости нет.
+                  {t(S.universities.noFits)}
                 </div>
               )}
             </div>
@@ -156,7 +182,7 @@ export default async function UniversityPage({
 
           {apps.length ? (
             <section>
-              <SectionTitle>Наши заявки в этот вуз</SectionTitle>
+              <SectionTitle>{t(S.universities.ourApplications)}</SectionTitle>
               <div className="card divide-y divide-hairline-soft">
                 {apps.map((a) => (
                   <Link
@@ -168,7 +194,8 @@ export default async function UniversityPage({
                       {students.find((s) => s.id === a.studentId)?.fullName ?? a.studentId}
                     </span>
                     <span className="t-caption text-ink-muted">
-                      {a.intake} · {money(a.contractValue)}
+                      {t(ref(INTAKE_LABEL, a.intake))} ·{" "}
+                      {f.som(a.contractValue, { compact: true })}
                     </span>
                   </Link>
                 ))}
@@ -180,53 +207,81 @@ export default async function UniversityPage({
         <div className="space-y-5">
           <div className="card p-5">
             <div className="t-caption mb-3 uppercase tracking-[0.07em] text-ink-faint">
-              Требования
+              {t(S.universities.requirements)}
             </div>
-            <Field label="TOPIK" value={uni.requirements.topikMin || "не требуется"} />
+            <Field
+              label="TOPIK"
+              value={uni.requirements.topikMin || t(S.common.notRequired)}
+            />
             <Field label="IELTS" value={uni.requirements.ieltsMin ?? "—"} />
             <Field label="GPA" value={uni.requirements.gpaMin ?? "—"} />
-            <Field label="Счёт в банке" value={money(uni.requirements.bankBalance)} />
             <Field
-              label="Срок после выпуска"
+              label={t(S.universities.bankBalance)}
+              value={f.usdWithSom(uni.requirements.bankBalance, rate)}
+            />
+            <Field
+              label={t(S.universities.gradWithin)}
               value={
                 uni.requirements.graduationWithinYears
-                  ? `до ${uni.requirements.graduationWithinYears} лет`
-                  : "не ограничен"
+                  ? `${t(S.universities.yearsUpTo)} ${uni.requirements.graduationWithinYears} ${t(S.universities.years)}`
+                  : t(S.universities.notLimited)
               }
             />
           </div>
 
           <div className="card p-5">
             <div className="t-caption mb-3 uppercase tracking-[0.07em] text-ink-faint">
-              Условия
+              {t(S.universities.conditions)}
             </div>
-            <Field label="Вступительный взнос" value={money(uni.admissionFee)} />
             <Field
-              label="Общежитие"
-              value={uni.dormAvailable ? money(uni.dormCostPerYear ?? 0) : "нет"}
+              label={t(S.universities.admissionFee)}
+              value={f.usd(uni.admissionFee)}
             />
-            <Field label="Грант" value={`до ${uni.scholarshipMax}%`} />
-            <Field label="Языковой центр" value={uni.hasLanguageCenter ? "есть" : "нет"} />
-            <Field label="Визовый статус" value={VISA_GRADE[uni.visaGrade]} />
-            <Field label="Наборы" value={uni.intakes.join(", ")} />
+            <Field
+              label={t(S.universities.dorm)}
+              value={
+                uni.dormAvailable
+                  ? f.usdWithSom(uni.dormCostPerYear ?? 0, rate)
+                  : t(S.common.none)
+              }
+            />
+            <Field
+              label={t(S.universities.scholarshipUpTo)}
+              value={`${t(S.universities.upTo)} ${uni.scholarshipMax}%`}
+            />
+            <Field
+              label={t(S.universities.languageCenter)}
+              value={t(uni.hasLanguageCenter ? S.common.yes : S.common.none)}
+            />
+            <Field
+              label={t(S.universities.visaStatus)}
+              value={t(VISA_GRADE_LABEL[uni.visaGrade])}
+            />
+            <Field
+              label={t(S.universities.intakes)}
+              value={uni.intakes.map((i) => t(ref(INTAKE_LABEL, i))).join(", ")}
+            />
           </div>
 
           <div className="card p-5">
             <div className="t-caption mb-3 uppercase tracking-[0.07em] text-ink-faint">
-              Источник данных
+              {t(S.universities.sourceTitle)}
             </div>
             <Field
-              label="Статус"
-              value={uni.dataStatus === "verified" ? "сверено" : "черновик"}
+              label={t(S.universities.status)}
+              value={t(
+                uni.dataStatus === "verified"
+                  ? S.universities.verified
+                  : S.universities.draft,
+              )}
             />
-            <Field label="Обновлено" value={formatDate(uni.updatedAt)} />
+            <Field label={t(S.universities.updatedAt)} value={f.date(uni.updatedAt)} />
             <Field
-              label="Admission guideline"
-              value={uni.sourceUrl ?? "не привязан"}
+              label={t(S.universities.guideline)}
+              value={uni.sourceUrl ?? t(S.universities.notLinked)}
             />
             <p className="t-micro mt-3 leading-relaxed text-ink-faint">
-              На этапе 2 сюда подключается разбор официальной страницы вуза и PDF
-              с правилами приёма: система сверяет цифры и ставит дату проверки.
+              {t(S.universities.sourceHint)}
             </p>
           </div>
         </div>

@@ -16,12 +16,22 @@ import { studentById } from "@/lib/data/students";
 import { TASKS } from "@/lib/data/tasks";
 import { universityById } from "@/lib/data/universities";
 import { userById } from "@/lib/data/users";
-import { formatDate, money, relativeDeadline, relativeTime } from "@/lib/format";
-import { DOCUMENT_STATUS, STAGES, stageMeta } from "@/lib/labels";
+import { formatters } from "@/lib/format";
+import { translator } from "@/lib/i18n";
+import {
+  CITY_LABEL,
+  DOCUMENT_STATUS,
+  INTAKE_LABEL,
+  PRIORITY_LABEL,
+  ref,
+  STAGES,
+  stageMeta,
+} from "@/lib/labels";
 import { matchProgram, verdictDot, verdictLabel } from "@/lib/matching";
 import { can } from "@/lib/rbac";
 import { scopedApplications } from "@/lib/queries";
 import { getSession } from "@/lib/session";
+import { S } from "@/lib/strings";
 
 const FLOW = STAGES.filter((s) => s.key !== "lost");
 
@@ -32,8 +42,18 @@ export default async function ApplicationPage({
 }) {
   const { id } = await params;
   const session = await getSession();
+  const t = translator(session.locale);
+  const f = formatters(session.locale);
+  const rate = session.tenant.usdRate;
+
   if (!can(session.role, "applications")) {
-    return <NoAccess role={session.role} module="Заявки" />;
+    return (
+      <NoAccess
+        role={session.role}
+        module={t(S.nav.applications)}
+        locale={session.locale}
+      />
+    );
   }
 
   const app = scopedApplications(session).find((a) => a.id === id);
@@ -57,7 +77,7 @@ export default async function ApplicationPage({
     <>
       <div className="t-caption mb-4 flex items-center gap-2 text-ink-faint">
         <Link href="/applications" className="hover:text-ink">
-          Заявки
+          {t(S.nav.applications)}
         </Link>
         <span>/</span>
         <span className="text-ink-muted">{app.id.toUpperCase()}</span>
@@ -69,15 +89,19 @@ export default async function ApplicationPage({
           <>
             <span className="chip">
               <StatusDot color={meta.dot} />
-              {meta.label}
+              {t(meta.label)}
             </span>
             <span>
               {uni?.name} · {program?.name}
             </span>
             <span className="text-ink-faint">·</span>
-            <span>набор {app.intake}</span>
+            <span>
+              {t(S.applications.intake)} {t(ref(INTAKE_LABEL, app.intake))}
+            </span>
             <span className="text-ink-faint">·</span>
-            <span>на этапе {relativeTime(app.stageEnteredAt)}</span>
+            <span>
+              {t(S.applications.onStage)} {f.relativeTime(app.stageEnteredAt)}
+            </span>
           </>
         }
         actions={
@@ -86,11 +110,11 @@ export default async function ApplicationPage({
               href={`/students/${app.studentId}`}
               className="btn btn-secondary btn-sm"
             >
-              Карточка студента
+              {t(S.applications.studentCard)}
             </Link>
             {can(session.role, "applications", "edit") ? (
               <button className="btn btn-primary btn-sm">
-                <IconCheck size={15} /> Перевести на следующий этап
+                <IconCheck size={15} /> {t(S.applications.nextStage)}
               </button>
             ) : null}
           </>
@@ -123,7 +147,7 @@ export default async function ApplicationPage({
                     ) : (
                       <StatusDot color={current ? s.dot : "var(--color-hairline)"} />
                     )}
-                    <span className="t-caption whitespace-nowrap">{s.short}</span>
+                    <span className="t-caption whitespace-nowrap">{t(s.short)}</span>
                   </div>
                   {i < FLOW.length - 1 ? (
                     <span
@@ -140,7 +164,7 @@ export default async function ApplicationPage({
             })}
           </div>
         </div>
-        <div className="t-micro mt-3 text-ink-faint">{meta.hint}</div>
+        <div className="t-micro mt-3 text-ink-faint">{t(meta.hint)}</div>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[1fr_340px]">
@@ -149,11 +173,11 @@ export default async function ApplicationPage({
             <SectionTitle
               action={
                 <span className="t-caption text-ink-faint">
-                  {dossier.done} из {dossier.total}
+                  {dossier.done} / {dossier.total}
                 </span>
               }
             >
-              Документы по заявке
+              {t(S.applications.docsOfApplication)}
             </SectionTitle>
             <div className="card p-5">
               <Progress percent={dossier.percent} />
@@ -166,8 +190,10 @@ export default async function ApplicationPage({
                       className="flex items-center gap-3 border-b border-hairline-soft py-2.5 last:border-b-0"
                     >
                       <StatusDot color={st.dot} />
-                      <span className="t-body-sm min-w-0 flex-1 truncate">{d.kind}</span>
-                      <span className="t-micro text-ink-faint">{st.label}</span>
+                      <span className="t-body-sm min-w-0 flex-1 truncate">
+                        {t(d.kind)}
+                      </span>
+                      <span className="t-micro text-ink-faint">{t(st.label)}</span>
                     </div>
                   );
                 })}
@@ -183,20 +209,21 @@ export default async function ApplicationPage({
                     href={`/universities/${uni?.id}`}
                     className="t-caption text-ink-muted hover:text-ink"
                   >
-                    Карточка вуза <IconArrowUpRight size={12} className="inline" />
+                    {t(S.applications.universityCard)}{" "}
+                    <IconArrowUpRight size={12} className="inline" />
                   </Link>
                 }
               >
-                Сходимость с требованиями вуза
+                {t(S.applications.fitTitle)}
               </SectionTitle>
               <div className="card p-5">
                 <div className="mb-4 flex items-center gap-3">
                   <span className="chip chip-active">
                     <StatusDot color={verdictDot(match.verdict)} />
-                    {verdictLabel(match.verdict)} · {match.score}/100
+                    {t(verdictLabel(match.verdict))} · {match.score}/100
                   </span>
                   <span className="t-caption text-ink-muted">
-                    полная стоимость года: {money(match.yearCost)}
+                    {t(S.applications.fullYearCost)}: {f.usdWithSom(match.yearCost, rate)}
                   </span>
                 </div>
                 <div className="grid gap-x-6 sm:grid-cols-2">
@@ -214,7 +241,7 @@ export default async function ApplicationPage({
                               : "var(--color-status-risk)"
                         }
                       />
-                      <span className="t-body-sm">{r.label}</span>
+                      <span className="t-body-sm">{t(r.label)}</span>
                     </div>
                   ))}
                 </div>
@@ -223,27 +250,27 @@ export default async function ApplicationPage({
           ) : null}
 
           <section>
-            <SectionTitle>Задачи по заявке</SectionTitle>
+            <SectionTitle>{t(S.applications.tasksOfApplication)}</SectionTitle>
             <div className="card divide-y divide-hairline-soft">
               {tasks.length ? (
-                tasks.map((t) => (
-                  <div key={t.id} className="flex items-center gap-3 px-5 py-3.5">
+                tasks.map((task) => (
+                  <div key={task.id} className="flex items-center gap-3 px-5 py-3.5">
                     <span className="h-3.5 w-3.5 flex-none rounded-[5px] border border-hairline" />
                     <div className="min-w-0 flex-1">
-                      <div className="t-body-sm">{t.title}</div>
-                      <div className="t-micro text-ink-faint">{t.description}</div>
+                      <div className="t-body-sm">{task.title}</div>
+                      <div className="t-micro text-ink-faint">{task.description}</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Avatar name={userById(t.assigneeId)?.name ?? "—"} size={22} />
+                      <Avatar name={userById(task.assigneeId)?.name ?? "—"} size={22} />
                       <span className="t-micro text-ink-faint">
-                        {relativeDeadline(t.dueAt)}
+                        {f.relativeDeadline(task.dueAt)}
                       </span>
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="t-body-sm px-5 py-8 text-center text-ink-muted">
-                  Задач нет.
+                  {t(S.common.noTasks)}
                 </div>
               )}
             </div>
@@ -253,48 +280,58 @@ export default async function ApplicationPage({
         <div className="space-y-5">
           <div className="card p-5">
             <div className="t-caption mb-3 uppercase tracking-[0.07em] text-ink-faint">
-              Заявка
+              {t(S.applications.application)}
             </div>
-            <Field label="Куратор" value={owner?.name ?? "—"} />
-            <Field label="Приоритет" value={app.priority === "high" ? "высокий" : app.priority === "normal" ? "обычный" : "низкий"} />
-            <Field label="Создана" value={formatDate(app.createdAt)} />
+            <Field label={t(S.students.colCurator)} value={owner?.name ?? "—"} />
             <Field
-              label="Дедлайн"
+              label={t(S.applications.priority)}
+              value={t(PRIORITY_LABEL[app.priority])}
+            />
+            <Field label={t(S.applications.created)} value={f.date(app.createdAt)} />
+            <Field
+              label={t(S.applications.deadline)}
               value={
                 app.deadline
-                  ? `${formatDate(app.deadline)} · ${relativeDeadline(app.deadline)}`
-                  : "не задан"
+                  ? `${f.date(app.deadline)} · ${f.relativeDeadline(app.deadline)}`
+                  : t(S.common.notSet)
               }
             />
-            <Field label="Договор" value={money(app.contractValue)} />
-            <Field label="Оплачено" value={money(app.paid)} />
+            <Field label={t(S.applications.contract)} value={f.som(app.contractValue)} />
+            <Field label={t(S.applications.paid)} value={f.som(app.paid)} />
           </div>
 
           <div className="card p-5">
             <div className="t-caption mb-3 uppercase tracking-[0.07em] text-ink-faint">
-              Вуз
+              {t(S.applications.university)}
             </div>
-            <Field label="Университет" value={uni?.name ?? "—"} />
-            <Field label="Город" value={uni?.city ?? "—"} />
-            <Field label="Программа" value={program?.name ?? "—"} />
+            <Field label={t(S.applications.university)} value={uni?.name ?? "—"} />
             <Field
-              label="Стоимость года"
-              value={program ? money(program.tuitionPerYear) : "—"}
+              label={t(S.applications.city)}
+              value={uni ? t(ref(CITY_LABEL, uni.city)) : "—"}
+            />
+            <Field label={t(S.applications.program)} value={program?.name ?? "—"} />
+            <Field
+              label={t(S.applications.yearPrice)}
+              value={program ? f.usdWithSom(program.tuitionPerYear, rate) : "—"}
             />
             <Field
-              label="Требуемый TOPIK"
-              value={program?.topikMin ? program.topikMin : "не требуется"}
+              label={t(S.applications.requiredTopik)}
+              value={program?.topikMin ? program.topikMin : t(S.common.notRequired)}
             />
             <Field
-              label="Общежитие"
-              value={uni?.dormAvailable ? money(uni.dormCostPerYear ?? 0) : "нет"}
+              label={t(S.students.dorm)}
+              value={
+                uni?.dormAvailable
+                  ? f.usdWithSom(uni.dormCostPerYear ?? 0, rate)
+                  : t(S.common.none)
+              }
             />
           </div>
 
           {app.note ? (
             <div className="card p-5">
               <div className="t-caption mb-2 uppercase tracking-[0.07em] text-ink-faint">
-                Заметка куратора
+                {t(S.applications.curatorNote)}
               </div>
               <p className="t-body-sm leading-relaxed text-ink-muted">{app.note}</p>
               <div className="mt-3 flex items-center gap-2">
@@ -307,7 +344,7 @@ export default async function ApplicationPage({
           {student ? (
             <div className="card p-5">
               <div className="t-caption mb-3 uppercase tracking-[0.07em] text-ink-faint">
-                Студент
+                {t(S.applications.student)}
               </div>
               <div className="mb-3 flex items-center gap-3">
                 <Avatar name={student.fullName} size={38} />
@@ -319,7 +356,9 @@ export default async function ApplicationPage({
               <div className="flex flex-wrap gap-1.5">
                 <Chip>TOPIK {student.profile.topik || "—"}</Chip>
                 {student.profile.ielts ? <Chip>IELTS {student.profile.ielts}</Chip> : null}
-                <Chip>{money(student.profile.budgetPerYear)}/год</Chip>
+                <Chip>
+                  {f.usd(student.profile.budgetPerYear)} / {t(S.common.perYear)}
+                </Chip>
               </div>
             </div>
           ) : null}

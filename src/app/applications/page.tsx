@@ -6,7 +6,9 @@ import { dossierProgress } from "@/lib/data/documents";
 import { studentById } from "@/lib/data/students";
 import { universityById } from "@/lib/data/universities";
 import { userById } from "@/lib/data/users";
-import { relativeTime } from "@/lib/format";
+import { formatters } from "@/lib/format";
+import { translator } from "@/lib/i18n";
+import { S } from "@/lib/strings";
 import { can } from "@/lib/rbac";
 import { scopedApplications, scopedTeam } from "@/lib/queries";
 import { getSession } from "@/lib/session";
@@ -17,8 +19,16 @@ export default async function ApplicationsPage({
   searchParams: Promise<{ stage?: string }>;
 }) {
   const session = await getSession();
+  const t = translator(session.locale);
+  const f = formatters(session.locale);
   if (!can(session.role, "applications")) {
-    return <NoAccess role={session.role} module="Заявки" />;
+    return (
+      <NoAccess
+        role={session.role}
+        module={t(S.nav.applications)}
+        locale={session.locale}
+      />
+    );
   }
 
   const { stage } = await searchParams;
@@ -44,7 +54,7 @@ export default async function ApplicationsPage({
       dossierPercent: dossierProgress(a.studentId).percent,
       contractValue: a.contractValue,
       paid: a.paid,
-      updatedLabel: `на этапе ${relativeTime(a.stageEnteredAt)}`,
+      updatedLabel: `${t(S.applications.onStage)} ${f.relativeTime(a.stageEnteredAt)}`,
     };
   });
 
@@ -53,24 +63,26 @@ export default async function ApplicationsPage({
   return (
     <>
       <PageHeader
-        title="Заявки"
+        title={t(S.applications.title)}
         meta={
           <>
-            <span>{cards.length} заявок</span>
+            <span>
+              {cards.length} {t(S.applications.count)}
+            </span>
             <span className="text-ink-faint">·</span>
-            <span>воронка от первого звонка до вылета</span>
+            <span>{t(S.applications.subtitle)}</span>
           </>
         }
         actions={
           <>
             {can(session.role, "applications", "export") ? (
               <button className="btn btn-secondary btn-sm">
-                <IconExport size={15} /> Экспорт
+                <IconExport size={15} /> {t(S.common.export)}
               </button>
             ) : null}
             {can(session.role, "applications", "create") ? (
               <button className="btn btn-primary btn-sm">
-                <IconPlus size={15} /> Новая заявка
+                <IconPlus size={15} /> {t(S.dashboard.newApplication)}
               </button>
             ) : null}
           </>
@@ -81,6 +93,7 @@ export default async function ApplicationsPage({
         owners={scopedTeam(session).map((u) => ({ id: u.id, name: u.name }))}
         intakes={intakes}
         initialStage={stage}
+        locale={session.locale}
       />
     </>
   );

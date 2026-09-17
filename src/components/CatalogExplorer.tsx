@@ -4,8 +4,17 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { IconSearch } from "./icons";
 import { Chip, StatusDot } from "./ui";
-import { money } from "@/lib/format";
-import { DEGREE_LABEL, OWNERSHIP_LABEL } from "@/lib/labels";
+import { formatters } from "@/lib/format";
+import { translator, type Locale } from "@/lib/i18n";
+import {
+  CITY_LABEL,
+  DEGREE_LABEL,
+  FIELD_LABEL,
+  INTAKE_LABEL,
+  OWNERSHIP_LABEL,
+  ref,
+} from "@/lib/labels";
+import { S } from "@/lib/strings";
 import { matchProgram, verdictDot, verdictLabel, type MatchResult } from "@/lib/matching";
 import type { DegreeLevel, Ownership, Student, University } from "@/lib/types";
 
@@ -58,13 +67,19 @@ export function CatalogExplorer({
   cities,
   fields,
   intakes,
+  locale,
+  usdRate,
 }: {
   universities: University[];
   students: Pick<Student, "id" | "fullName" | "profile">[];
   cities: string[];
   fields: string[];
   intakes: string[];
+  locale: Locale;
+  usdRate: number;
 }) {
+  const t = translator(locale);
+  const f = formatters(locale);
   const [filters, setFilters] = useState<Filters>(EMPTY);
   const [studentId, setStudentId] = useState<string>("none");
 
@@ -178,14 +193,14 @@ export function CatalogExplorer({
         <div className="card p-5">
           <div className="mb-4">
             <div className="t-micro mb-2 uppercase tracking-[0.07em] text-ink-faint">
-              Подобрать под студента
+              {t(S.universities.pickForStudent)}
             </div>
             <select
               value={studentId}
               onChange={(e) => applyStudent(e.target.value)}
               className="field text-[13px]"
             >
-              <option value="none">— выбрать студента —</option>
+              <option value="none">{t(S.universities.chooseStudent)}</option>
               {students.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.fullName}
@@ -196,8 +211,10 @@ export function CatalogExplorer({
               <div className="t-micro mt-2 leading-relaxed text-ink-faint">
                 TOPIK {student.profile.topik || "—"} ·{" "}
                 {student.profile.ielts ? `IELTS ${student.profile.ielts} · ` : ""}
-                бюджет {money(student.profile.budgetPerYear)} ·{" "}
-                {student.profile.preferredCities.join(", ") || "город любой"}
+                {t(S.universities.budget)} {f.usd(student.profile.budgetPerYear)} ·{" "}
+                {student.profile.preferredCities
+                  .map((c) => t(ref(CITY_LABEL, c)))
+                  .join(", ") || t(S.universities.cityAny)}
               </div>
             ) : null}
           </div>
@@ -210,51 +227,55 @@ export function CatalogExplorer({
               <input
                 value={filters.query}
                 onChange={(e) => set("query", e.target.value)}
-                placeholder="Название вуза"
+                placeholder={t(S.universities.universityName)}
                 className="field h-9 pl-8 text-[13px]"
               />
             </label>
 
-            <FilterGroup title="Город">
+            <FilterGroup title={t(S.universities.city)}>
               {cities.map((c) => (
                 <button key={c} onClick={() => toggle("cities", c)}>
-                  <Chip active={filters.cities.includes(c)}>{c}</Chip>
+                  <Chip active={filters.cities.includes(c)}>{t(ref(CITY_LABEL, c))}</Chip>
                 </button>
               ))}
             </FilterGroup>
 
-            <FilterGroup title="Форма собственности">
+            <FilterGroup title={t(S.universities.ownership)}>
               {OWNERSHIPS.map((o) => (
                 <button key={o} onClick={() => toggle("ownership", o)}>
-                  <Chip active={filters.ownership.includes(o)}>{OWNERSHIP_LABEL[o]}</Chip>
+                  <Chip active={filters.ownership.includes(o)}>
+                    {t(OWNERSHIP_LABEL[o])}
+                  </Chip>
                 </button>
               ))}
             </FilterGroup>
 
-            <FilterGroup title="Направление">
-              {fields.map((f) => (
-                <button key={f} onClick={() => toggle("fields", f)}>
-                  <Chip active={filters.fields.includes(f)}>{f}</Chip>
+            <FilterGroup title={t(S.universities.field)}>
+              {fields.map((item) => (
+                <button key={item} onClick={() => toggle("fields", item)}>
+                  <Chip active={filters.fields.includes(item)}>
+                    {t(ref(FIELD_LABEL, item))}
+                  </Chip>
                 </button>
               ))}
             </FilterGroup>
 
-            <FilterGroup title="Уровень обучения">
+            <FilterGroup title={t(S.universities.degree)}>
               <select
                 value={filters.degree}
                 onChange={(e) => set("degree", e.target.value as Filters["degree"])}
                 className="field text-[13px]"
               >
-                <option value="all">Любой</option>
+                <option value="all">{t(S.universities.any)}</option>
                 {DEGREES.map((d) => (
                   <option key={d} value={d}>
-                    {DEGREE_LABEL[d]}
+                    {t(DEGREE_LABEL[d])}
                   </option>
                 ))}
               </select>
             </FilterGroup>
 
-            <FilterGroup title="TOPIK студента">
+            <FilterGroup title={t(S.universities.studentTopik)}>
               <select
                 value={String(filters.topik)}
                 onChange={(e) =>
@@ -262,16 +283,16 @@ export function CatalogExplorer({
                 }
                 className="field text-[13px]"
               >
-                <option value="all">Не важно</option>
+                <option value="all">{t(S.universities.notImportant)}</option>
                 {[0, 1, 2, 3, 4, 5, 6].map((l) => (
                   <option key={l} value={l}>
-                    {l === 0 ? "Нет сертификата" : `TOPIK ${l}`}
+                    {l === 0 ? t(S.universities.noCertificate) : `TOPIK ${l}`}
                   </option>
                 ))}
               </select>
             </FilterGroup>
 
-            <FilterGroup title="IELTS студента">
+            <FilterGroup title={t(S.universities.studentIelts)}>
               <select
                 value={String(filters.ielts)}
                 onChange={(e) =>
@@ -279,7 +300,7 @@ export function CatalogExplorer({
                 }
                 className="field text-[13px]"
               >
-                <option value="all">Не важно</option>
+                <option value="all">{t(S.universities.notImportant)}</option>
                 {[5, 5.5, 6, 6.5, 7].map((l) => (
                   <option key={l} value={l}>
                     IELTS {l}
@@ -288,7 +309,7 @@ export function CatalogExplorer({
               </select>
             </FilterGroup>
 
-            <FilterGroup title="Бюджет на год">
+            <FilterGroup title={t(S.universities.budgetPerYear)}>
               <select
                 value={String(filters.budget)}
                 onChange={(e) =>
@@ -296,42 +317,45 @@ export function CatalogExplorer({
                 }
                 className="field text-[13px]"
               >
-                <option value="all">Любой</option>
+                <option value="all">{t(S.universities.any)}</option>
                 {BUDGETS.map((b) => (
                   <option key={b} value={b}>
-                    до {money(b)}
+                    {t(S.universities.upTo)} {f.usd(b)} ·{" "}
+                    {f.som(b * usdRate, { compact: true })}
                   </option>
                 ))}
               </select>
             </FilterGroup>
 
-            <FilterGroup title="Набор">
+            <FilterGroup title={t(S.universities.intake)}>
               <select
                 value={filters.intake}
                 onChange={(e) => set("intake", e.target.value)}
                 className="field text-[13px]"
               >
-                <option value="all">Любой</option>
+                <option value="all">{t(S.universities.any)}</option>
                 {intakes.map((i) => (
                   <option key={i} value={i}>
-                    {i}
+                    {t(ref(INTAKE_LABEL, i))}
                   </option>
                 ))}
               </select>
             </FilterGroup>
 
-            <FilterGroup title="Условия">
+            <FilterGroup title={t(S.universities.conditions)}>
               <button onClick={() => set("dorm", !filters.dorm)}>
-                <Chip active={filters.dorm}>Есть общежитие</Chip>
+                <Chip active={filters.dorm}>{t(S.universities.hasDorm)}</Chip>
               </button>
               <button onClick={() => set("scholarship", !filters.scholarship)}>
-                <Chip active={filters.scholarship}>Грант от 50%</Chip>
+                <Chip active={filters.scholarship}>{t(S.universities.grantFrom)}</Chip>
               </button>
               <button onClick={() => set("languageCenter", !filters.languageCenter)}>
-                <Chip active={filters.languageCenter}>Языковой центр</Chip>
+                <Chip active={filters.languageCenter}>
+                  {t(S.universities.languageCenter)}
+                </Chip>
               </button>
               <button onClick={() => set("certifiedOnly", !filters.certifiedOnly)}>
-                <Chip active={filters.certifiedOnly}>Визовый рейтинг A</Chip>
+                <Chip active={filters.certifiedOnly}>{t(S.universities.visaGradeA)}</Chip>
               </button>
             </FilterGroup>
 
@@ -342,7 +366,7 @@ export function CatalogExplorer({
               }}
               className="btn btn-secondary btn-sm mt-2 w-full"
             >
-              Сбросить {activeCount ? `(${activeCount})` : ""}
+              {t(S.common.reset)} {activeCount ? `(${activeCount})` : ""}
             </button>
           </div>
         </div>
@@ -351,8 +375,10 @@ export function CatalogExplorer({
       <div>
         <div className="t-caption mb-4 flex items-center justify-between text-ink-muted">
           <span>
-            Найдено {rows.length} вузов
-            {student ? ` · отсортировано по совпадению с профилем ${student.fullName}` : ""}
+            {t(S.universities.found)} {rows.length} {t(S.universities.universities)}
+            {student
+              ? ` · ${t(S.universities.sortedByMatch)}: ${student.fullName}`
+              : ""}
           </span>
         </div>
 
@@ -366,36 +392,50 @@ export function CatalogExplorer({
                     <span className="t-micro text-ink-faint">{u.nameKo}</span>
                   </div>
                   <div className="t-caption mt-1.5 text-ink-muted">
-                    {u.city} · {OWNERSHIP_LABEL[u.ownership]} ·{" "}
-                    {u.nationalRank ? `#${u.nationalRank} в стране` : "без рейтинга"} ·
-                    основан в {u.founded}
+                    {t(ref(CITY_LABEL, u.city))} · {t(OWNERSHIP_LABEL[u.ownership])} ·{" "}
+                    {u.nationalRank
+                      ? `#${u.nationalRank} ${t(S.universities.inCountry)}`
+                      : t(S.universities.noRank)}{" "}
+                    · {t(S.universities.founded)} {u.founded}
                   </div>
                 </div>
                 {match ? (
                   <span className="chip chip-active">
                     <StatusDot color={verdictDot(match.verdict)} />
-                    {verdictLabel(match.verdict)} · {match.score}
+                    {t(verdictLabel(match.verdict))} · {match.score}
                   </span>
                 ) : (
                   <span className="chip">
-                    {u.dataStatus === "draft" ? "черновик данных" : "проверено"}
+                    {t(
+                      u.dataStatus === "draft"
+                        ? S.universities.draft
+                        : S.universities.verified,
+                    )}
                   </span>
                 )}
               </div>
 
               <div className="mt-4 grid gap-4 sm:grid-cols-3">
                 <Metric
-                  label="Обучение в год"
-                  value={`${money(Math.min(...programs.map((p) => p.tuitionPerYear)))} – ${money(
+                  label={t(S.universities.tuitionPerYear)}
+                  value={`${f.usd(Math.min(...programs.map((p) => p.tuitionPerYear)))} – ${f.usd(
                     Math.max(...programs.map((p) => p.tuitionPerYear)),
                   )}`}
+                  hint={f.som(
+                    Math.min(...programs.map((p) => p.tuitionPerYear)) * usdRate,
+                    { compact: true },
+                  )}
                 />
                 <Metric
-                  label="Общежитие"
-                  value={u.dormAvailable ? `${money(u.dormCostPerYear ?? 0)} в год` : "нет"}
+                  label={t(S.universities.dorm)}
+                  value={
+                    u.dormAvailable
+                      ? `${f.usd(u.dormCostPerYear ?? 0)} ${t(S.common.perYear)}`
+                      : t(S.common.none)
+                  }
                 />
                 <Metric
-                  label="Требования"
+                  label={t(S.universities.requirements)}
                   value={`TOPIK ${u.requirements.topikMin}+${
                     u.requirements.ieltsMin ? ` · IELTS ${u.requirements.ieltsMin}` : ""
                   } · GPA ${u.requirements.gpaMin ?? "—"}`}
@@ -405,11 +445,13 @@ export function CatalogExplorer({
               <div className="mt-4 flex flex-wrap gap-1.5">
                 {programs.slice(0, 4).map((p) => (
                   <Chip key={p.id}>
-                    {p.name} · {money(p.tuitionPerYear)}
+                    {p.name} · {f.usd(p.tuitionPerYear)}
                   </Chip>
                 ))}
                 {programs.length > 4 ? (
-                  <Chip>+{programs.length - 4} программ</Chip>
+                  <Chip>
+                    +{programs.length - 4} {t(S.universities.morePrograms)}
+                  </Chip>
                 ) : null}
               </div>
 
@@ -426,7 +468,7 @@ export function CatalogExplorer({
                             : "var(--color-status-risk)"
                       }
                     >
-                      {r.label}
+                      {t(r.label)}
                     </Chip>
                   ))}
                 </div>
@@ -436,9 +478,9 @@ export function CatalogExplorer({
 
           {!rows.length ? (
             <div className="card px-6 py-16 text-center">
-              <div className="t-body-lg">Под эти условия вузов нет</div>
+              <div className="t-body-lg">{t(S.universities.noResults)}</div>
               <div className="t-caption mt-2 text-ink-muted">
-                Снимите часть фильтров — обычно первым мешает бюджет или уровень TOPIK.
+                {t(S.universities.noResultsHint)}
               </div>
             </div>
           ) : null}
@@ -465,11 +507,20 @@ function FilterGroup({
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
   return (
     <div>
       <div className="t-micro text-ink-faint">{label}</div>
       <div className="t-body-sm mt-1">{value}</div>
+      {hint ? <div className="t-micro mt-0.5 text-ink-faint">{hint}</div> : null}
     </div>
   );
 }

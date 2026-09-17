@@ -1,3 +1,4 @@
+import { loc, type Loc } from "./i18n";
 import type { Role } from "./types";
 
 /** Модули системы = разделы навигации + объекты прав. */
@@ -20,8 +21,8 @@ export type Scope = "tenant" | "branch" | "own";
 
 export interface RoleDefinition {
   key: Role;
-  label: string;
-  description: string;
+  label: Loc;
+  description: Loc;
   scope: Scope;
   permissions: Partial<Record<Module, Action[]>>;
 }
@@ -33,9 +34,11 @@ const RO: Action[] = ["view"];
 export const ROLES: RoleDefinition[] = [
   {
     key: "owner",
-    label: "Владелец",
-    description:
+    label: loc("Владелец", "Egasi"),
+    description: loc(
       "Полный доступ, включая тариф, домен агентства и удаление данных.",
+      "To‘liq huquq: tarif, agentlik domeni va ma’lumotlarni o‘chirish.",
+    ),
     scope: "tenant",
     permissions: {
       dashboard: RO,
@@ -52,9 +55,11 @@ export const ROLES: RoleDefinition[] = [
   },
   {
     key: "director",
-    label: "Директор",
-    description:
+    label: loc("Директор", "Direktor"),
+    description: loc(
       "Вся операционка и аналитика агентства, настройки без биллинга и домена.",
+      "Butun operatsion ish va tahlil; sozlamalar, tarif va domendan tashqari.",
+    ),
     scope: "tenant",
     permissions: {
       dashboard: RO,
@@ -71,8 +76,11 @@ export const ROLES: RoleDefinition[] = [
   },
   {
     key: "branch_manager",
-    label: "Руководитель филиала",
-    description: "Те же права, что у директора, но только по своему филиалу.",
+    label: loc("Руководитель филиала", "Filial rahbari"),
+    description: loc(
+      "Те же права, что у директора, но только по своему филиалу.",
+      "Direktor bilan bir xil huquq, faqat o‘z filiali doirasida.",
+    ),
     scope: "branch",
     permissions: {
       dashboard: RO,
@@ -89,9 +97,11 @@ export const ROLES: RoleDefinition[] = [
   },
   {
     key: "sales_manager",
-    label: "Менеджер по продажам",
-    description:
+    label: loc("Менеджер по продажам", "Sotuv menejeri"),
+    description: loc(
       "Работает с лидами и своими студентами: первичная консультация, договор, передача куратору.",
+      "Lidlar va o‘z talabalari bilan ishlaydi: konsultatsiya, shartnoma, kuratorga topshirish.",
+    ),
     scope: "own",
     permissions: {
       dashboard: RO,
@@ -105,9 +115,11 @@ export const ROLES: RoleDefinition[] = [
   },
   {
     key: "case_manager",
-    label: "Куратор (оператор)",
-    description:
+    label: loc("Куратор (оператор)", "Kurator (operator)"),
+    description: loc(
       "Ведёт заявку от подбора вуза до выезда: подбор, документы, подача, переписка с вузом.",
+      "Arizani tanlovdan jo‘nashgacha olib boradi: tanlov, hujjatlar, topshirish, yozishmalar.",
+    ),
     scope: "own",
     permissions: {
       dashboard: RO,
@@ -121,9 +133,11 @@ export const ROLES: RoleDefinition[] = [
   },
   {
     key: "document_specialist",
-    label: "Специалист по документам",
-    description:
+    label: loc("Специалист по документам", "Hujjatlar bo‘yicha mutaxassis"),
+    description: loc(
       "Проверка, апостиль, переводы, сроки годности справок и сертификатов.",
+      "Tekshiruv, apostil, tarjimalar, ma’lumotnoma va sertifikat muddatlari.",
+    ),
     scope: "branch",
     permissions: {
       dashboard: RO,
@@ -136,8 +150,11 @@ export const ROLES: RoleDefinition[] = [
   },
   {
     key: "finance",
-    label: "Финансы",
-    description: "Платежи, договоры, сверка оплат. Профили студентов — только чтение.",
+    label: loc("Финансы", "Moliyachi"),
+    description: loc(
+      "Платежи, договоры, сверка оплат. Профили студентов — только чтение.",
+      "To‘lovlar, shartnomalar, solishtirish. Talaba profillari — faqat o‘qish.",
+    ),
     scope: "tenant",
     permissions: {
       dashboard: RO,
@@ -150,9 +167,11 @@ export const ROLES: RoleDefinition[] = [
   },
   {
     key: "partner",
-    label: "Агент-партнёр",
-    description:
+    label: loc("Агент-партнёр", "Hamkor agent"),
+    description: loc(
       "Внешний партнёр: видит только приведённых им студентов и статус их заявок.",
+      "Tashqi hamkor: faqat o‘zi olib kelgan talabalarni va ularning holatini ko‘radi.",
+    ),
     scope: "own",
     permissions: {
       students: RO,
@@ -170,7 +189,7 @@ export function roleDef(role: Role): RoleDefinition {
   return def;
 }
 
-export function roleLabel(role: Role): string {
+export function roleLabel(role: Role): Loc {
   return roleDef(role).label;
 }
 

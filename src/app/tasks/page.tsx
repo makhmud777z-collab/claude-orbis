@@ -5,57 +5,62 @@ import { PageHeader } from "@/components/ui";
 import { applicationById } from "@/lib/data/applications";
 import { studentById } from "@/lib/data/students";
 import { userById } from "@/lib/data/users";
+import { translator } from "@/lib/i18n";
 import { can } from "@/lib/rbac";
+import { S } from "@/lib/strings";
 import { scopedTasks, scopedTeam } from "@/lib/queries";
 import { getSession } from "@/lib/session";
 
 export default async function TasksPage() {
   const session = await getSession();
+  const t = translator(session.locale);
   if (!can(session.role, "tasks")) {
-    return <NoAccess role={session.role} module="Задачи" />;
+    return (
+      <NoAccess role={session.role} module={t(S.nav.tasks)} locale={session.locale} />
+    );
   }
 
-  const cards: TaskCard[] = scopedTasks(session).map((t) => {
+  const cards: TaskCard[] = scopedTasks(session).map((task) => {
     let relationLabel: string | null = null;
-    if (t.relation?.type === "student") {
-      relationLabel = studentById(t.relation.id)?.fullName ?? null;
-    } else if (t.relation?.type === "application") {
-      const app = applicationById(t.relation.id);
-      relationLabel = app ? `Заявка ${app.id.toUpperCase()}` : null;
+    if (task.relation?.type === "student") {
+      relationLabel = studentById(task.relation.id)?.fullName ?? null;
+    } else if (task.relation?.type === "application") {
+      const app = applicationById(task.relation.id);
+      relationLabel = app ? `${t(S.applications.application)} ${app.id.toUpperCase()}` : null;
     }
 
     return {
-      id: t.id,
-      title: t.title,
-      description: t.description,
-      status: t.status,
-      priority: t.priority,
-      dueAt: t.dueAt,
-      assigneeId: t.assigneeId,
-      assigneeName: userById(t.assigneeId)?.name ?? "—",
-      creatorName: userById(t.creatorId)?.name ?? "—",
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      priority: task.priority,
+      dueAt: task.dueAt,
+      assigneeId: task.assigneeId,
+      assigneeName: userById(task.assigneeId)?.name ?? "—",
+      creatorName: userById(task.creatorId)?.name ?? "—",
       relationLabel,
-      overdue: t.status !== "done" && t.dueAt < "2026-09-16",
+      overdue: task.status !== "done" && task.dueAt < "2026-09-16",
     };
   });
 
   return (
     <>
       <PageHeader
-        title="Задачи"
+        title={t(S.tasks.title)}
         meta={
           <>
-            <span>{cards.filter((c) => c.status !== "done").length} в работе</span>
-            <span className="text-ink-faint">·</span>
             <span>
-              руководитель ставит задачу — исполнитель видит её у себя и в дедлайнах
+              {cards.filter((c) => c.status !== "done").length} {t(S.tasks.inProgress)}
             </span>
+            <span className="text-ink-faint">·</span>
+            <span>{t(S.tasks.subtitle)}</span>
           </>
         }
         actions={
           can(session.role, "tasks", "create") ? (
             <button className="btn btn-primary btn-sm">
-              <IconPlus size={15} /> Новая задача
+              <IconPlus size={15} /> {t(S.tasks.create)}
             </button>
           ) : null
         }
@@ -64,6 +69,7 @@ export default async function TasksPage() {
         tasks={cards}
         assignees={scopedTeam(session).map((u) => ({ id: u.id, name: u.name }))}
         currentUserId={session.user.id}
+        locale={session.locale}
       />
     </>
   );

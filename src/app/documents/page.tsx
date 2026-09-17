@@ -3,14 +3,19 @@ import { IconPlus } from "@/components/icons";
 import { NoAccess } from "@/components/NoAccess";
 import { PageHeader } from "@/components/ui";
 import { userById } from "@/lib/data/users";
+import { translator } from "@/lib/i18n";
 import { can } from "@/lib/rbac";
+import { S } from "@/lib/strings";
 import { scopedDocuments, scopedStudents } from "@/lib/queries";
 import { getSession } from "@/lib/session";
 
 export default async function DocumentsPage() {
   const session = await getSession();
+  const t = translator(session.locale);
   if (!can(session.role, "documents")) {
-    return <NoAccess role={session.role} module="Документы" />;
+    return (
+      <NoAccess role={session.role} module={t(S.nav.documents)} locale={session.locale} />
+    );
   }
 
   const docs = scopedDocuments(session);
@@ -50,25 +55,31 @@ export default async function DocumentsPage() {
   return (
     <>
       <PageHeader
-        title="Документы"
+        title={t(S.documents.title)}
         meta={
           <>
-            <span>{folders.length} папок студентов</span>
+            <span>
+              {folders.length} {t(S.documents.folders)}
+            </span>
             <span className="text-ink-faint">·</span>
-            <span>{docs.length} документов</span>
+            <span>
+              {docs.length} {t(S.documents.documents)}
+            </span>
             <span className="text-ink-faint">·</span>
-            <span>{problems} требуют внимания</span>
+            <span>
+              {problems} {t(S.documents.needAttention)}
+            </span>
           </>
         }
         actions={
           can(session.role, "documents", "create") ? (
             <button className="btn btn-primary btn-sm">
-              <IconPlus size={15} /> Загрузить документ
+              <IconPlus size={15} /> {t(S.documents.upload)}
             </button>
           ) : null
         }
       />
-      <DocumentsExplorer folders={folders} />
+      <DocumentsExplorer folders={folders} locale={session.locale} />
     </>
   );
 }

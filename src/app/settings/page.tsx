@@ -8,29 +8,36 @@ import {
   SectionTitle,
   StatusDot,
 } from "@/components/ui";
-import { formatDate } from "@/lib/format";
+import { formatters } from "@/lib/format";
+import { translator, LOCALES, type Loc } from "@/lib/i18n";
+import { BRANCH_LABEL, CITY_LABEL, ref } from "@/lib/labels";
 import { can, ROLES } from "@/lib/rbac";
+import { S } from "@/lib/strings";
 import { getSession } from "@/lib/session";
 import { ROOT_DOMAIN } from "@/lib/tenants";
 
-const PLAN_LABEL: Record<string, string> = {
-  trial: "Пробный период",
-  standard: "Standard",
-  pro: "Pro",
-  enterprise: "Enterprise",
+const PLAN_LABEL: Record<string, Loc> = {
+  trial: S.plans.trial,
+  standard: S.plans.standard,
+  pro: S.plans.pro,
+  enterprise: S.plans.enterprise,
 };
 
-const INTEGRATIONS = [
-  { name: "Telegram-бот для лидов", status: "этап 2", hint: "заявка из бота сразу в воронку" },
-  { name: "Почта агентства (SMTP)", status: "этап 2", hint: "письма студентам с домена агентства" },
-  { name: "Хранилище документов", status: "этап 2", hint: "S3-совместимое, с версиями файлов" },
-  { name: "Импорт каталога вузов", status: "этап 2", hint: "разбор admission guideline" },
+const INTEGRATIONS: { name: Loc; hint: Loc }[] = [
+  { name: S.integrations.telegram, hint: S.integrations.telegramHint },
+  { name: S.integrations.smtp, hint: S.integrations.smtpHint },
+  { name: S.integrations.storage, hint: S.integrations.storageHint },
+  { name: S.integrations.catalog, hint: S.integrations.catalogHint },
 ];
 
 export default async function SettingsPage() {
   const session = await getSession();
+  const t = translator(session.locale);
+  const f = formatters(session.locale);
   if (!can(session.role, "settings")) {
-    return <NoAccess role={session.role} module="Настройки" />;
+    return (
+      <NoAccess role={session.role} module={t(S.nav.settings)} locale={session.locale} />
+    );
   }
 
   const { tenant } = session;
@@ -38,21 +45,23 @@ export default async function SettingsPage() {
   return (
     <>
       <PageHeader
-        title="Настройки агентства"
+        title={t(S.settings.title)}
         meta={
           <>
             <span>{tenant.name}</span>
             <span className="text-ink-faint">·</span>
-            <span>{PLAN_LABEL[tenant.plan]}</span>
+            <span>{t(PLAN_LABEL[tenant.plan])}</span>
             <span className="text-ink-faint">·</span>
             <span>
-              {tenant.seatsUsed} из {tenant.seatsLimit} мест
+              {tenant.seatsUsed} / {tenant.seatsLimit} {t(S.settings.seats)}
             </span>
           </>
         }
         actions={
           can(session.role, "settings", "edit") ? (
-            <button className="btn btn-primary btn-sm">Сохранить изменения</button>
+            <button className="btn btn-primary btn-sm">
+              {t(S.settings.saveChanges)}
+            </button>
           ) : null
         }
       />
@@ -65,26 +74,29 @@ export default async function SettingsPage() {
             customDomain={tenant.customDomain}
             customDomainStatus={tenant.customDomainStatus}
             currentHost={session.host}
+            locale={session.locale}
           />
 
           <div className="card p-6">
-            <SectionTitle>Роли и доступы</SectionTitle>
+            <SectionTitle>{t(S.settings.rolesTitle)}</SectionTitle>
             <div className="divide-y divide-hairline-soft">
               {ROLES.map((r) => (
                 <div key={r.key} className="flex flex-wrap items-center gap-4 py-3.5">
                   <div className="min-w-[200px] flex-1">
-                    <div className="t-body-sm">{r.label}</div>
-                    <div className="t-micro text-ink-faint">{r.description}</div>
+                    <div className="t-body-sm">{t(r.label)}</div>
+                    <div className="t-micro text-ink-faint">{t(r.description)}</div>
                   </div>
                   <Chip>
-                    {r.scope === "tenant"
-                      ? "всё агентство"
-                      : r.scope === "branch"
-                        ? "свой филиал"
-                        : "только свои записи"}
+                    {t(
+                      r.scope === "tenant"
+                        ? S.common.scopeTenant
+                        : r.scope === "branch"
+                          ? S.common.scopeBranch
+                          : S.common.scopeOwn,
+                    )}
                   </Chip>
-                  <span className="t-micro w-24 text-right text-ink-faint">
-                    {Object.keys(r.permissions).length} модулей
+                  <span className="t-micro w-28 text-right text-ink-faint">
+                    {Object.keys(r.permissions).length} {t(S.settings.modules)}
                   </span>
                 </div>
               ))}
@@ -92,16 +104,16 @@ export default async function SettingsPage() {
           </div>
 
           <div className="card p-6">
-            <SectionTitle>Интеграции</SectionTitle>
+            <SectionTitle>{t(S.settings.integrations)}</SectionTitle>
             <div className="divide-y divide-hairline-soft">
               {INTEGRATIONS.map((i) => (
-                <div key={i.name} className="flex items-center gap-4 py-3.5">
+                <div key={i.name.ru} className="flex items-center gap-4 py-3.5">
                   <StatusDot color="var(--color-status-hold)" />
                   <div className="min-w-0 flex-1">
-                    <div className="t-body-sm">{i.name}</div>
-                    <div className="t-micro text-ink-faint">{i.hint}</div>
+                    <div className="t-body-sm">{t(i.name)}</div>
+                    <div className="t-micro text-ink-faint">{t(i.hint)}</div>
                   </div>
-                  <Chip>{i.status}</Chip>
+                  <Chip>{t(S.settings.stage2)}</Chip>
                 </div>
               ))}
             </div>
@@ -111,41 +123,58 @@ export default async function SettingsPage() {
         <div className="space-y-5">
           <div className="card p-5">
             <div className="t-caption mb-3 uppercase tracking-[0.07em] text-ink-faint">
-              Агентство
+              {t(S.settings.agency)}
             </div>
-            <Field label="Название" value={tenant.name} />
-            <Field label="Юридическое лицо" value={tenant.legalName} />
-            <Field label="Монограмма" value={tenant.mark} />
-            <Field label="Язык интерфейса" value={tenant.locale.toUpperCase()} />
-            <Field label="Валюта договоров" value={tenant.currency} />
-            <Field label="В системе с" value={formatDate(tenant.createdAt)} />
+            <Field label={t(S.settings.name)} value={tenant.name} />
+            <Field label={t(S.settings.legalName)} value={tenant.legalName} />
+            <Field label={t(S.settings.monogram)} value={tenant.mark} />
+            <Field
+              label={t(S.settings.interfaceLanguage)}
+              value={LOCALES.find((l) => l.key === tenant.locale)?.label ?? tenant.locale}
+            />
+            <Field
+              label={t(S.settings.currency)}
+              value={session.locale === "ru" ? "Сум (UZS)" : "So‘m (UZS)"}
+            />
+            <Field
+              label={t(S.settings.usdRate)}
+              value={`1 $ = ${f.som(tenant.usdRate)}`}
+            />
+            <Field label={t(S.settings.inSystemSince)} value={f.date(tenant.createdAt)} />
+            <p className="t-micro mt-3 leading-relaxed text-ink-faint">
+              {t(S.settings.rateHint)}
+            </p>
           </div>
 
           <div className="card p-5">
             <div className="t-caption mb-3 uppercase tracking-[0.07em] text-ink-faint">
-              Тариф
+              {t(S.settings.plan)}
             </div>
-            <div className="t-display-sm">{PLAN_LABEL[tenant.plan]}</div>
+            <div className="t-display-sm">{t(PLAN_LABEL[tenant.plan])}</div>
             <div className="t-micro mt-1 text-ink-faint">
-              {tenant.seatsUsed} из {tenant.seatsLimit} рабочих мест занято
+              {tenant.seatsUsed} / {tenant.seatsLimit} {t(S.settings.seatsUsed)}
             </div>
             <div className="mt-4">
               <Progress percent={(tenant.seatsUsed / tenant.seatsLimit) * 100} />
             </div>
             <button className="btn btn-secondary btn-sm mt-5 w-full">
-              Добавить места
+              {t(S.settings.addSeats)}
             </button>
           </div>
 
           <div className="card p-5">
             <div className="t-caption mb-3 uppercase tracking-[0.07em] text-ink-faint">
-              Филиалы
+              {t(S.settings.branches)}
             </div>
             {tenant.branches.map((b) => (
-              <Field key={b.id} label={b.city} value={b.name} />
+              <Field
+                key={b.id}
+                label={t(ref(CITY_LABEL, b.city))}
+                value={t(ref(BRANCH_LABEL, b.name))}
+              />
             ))}
             <button className="btn btn-secondary btn-sm mt-4 w-full">
-              Добавить филиал
+              {t(S.settings.addBranch)}
             </button>
           </div>
         </div>

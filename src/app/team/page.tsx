@@ -1,30 +1,37 @@
 import { IconPlus } from "@/components/icons";
 import { NoAccess } from "@/components/NoAccess";
 import { Avatar, Chip, PageHeader, SectionTitle, StatusDot } from "@/components/ui";
-import { formatDate, relativeTime } from "@/lib/format";
+import { formatters } from "@/lib/format";
+import { translator, type Loc } from "@/lib/i18n";
+import { CITY_LABEL, ref } from "@/lib/labels";
 import { can, ROLES } from "@/lib/rbac";
 import { scopedApplications, scopedStudents, scopedTasks, scopedTeam } from "@/lib/queries";
 import { getSession } from "@/lib/session";
+import { S } from "@/lib/strings";
 
-const MODULE_LABEL: Record<string, string> = {
-  dashboard: "Дашборд",
-  students: "Студенты",
-  applications: "Заявки",
-  universities: "Каталог",
-  documents: "Документы",
-  tasks: "Задачи",
-  deadlines: "Дедлайны",
-  team: "Сотрудники",
-  finance: "Финансы",
-  settings: "Настройки",
+const MODULE_LABEL: Record<string, Loc> = {
+  dashboard: S.nav.dashboard,
+  students: S.nav.students,
+  applications: S.nav.applications,
+  universities: S.nav.universities,
+  documents: S.nav.documents,
+  tasks: S.nav.tasks,
+  deadlines: S.nav.deadlines,
+  team: S.nav.team,
+  finance: S.nav.finance,
+  settings: S.nav.settings,
 };
 
 const MODULES = Object.keys(MODULE_LABEL);
 
 export default async function TeamPage() {
   const session = await getSession();
+  const t = translator(session.locale);
+  const f = formatters(session.locale);
   if (!can(session.role, "team")) {
-    return <NoAccess role={session.role} module="Сотрудники" />;
+    return (
+      <NoAccess role={session.role} module={t(S.nav.team)} locale={session.locale} />
+    );
   }
 
   const team = scopedTeam(session);
@@ -36,21 +43,21 @@ export default async function TeamPage() {
   return (
     <>
       <PageHeader
-        title="Сотрудники"
+        title={t(S.team.title)}
         meta={
           <>
             <span>
-              {team.length} человек · {session.tenant.seatsUsed} из{" "}
-              {session.tenant.seatsLimit} мест по тарифу
+              {team.length} {t(S.team.people)} · {session.tenant.seatsUsed}{" "}
+              {t(S.team.of)} {session.tenant.seatsLimit} {t(S.team.seats)}
             </span>
             <span className="text-ink-faint">·</span>
-            <span>роль определяет и права, и зону видимости данных</span>
+            <span>{t(S.team.subtitle)}</span>
           </>
         }
         actions={
           can(session.role, "team", "create") ? (
             <button className="btn btn-primary btn-sm">
-              <IconPlus size={15} /> Пригласить
+              <IconPlus size={15} /> {t(S.team.invite)}
             </button>
           ) : null
         }
@@ -82,30 +89,41 @@ export default async function TeamPage() {
                           : "var(--color-status-hold)"
                     }
                   />
-                  {u.status === "active" ? "активен" : u.status === "invited" ? "приглашён" : "заблокирован"}
+                  {t(
+                    u.status === "active"
+                      ? S.team.active
+                      : u.status === "invited"
+                        ? S.team.invited
+                        : S.team.suspended,
+                  )}
                 </span>
               </div>
 
               <div className="mt-4 flex flex-wrap gap-1.5">
-                <Chip active>{role.label}</Chip>
+                <Chip active>{t(role.label)}</Chip>
                 <Chip>
-                  {role.scope === "tenant"
-                    ? "всё агентство"
-                    : role.scope === "branch"
-                      ? "свой филиал"
-                      : "только свои записи"}
+                  {t(
+                    role.scope === "tenant"
+                      ? S.common.scopeTenant
+                      : role.scope === "branch"
+                        ? S.common.scopeBranch
+                        : S.common.scopeOwn,
+                  )}
                 </Chip>
               </div>
 
               <div className="mt-4 grid grid-cols-3 gap-2 border-t border-hairline-soft pt-4">
-                <Stat label="студентов" value={myStudents} />
-                <Stat label="заявок" value={myApps} />
-                <Stat label="задач" value={myTasks} />
+                <Stat label={t(S.team.studentsShort)} value={myStudents} />
+                <Stat label={t(S.team.applicationsShort)} value={myApps} />
+                <Stat label={t(S.team.tasksShort)} value={myTasks} />
               </div>
 
               <div className="t-micro mt-4 text-ink-faint">
-                {branches.get(u.branchId)?.city ?? "—"} · в системе с{" "}
-                {formatDate(u.joinedAt)} · был {relativeTime(u.lastActiveAt)}
+                {branches.get(u.branchId)
+                  ? t(ref(CITY_LABEL, branches.get(u.branchId)!.city))
+                  : "—"}{" "}
+                · {t(S.team.inSystemSince)} {f.date(u.joinedAt)} · {t(S.team.lastSeen)}{" "}
+                {f.relativeTime(u.lastActiveAt)}
               </div>
             </article>
           );
@@ -113,21 +131,21 @@ export default async function TeamPage() {
       </div>
 
       <section className="mt-10">
-        <SectionTitle>Матрица прав</SectionTitle>
+        <SectionTitle>{t(S.team.matrix)}</SectionTitle>
         <div className="card overflow-hidden">
           <div className="scroll-x">
             <table className="w-full min-w-[900px] border-collapse">
               <thead>
                 <tr className="border-b border-hairline-soft">
                   <th className="t-micro px-5 py-3 text-left font-medium uppercase tracking-[0.07em] text-ink-faint">
-                    Роль
+                    {t(S.team.role)}
                   </th>
                   {MODULES.map((m) => (
                     <th
                       key={m}
                       className="t-micro px-2 py-3 text-center font-medium uppercase tracking-[0.07em] text-ink-faint"
                     >
-                      {MODULE_LABEL[m]}
+                      {t(MODULE_LABEL[m])}
                     </th>
                   ))}
                 </tr>
@@ -136,9 +154,9 @@ export default async function TeamPage() {
                 {ROLES.map((r) => (
                   <tr key={r.key} className="border-b border-hairline-soft last:border-b-0">
                     <td className="px-5 py-3">
-                      <div className="t-body-sm">{r.label}</div>
+                      <div className="t-body-sm">{t(r.label)}</div>
                       <div className="t-micro max-w-[260px] text-ink-faint">
-                        {r.description}
+                        {t(r.description)}
                       </div>
                     </td>
                     {MODULES.map((m) => {
@@ -146,10 +164,10 @@ export default async function TeamPage() {
                       const level = !perms
                         ? "—"
                         : perms.includes("delete")
-                          ? "полный"
+                          ? t(S.team.levelFull)
                           : perms.includes("edit")
-                            ? "правка"
-                            : "чтение";
+                            ? t(S.team.levelEdit)
+                            : t(S.team.levelRead);
                       return (
                         <td key={m} className="px-2 py-3 text-center">
                           <span
@@ -158,7 +176,7 @@ export default async function TeamPage() {
                               color:
                                 level === "—"
                                   ? "var(--color-hairline)"
-                                  : level === "чтение"
+                                  : level === t(S.team.levelRead)
                                     ? "var(--color-ink-faint)"
                                     : "var(--color-ink-muted)",
                             }}

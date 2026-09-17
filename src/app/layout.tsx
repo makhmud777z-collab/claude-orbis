@@ -29,7 +29,7 @@ export default async function RootLayout({
   const host = session.host || `${session.tenant.slug}.${ROOT_DOMAIN}`;
 
   return (
-    <html lang="ru" className={inter.variable}>
+    <html lang={session.locale} className={inter.variable}>
       <body className="grain min-h-screen bg-canvas text-ink antialiased">
         <div className="flex min-h-screen">
           <Sidebar
@@ -38,6 +38,7 @@ export default async function RootLayout({
             host={host}
             modules={visibleModules(session.role)}
             roleLabel={roleLabel(session.role)}
+            locale={session.locale}
           />
           <div className="relative z-10 flex min-w-0 flex-1 flex-col">
             <Topbar
@@ -46,6 +47,7 @@ export default async function RootLayout({
               tenant={session.tenant}
               tenants={TENANTS.map((t) => ({ slug: t.slug, name: t.name }))}
               staff={usersOfTenant(session.tenant.id)}
+              locale={session.locale}
             />
             <main className="flex-1 px-5 py-7 lg:px-8">{children}</main>
           </div>

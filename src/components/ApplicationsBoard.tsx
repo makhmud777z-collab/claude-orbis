@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { IconFilter, IconMore } from "./icons";
 import { Avatar, Chip, Progress, StatusDot } from "./ui";
-import { BOARD_STAGES, stageMeta } from "@/lib/labels";
-import { money, relativeDeadline } from "@/lib/format";
+import { BOARD_STAGES, CITY_LABEL, INTAKE_LABEL, ref, stageMeta } from "@/lib/labels";
+import { formatters } from "@/lib/format";
+import { translator, type Locale } from "@/lib/i18n";
+import { S } from "@/lib/strings";
 import type { ApplicationStage } from "@/lib/types";
 
 export interface BoardCard {
@@ -33,12 +35,16 @@ export function ApplicationsBoard({
   owners,
   intakes,
   initialStage,
+  locale,
 }: {
   cards: BoardCard[];
   owners: { id: string; name: string }[];
   intakes: string[];
   initialStage?: string;
+  locale: Locale;
 }) {
+  const t = translator(locale);
+  const f = formatters(locale);
   const [owner, setOwner] = useState("all");
   const [intake, setIntake] = useState("all");
   const [onlyUrgent, setOnlyUrgent] = useState(false);
@@ -65,10 +71,10 @@ export function ApplicationsBoard({
           onChange={(e) => setFocus(e.target.value)}
           className="field h-[30px] w-auto rounded-full py-0 text-[12px]"
         >
-          <option value="all">Все этапы</option>
+          <option value="all">{t(S.applications.allStages)}</option>
           {BOARD_STAGES.map((s) => (
             <option key={s} value={s}>
-              {stageMeta(s).label}
+              {t(stageMeta(s).label)}
             </option>
           ))}
         </select>
@@ -77,7 +83,7 @@ export function ApplicationsBoard({
           onChange={(e) => setOwner(e.target.value)}
           className="field h-[30px] w-auto rounded-full py-0 text-[12px]"
         >
-          <option value="all">Все кураторы</option>
+          <option value="all">{t(S.students.allCurators)}</option>
           {owners.map((o) => (
             <option key={o.id} value={o.id}>
               {o.name}
@@ -89,23 +95,23 @@ export function ApplicationsBoard({
           onChange={(e) => setIntake(e.target.value)}
           className="field h-[30px] w-auto rounded-full py-0 text-[12px]"
         >
-          <option value="all">Все наборы</option>
+          <option value="all">{t(S.applications.allIntakes)}</option>
           {intakes.map((i) => (
             <option key={i} value={i}>
-              {i}
+              {t(ref(INTAKE_LABEL, i))}
             </option>
           ))}
         </select>
         <button onClick={() => setOnlyUrgent((v) => !v)}>
           <Chip active={onlyUrgent} dot="var(--color-status-risk)">
-            Только срочные
+            {t(S.applications.onlyUrgent)}
           </Chip>
         </button>
         <div className="ml-auto flex items-center gap-2">
           <span className="t-micro text-ink-faint">
-            {filtered.length} заявок в выборке
+            {filtered.length} {t(S.applications.inSelection)}
           </span>
-          <button className="btn-icon" aria-label="Фильтры">
+          <button className="btn-icon" aria-label={t(S.common.filters)}>
             <IconFilter size={16} />
           </button>
         </div>
@@ -120,7 +126,7 @@ export function ApplicationsBoard({
               <section key={stage} className="w-[286px] flex-none">
                 <div className="mb-3 flex items-center gap-2 rounded-[10px] border border-hairline-soft bg-surface-1 px-3.5 py-2.5">
                   <StatusDot color={meta.dot} />
-                  <span className="t-caption flex-1 truncate">{meta.short}</span>
+                  <span className="t-caption flex-1 truncate">{t(meta.short)}</span>
                   <span className="t-micro t-num rounded-full bg-surface-2 px-2 py-0.5 text-ink-muted">
                     {items.length}
                   </span>
@@ -149,13 +155,14 @@ export function ApplicationsBoard({
                           {c.universityName}
                         </div>
                         <div className="t-micro truncate text-ink-faint">
-                          {c.programName} · {c.city} · {c.intake}
+                          {c.programName} · {t(ref(CITY_LABEL, c.city))} ·{" "}
+                          {t(ref(INTAKE_LABEL, c.intake))}
                         </div>
                       </div>
 
                       <div className="mt-3.5">
                         <div className="t-micro mb-1.5 flex items-center justify-between text-ink-faint">
-                          <span>Досье</span>
+                          <span>{t(S.applications.dossier)}</span>
                           <span className="t-num">{c.dossierPercent}%</span>
                         </div>
                         <Progress
@@ -178,10 +185,11 @@ export function ApplicationsBoard({
                               : "var(--color-status-hold)"
                           }
                         >
-                          {relativeDeadline(c.deadline)}
+                          {f.relativeDeadline(c.deadline)}
                         </Chip>
                         <span className="t-micro t-num text-ink-faint">
-                          {money(c.paid)} / {money(c.contractValue)}
+                          {f.som(c.paid, { compact: true })} /{" "}
+                          {f.som(c.contractValue, { compact: true })}
                         </span>
                       </div>
                     </Link>
@@ -189,7 +197,7 @@ export function ApplicationsBoard({
 
                   {!items.length ? (
                     <div className="t-micro rounded-[15px] border border-dashed border-hairline px-4 py-8 text-center text-ink-faint">
-                      Пусто
+                      {t(S.common.empty)}
                     </div>
                   ) : null}
                 </div>

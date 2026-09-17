@@ -5,7 +5,9 @@ import { useMemo, useState } from "react";
 import { IconDocuments, IconSearch } from "./icons";
 import { Avatar, Chip, Progress, StatusDot } from "./ui";
 import { DOCUMENT_STATUS } from "@/lib/labels";
-import { formatShortDate } from "@/lib/format";
+import { formatters } from "@/lib/format";
+import { translator, type Loc, type Locale } from "@/lib/i18n";
+import { S } from "@/lib/strings";
 import type { DocumentStatus } from "@/lib/types";
 
 export interface DossierFolder {
@@ -19,7 +21,7 @@ export interface DossierFolder {
   updatedAt: string;
   items: {
     id: string;
-    kind: string;
+    kind: Loc;
     fileName: string | null;
     status: DocumentStatus;
     sizeKb: number | null;
@@ -29,38 +31,46 @@ export interface DossierFolder {
   }[];
 }
 
-const TABS: { key: "all" | "problem" | "expiring"; label: string }[] = [
-  { key: "all", label: "Все папки" },
-  { key: "problem", label: "Требуют внимания" },
-  { key: "expiring", label: "Истекает срок" },
+const TABS: { key: "all" | "problem" | "expiring"; label: Loc }[] = [
+  { key: "all", label: S.documents.allFolders },
+  { key: "problem", label: S.documents.tabProblem },
+  { key: "expiring", label: S.documents.tabExpiring },
 ];
 
-export function DocumentsExplorer({ folders }: { folders: DossierFolder[] }) {
+export function DocumentsExplorer({
+  folders,
+  locale,
+}: {
+  folders: DossierFolder[];
+  locale: Locale;
+}) {
+  const t = translator(locale);
+  const f = formatters(locale);
   const [tab, setTab] = useState<"all" | "problem" | "expiring">("all");
   const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(folders[0]?.studentId ?? null);
 
   const visible = useMemo(
     () =>
-      folders.filter((f) => {
-        if (query && !f.studentName.toLowerCase().includes(query.toLowerCase()))
+      folders.filter((folder) => {
+        if (query && !folder.studentName.toLowerCase().includes(query.toLowerCase()))
           return false;
-        if (tab === "problem") return f.problems > 0;
+        if (tab === "problem") return folder.problems > 0;
         if (tab === "expiring")
-          return f.items.some((i) => i.status === "expiring" || i.expiresAt);
+          return folder.items.some((i) => i.status === "expiring" || i.expiresAt);
         return true;
       }),
     [folders, tab, query],
   );
 
-  const open = visible.find((f) => f.studentId === openId) ?? visible[0];
+  const open = visible.find((folder) => folder.studentId === openId) ?? visible[0];
 
   return (
     <>
       <div className="mb-5 flex flex-wrap items-center gap-2">
-        {TABS.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)}>
-            <Chip active={tab === t.key}>{t.label}</Chip>
+        {TABS.map((tab_) => (
+          <button key={tab_.key} onClick={() => setTab(tab_.key)}>
+            <Chip active={tab === tab_.key}>{t(tab_.label)}</Chip>
           </button>
         ))}
         <label className="relative ml-auto flex items-center">
@@ -70,7 +80,7 @@ export function DocumentsExplorer({ folders }: { folders: DossierFolder[] }) {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Поиск по студенту"
+            placeholder={t(S.documents.searchStudent)}
             className="field h-[30px] w-[200px] rounded-full py-0 pl-8 text-[12px]"
           />
         </label>
@@ -78,23 +88,26 @@ export function DocumentsExplorer({ folders }: { folders: DossierFolder[] }) {
 
       <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
         <div className="space-y-2.5 lg:max-h-[72vh] lg:overflow-y-auto lg:pr-1">
-          {visible.map((f) => (
+          {visible.map((folder) => (
             <button
-              key={f.studentId}
-              onClick={() => setOpenId(f.studentId)}
+              key={folder.studentId}
+              onClick={() => setOpenId(folder.studentId)}
               className={`card card-hover w-full p-4 text-left ${
-                open?.studentId === f.studentId ? "!bg-surface-2 !border-hairline" : ""
+                open?.studentId === folder.studentId
+                  ? "!bg-surface-2 !border-hairline"
+                  : ""
               }`}
             >
               <div className="flex items-center gap-3">
-                <Avatar name={f.studentName} size={30} />
+                <Avatar name={folder.studentName} size={30} />
                 <div className="min-w-0 flex-1">
-                  <div className="t-body-sm truncate">{f.studentName}</div>
+                  <div className="t-body-sm truncate">{folder.studentName}</div>
                   <div className="t-micro truncate text-ink-faint">
-                    {f.total} документов · куратор {f.ownerName}
+                    {folder.total} {t(S.documents.documents)} · {t(S.common.curator)}{" "}
+                    {folder.ownerName}
                   </div>
                 </div>
-                {f.problems ? (
+                {folder.problems ? (
                   <span
                     className="t-micro t-num rounded-full px-2 py-0.5"
                     style={{
@@ -102,30 +115,30 @@ export function DocumentsExplorer({ folders }: { folders: DossierFolder[] }) {
                       color: "var(--color-status-risk)",
                     }}
                   >
-                    {f.problems}
+                    {folder.problems}
                   </span>
                 ) : null}
               </div>
               <div className="mt-3 flex items-center gap-3">
                 <Progress
-                  percent={f.percent}
+                  percent={folder.percent}
                   tone={
-                    f.percent >= 80
+                    folder.percent >= 80
                       ? "var(--color-status-deal)"
-                      : f.percent >= 40
+                      : folder.percent >= 40
                         ? "var(--color-status-progress)"
                         : "var(--color-status-risk)"
                   }
                 />
                 <span className="t-micro t-num w-9 text-right text-ink-faint">
-                  {f.percent}%
+                  {folder.percent}%
                 </span>
               </div>
             </button>
           ))}
           {!visible.length ? (
             <div className="card px-4 py-10 text-center">
-              <div className="t-body-sm text-ink-muted">Папок нет</div>
+              <div className="t-body-sm text-ink-muted">{t(S.documents.noFolders)}</div>
             </div>
           ) : null}
         </div>
@@ -138,10 +151,13 @@ export function DocumentsExplorer({ folders }: { folders: DossierFolder[] }) {
                   <IconDocuments size={17} />
                 </span>
                 <div>
-                  <div className="t-body-sm">Досье — {open.studentName}</div>
+                  <div className="t-body-sm">
+                    {t(S.documents.dossierOf)} — {open.studentName}
+                  </div>
                   <div className="t-micro text-ink-faint">
-                    {open.verified} проверено · {open.problems} требуют внимания ·
-                    обновлено {formatShortDate(open.updatedAt)}
+                    {open.verified} {t(S.documents.verified)} · {open.problems}{" "}
+                    {t(S.documents.needAttention)} · {t(S.documents.updated)}{" "}
+                    {f.shortDate(open.updatedAt)}
                   </div>
                 </div>
               </div>
@@ -150,9 +166,11 @@ export function DocumentsExplorer({ folders }: { folders: DossierFolder[] }) {
                   href={`/students/${open.studentId}`}
                   className="btn btn-secondary btn-sm"
                 >
-                  Карточка студента
+                  {t(S.applications.studentCard)}
                 </Link>
-                <button className="btn btn-primary btn-sm">Загрузить файл</button>
+                <button className="btn btn-primary btn-sm">
+                  {t(S.documents.uploadFile)}
+                </button>
               </div>
             </div>
 
@@ -163,20 +181,20 @@ export function DocumentsExplorer({ folders }: { folders: DossierFolder[] }) {
                   <div key={d.id} className="flex flex-wrap items-center gap-4 px-5 py-3.5">
                     <StatusDot color={st.dot} />
                     <div className="min-w-[200px] flex-1">
-                      <div className="t-body-sm">{d.kind}</div>
+                      <div className="t-body-sm">{t(d.kind)}</div>
                       <div className="t-micro text-ink-faint">
-                        {d.fileName ?? "файл не загружен"}
-                        {d.sizeKb ? ` · ${(d.sizeKb / 1024).toFixed(1)} МБ` : ""}
+                        {d.fileName ?? t(S.students.fileMissing)}
+                        {d.sizeKb ? ` · ${(d.sizeKb / 1024).toFixed(1)} MB` : ""}
                       </div>
                     </div>
-                    {d.needsApostille ? <Chip>апостиль</Chip> : null}
+                    {d.needsApostille ? <Chip>{t(S.students.apostille)}</Chip> : null}
                     {d.expiresAt ? (
                       <Chip dot="var(--color-status-progress)">
-                        до {formatShortDate(d.expiresAt)}
+                        {t(S.documents.until)} {f.shortDate(d.expiresAt)}
                       </Chip>
                     ) : null}
                     <span className="t-caption w-24 text-right text-ink-muted">
-                      {st.label}
+                      {t(st.label)}
                     </span>
                   </div>
                 );

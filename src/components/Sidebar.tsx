@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { GROUP_LABEL, NAV, type NavEntry } from "./nav";
 import { IconLogo } from "./icons";
+import { translator, type Locale } from "@/lib/i18n";
 import type { Module } from "@/lib/rbac";
+import type { Loc } from "@/lib/i18n";
 
 export function Sidebar({
   tenantName,
@@ -12,14 +14,17 @@ export function Sidebar({
   host,
   modules,
   roleLabel,
+  locale,
 }: {
   tenantName: string;
   tenantMark: string;
   host: string;
   modules: Module[];
-  roleLabel: string;
+  roleLabel: Loc;
+  locale: Locale;
 }) {
   const pathname = usePathname();
+  const t = translator(locale);
   const allowed = new Set(modules);
   const entries = NAV.filter((e) => allowed.has(e.module));
   const groups: NavEntry["group"][] = ["work", "base", "admin"];
@@ -46,7 +51,7 @@ export function Sidebar({
           return (
             <div key={group}>
               <div className="t-micro mb-2 px-3 uppercase tracking-[0.08em] text-ink-faint">
-                {GROUP_LABEL[group]}
+                {t(GROUP_LABEL[group])}
               </div>
               <div className="space-y-0.5">
                 {items.map(({ href, label, icon: Icon }) => (
@@ -56,7 +61,7 @@ export function Sidebar({
                     className={`nav-item ${isActive(href) ? "nav-item-active" : ""}`}
                   >
                     <Icon size={17} />
-                    {label}
+                    {t(label)}
                   </Link>
                 ))}
               </div>
@@ -72,7 +77,7 @@ export function Sidebar({
           </span>
           <span className="min-w-0">
             <span className="t-caption block truncate">{tenantName}</span>
-            <span className="t-micro block truncate text-ink-faint">{roleLabel}</span>
+            <span className="t-micro block truncate text-ink-faint">{t(roleLabel)}</span>
           </span>
         </div>
       </div>

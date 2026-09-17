@@ -4,8 +4,17 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Avatar, Chip, StatusDot } from "./ui";
 import { IconSearch } from "./icons";
-import { DEGREE_LABEL, SOURCE_LABEL, STUDENT_STATUS } from "@/lib/labels";
-import { formatShortDate, money } from "@/lib/format";
+import { formatters } from "@/lib/format";
+import { translator, type Loc, type Locale } from "@/lib/i18n";
+import {
+  CITY_LABEL,
+  DEGREE_LABEL,
+  FIELD_LABEL,
+  ref,
+  SOURCE_LABEL,
+  STUDENT_STATUS,
+} from "@/lib/labels";
+import { S } from "@/lib/strings";
 import type { Student, User } from "@/lib/types";
 
 export interface StudentRow extends Student {
@@ -15,26 +24,31 @@ export interface StudentRow extends Student {
   dossierPercent: number;
 }
 
-const STATUS_FILTERS = [
-  { key: "all", label: "Все" },
-  { key: "lead", label: "Лиды" },
-  { key: "active", label: "В работе" },
-  { key: "enrolled", label: "Зачислены" },
-  { key: "paused", label: "На паузе" },
-  { key: "lost", label: "Потеряны" },
-] as const;
-
 export function StudentsTable({
   rows,
   owners,
+  locale,
 }: {
   rows: StudentRow[];
   owners: Pick<User, "id" | "name">[];
+  locale: Locale;
 }) {
+  const t = translator(locale);
+  const f = formatters(locale);
+
   const [status, setStatus] = useState<string>("all");
   const [owner, setOwner] = useState<string>("all");
   const [topik, setTopik] = useState<string>("all");
   const [query, setQuery] = useState("");
+
+  const statusFilters: { key: string; label: Loc }[] = [
+    { key: "all", label: S.common.all },
+    { key: "lead", label: S.students.filterLead },
+    { key: "active", label: S.students.filterActive },
+    { key: "enrolled", label: S.students.filterEnrolled },
+    { key: "paused", label: S.students.filterPaused },
+    { key: "lost", label: S.students.filterLost },
+  ];
 
   const filtered = useMemo(
     () =>
@@ -52,18 +66,28 @@ export function StudentsTable({
     [rows, status, owner, topik, query],
   );
 
+  const columns = [
+    S.students.colStudent,
+    S.students.colProfile,
+    S.students.colBudget,
+    S.students.colGoal,
+    S.students.colCurator,
+    S.students.colDossier,
+    S.students.colStatus,
+  ];
+
   return (
     <>
       <div className="mb-5 flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap items-center gap-1.5">
-          {STATUS_FILTERS.map((f) => (
-            <button key={f.key} onClick={() => setStatus(f.key)}>
-              <Chip active={status === f.key}>
-                {f.label}
+          {statusFilters.map((item) => (
+            <button key={item.key} onClick={() => setStatus(item.key)}>
+              <Chip active={status === item.key}>
+                {t(item.label)}
                 <span className="t-num ml-1 text-ink-faint">
-                  {f.key === "all"
+                  {item.key === "all"
                     ? rows.length
-                    : rows.filter((r) => r.status === f.key).length}
+                    : rows.filter((r) => r.status === item.key).length}
                 </span>
               </Chip>
             </button>
@@ -76,7 +100,7 @@ export function StudentsTable({
             onChange={(e) => setOwner(e.target.value)}
             className="field h-[30px] w-auto rounded-full py-0 text-[12px]"
           >
-            <option value="all">Все кураторы</option>
+            <option value="all">{t(S.students.allCurators)}</option>
             {owners.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.name}
@@ -88,7 +112,7 @@ export function StudentsTable({
             onChange={(e) => setTopik(e.target.value)}
             className="field h-[30px] w-auto rounded-full py-0 text-[12px]"
           >
-            <option value="all">Любой TOPIK</option>
+            <option value="all">{t(S.students.anyTopik)}</option>
             {[1, 2, 3, 4, 5, 6].map((lvl) => (
               <option key={lvl} value={lvl}>
                 TOPIK {lvl}+
@@ -102,7 +126,7 @@ export function StudentsTable({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Поиск по базе"
+              placeholder={t(S.students.searchBase)}
               className="field h-[30px] w-[190px] rounded-full py-0 pl-8 text-[12px]"
             />
           </label>
@@ -114,16 +138,14 @@ export function StudentsTable({
           <table className="w-full min-w-[1060px] border-collapse">
             <thead>
               <tr className="border-b border-hairline-soft">
-                {["Студент", "Профиль", "Бюджет / год", "Цель", "Куратор", "Досье", "Статус"].map(
-                  (h) => (
-                    <th
-                      key={h}
-                      className="t-micro whitespace-nowrap px-4 py-3 text-left font-medium uppercase tracking-[0.07em] text-ink-faint"
-                    >
-                      {h}
-                    </th>
-                  ),
-                )}
+                {columns.map((h) => (
+                  <th
+                    key={h.ru}
+                    className="t-micro whitespace-nowrap px-4 py-3 text-left font-medium uppercase tracking-[0.07em] text-ink-faint"
+                  >
+                    {t(h)}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -140,7 +162,8 @@ export function StudentsTable({
                         <span className="min-w-0">
                           <span className="t-body-sm block truncate">{s.fullName}</span>
                           <span className="t-micro block truncate text-ink-faint">
-                            {s.city} · {SOURCE_LABEL[s.source]} · {formatShortDate(s.createdAt)}
+                            {t(ref(CITY_LABEL, s.city))} · {t(SOURCE_LABEL[s.source])} ·{" "}
+                            {f.shortDate(s.createdAt)}
                           </span>
                         </span>
                       </Link>
@@ -153,18 +176,26 @@ export function StudentsTable({
                       </div>
                     </td>
                     <td className="t-body-sm t-num whitespace-nowrap px-4 py-3.5">
-                      {money(s.profile.budgetPerYear)}
+                      {f.usd(s.profile.budgetPerYear)}
                       {s.profile.needsScholarship ? (
-                        <span className="t-micro block text-ink-faint">нужен грант</span>
+                        <span className="t-micro block text-ink-faint">
+                          {t(S.students.needsGrant)}
+                        </span>
                       ) : null}
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="t-body-sm whitespace-nowrap">
-                        {s.profile.preferredMajors[0] ?? "не определено"}
+                        {s.profile.preferredMajors[0]
+                          ? t(ref(FIELD_LABEL, s.profile.preferredMajors[0]))
+                          : t(S.students.notDefined)}
                       </div>
                       <div className="t-micro whitespace-nowrap text-ink-faint">
-                        {DEGREE_LABEL[s.profile.degreeLevel]} ·{" "}
-                        {s.profile.preferredCities.join(", ") || "любой город"}
+                        {t(DEGREE_LABEL[s.profile.degreeLevel])} ·{" "}
+                        {s.profile.preferredCities.length
+                          ? s.profile.preferredCities
+                              .map((c) => t(ref(CITY_LABEL, c)))
+                              .join(", ")
+                          : t(S.students.anyCity)}
                       </div>
                     </td>
                     <td className="px-4 py-3.5">
@@ -176,13 +207,13 @@ export function StudentsTable({
                     <td className="px-4 py-3.5">
                       <div className="t-caption t-num">{s.dossierPercent}%</div>
                       <div className="t-micro whitespace-nowrap text-ink-faint">
-                        {s.applicationsCount} заявк{s.applicationsCount === 1 ? "а" : "и"}
+                        {s.applicationsCount} {t(S.students.applicationsShort)}
                       </div>
                     </td>
                     <td className="px-4 py-3.5">
                       <span className="chip">
                         <StatusDot color={st.dot} />
-                        {st.label}
+                        {t(st.label)}
                       </span>
                     </td>
                   </tr>
@@ -193,7 +224,7 @@ export function StudentsTable({
         </div>
         {!filtered.length ? (
           <div className="t-body-sm px-5 py-12 text-center text-ink-muted">
-            Ничего не найдено — попробуйте снять фильтры.
+            {t(S.common.nothingFound)}
           </div>
         ) : null}
       </div>

@@ -1,3 +1,5 @@
+import type { Loc, Locale } from "./i18n";
+
 /**
  * Orbis System — доменная модель.
  * Слой данных намеренно отделён от UI: сейчас источник — моки в src/lib/data,
@@ -18,8 +20,13 @@ export interface Tenant {
   customDomain: string | null;
   customDomainStatus: "none" | "pending" | "verified";
   plan: TenantPlan;
-  locale: "ru" | "uz" | "kk" | "en";
-  currency: "USD" | "KRW" | "UZS";
+  /** язык интерфейса по умолчанию; сотрудник может переключить себе */
+  locale: Locale;
+  /** договоры агентства ведутся в сумах */
+  currency: "UZS";
+  /** курс для пересчёта стоимости обучения: сум за $1 */
+  usdRate: number;
+  rateUpdatedAt: string;
   /** буква/монограмма в логотипе — брендинг арендатора без ломки палитры */
   mark: string;
   seatsUsed: number;
@@ -82,7 +89,7 @@ export interface StudentProfile {
   /** аттестат / диплом */
   education: string;
   graduationYear: number;
-  /** бюджет семьи на год обучения, USD */
+  /** бюджет семьи на год обучения, USD — вузы публикуют цены в долларах */
   budgetPerYear: number;
   preferredCities: string[];
   preferredMajors: string[];
@@ -142,7 +149,9 @@ export interface Application {
   priority: "low" | "normal" | "high";
   /** ближайший внешний дедлайн по заявке */
   deadline: string | null;
+  /** сумма договора с семьёй, в сумах */
   contractValue: number;
+  /** оплачено, в сумах */
   paid: number;
   createdAt: string;
   note: string;
@@ -163,7 +172,7 @@ export interface StudentDocument {
   tenantId: string;
   studentId: string;
   applicationId: string | null;
-  kind: string;
+  kind: Loc;
   fileName: string | null;
   sizeKb: number | null;
   status: DocumentStatus;

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { NAV } from "@/components/nav";
 import { IconArrowUpRight, IconExport, IconPlus } from "@/components/icons";
 import {
   Avatar,
@@ -11,7 +12,8 @@ import {
   StatusDot,
 } from "@/components/ui";
 import { userById } from "@/lib/data/users";
-import { formatShortDate, money, relativeDeadline, relativeTime } from "@/lib/format";
+import { daysUntil, formatters } from "@/lib/format";
+import { translator } from "@/lib/i18n";
 import { BOARD_STAGES, DEADLINE_KIND, stageMeta } from "@/lib/labels";
 import {
   scopedActivity,
@@ -21,8 +23,8 @@ import {
   scopedTasks,
 } from "@/lib/queries";
 import { can, visibleModules } from "@/lib/rbac";
-import { NAV } from "@/components/nav";
 import { getSession } from "@/lib/session";
+import { S } from "@/lib/strings";
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -35,6 +37,9 @@ export default async function DashboardPage() {
     redirect(first?.href ?? "/students");
   }
 
+  const t = translator(session.locale);
+  const f = formatters(session.locale);
+
   const students = scopedStudents(session);
   const applications = scopedApplications(session);
   const deadlines = scopedDeadlines(session);
@@ -45,12 +50,7 @@ export default async function DashboardPage() {
   const inPipeline = applications.filter(
     (a) => !["departed", "lost"].includes(a.stage),
   );
-  const soon = deadlines.filter((d) => {
-    const days = Math.round(
-      (new Date(d.date).getTime() - new Date("2026-09-16").getTime()) / 86_400_000,
-    );
-    return days <= 7;
-  });
+  const soon = deadlines.filter((d) => daysUntil(d.date) <= 7);
   const contracted = inPipeline.reduce((sum, a) => sum + a.contractValue, 0);
   const collected = inPipeline.reduce((sum, a) => sum + a.paid, 0);
 
@@ -62,32 +62,33 @@ export default async function DashboardPage() {
   const maxStage = Math.max(1, ...byStage.map((s) => s.count));
 
   const myTasks = tasks
-    .filter((t) => t.status !== "done")
+    .filter((task) => task.status !== "done")
     .sort((a, b) => a.dueAt.localeCompare(b.dueAt))
     .slice(0, 5);
 
   return (
     <>
       <PageHeader
-        title={`Добрый день, ${session.user.name.split(" ")[0]}`}
+        title={`${t(S.dashboard.greeting)}, ${session.user.name.split(" ")[0]}`}
         meta={
           <>
             <span>{session.tenant.name}</span>
             <span className="text-ink-faint">·</span>
-            <span>16 сентября 2026, среда</span>
+            <span>{t(S.dashboard.date)}</span>
             <span className="text-ink-faint">·</span>
             <span>
-              {inPipeline.length} активных заявок · {soon.length} дедлайнов на неделе
+              {inPipeline.length} {t(S.dashboard.activeApps)} · {soon.length}{" "}
+              {t(S.dashboard.weekDeadlines)}
             </span>
           </>
         }
         actions={
           <>
             <button className="btn btn-secondary btn-sm">
-              <IconExport size={15} /> Экспорт
+              <IconExport size={15} /> {t(S.common.export)}
             </button>
             <Link href="/applications" className="btn btn-primary btn-sm">
-              <IconPlus size={15} /> Новая заявка
+              <IconPlus size={15} /> {t(S.dashboard.newApplication)}
             </Link>
           </>
         }
@@ -95,27 +96,31 @@ export default async function DashboardPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
-          label="Студенты в работе"
+          label={t(S.dashboard.tileStudents)}
           value={active}
-          hint={`всего в базе ${students.length}`}
+          hint={`${t(S.dashboard.tileStudentsHint)} ${students.length}`}
           accent="var(--color-status-open)"
         />
         <StatTile
-          label="Заявки в воронке"
+          label={t(S.dashboard.tileApps)}
           value={inPipeline.length}
-          hint={`${applications.filter((a) => a.stage === "offer").length} с offer · ${applications.filter((a) => a.stage === "visa").length} на визе`}
+          hint={`${applications.filter((a) => a.stage === "offer").length} ${t(S.dashboard.tileWithOffer)} · ${applications.filter((a) => a.stage === "visa").length} ${t(S.dashboard.tileOnVisa)}`}
           accent="var(--color-status-violet)"
         />
         <StatTile
-          label="Дедлайны ≤ 7 дней"
+          label={t(S.dashboard.tileDeadlines)}
           value={soon.length}
-          hint={soon[0] ? `ближайший — ${formatShortDate(soon[0].date)}` : "всё спокойно"}
+          hint={
+            soon[0]
+              ? `${t(S.dashboard.tileNearest)} — ${f.shortDate(soon[0].date)}`
+              : t(S.dashboard.tileCalm)
+          }
           accent="var(--color-status-progress)"
         />
         <StatTile
-          label="Законтрактовано"
-          value={money(contracted)}
-          hint={`оплачено ${money(collected)} · ${Math.round((collected / Math.max(1, contracted)) * 100)}%`}
+          label={t(S.dashboard.tileContracted)}
+          value={f.som(contracted, { compact: true })}
+          hint={`${t(S.dashboard.tilePaid)} ${f.som(collected, { compact: true })} · ${Math.round((collected / Math.max(1, contracted)) * 100)}%`}
           accent="var(--color-status-deal)"
         />
       </div>
@@ -124,11 +129,11 @@ export default async function DashboardPage() {
         <SectionTitle
           action={
             <Link href="/applications" className="t-caption text-ink-muted hover:text-ink">
-              Открыть доску <IconArrowUpRight size={13} className="inline" />
+              {t(S.dashboard.openBoard)} <IconArrowUpRight size={13} className="inline" />
             </Link>
           }
         >
-          Воронка заявок
+          {t(S.dashboard.funnel)}
         </SectionTitle>
         <div className="card grid grid-cols-2 divide-y divide-hairline-soft sm:grid-cols-4 sm:divide-y-0 xl:grid-cols-8">
           {byStage.map(({ stage, meta, count }) => (
@@ -139,7 +144,7 @@ export default async function DashboardPage() {
             >
               <div className="t-micro flex items-center gap-2 whitespace-nowrap text-ink-muted">
                 <StatusDot color={meta.dot} />
-                {meta.short}
+                {t(meta.short)}
               </div>
               <div className="t-num mt-3 text-[26px] font-medium tracking-[-1.2px]">
                 {count}
@@ -157,11 +162,11 @@ export default async function DashboardPage() {
           <SectionTitle
             action={
               <Link href="/deadlines" className="t-caption text-ink-muted hover:text-ink">
-                Все дедлайны
+                {t(S.dashboard.allDeadlines)}
               </Link>
             }
           >
-            Ближайшие дедлайны
+            {t(S.dashboard.nearestDeadlines)}
           </SectionTitle>
           <div className="card divide-y divide-hairline-soft">
             {deadlines.slice(0, 6).map((d) => {
@@ -173,13 +178,13 @@ export default async function DashboardPage() {
                   <div className="min-w-0 flex-1">
                     <div className="t-body-sm truncate">{d.title}</div>
                     <div className="t-micro mt-0.5 text-ink-faint">
-                      {kind.label} · {owner?.name ?? "—"}
+                      {t(kind.label)} · {owner?.name ?? "—"}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="t-caption t-num">{formatShortDate(d.date)}</div>
+                    <div className="t-caption t-num">{f.shortDate(d.date)}</div>
                     <div className="t-micro text-ink-faint">
-                      {relativeDeadline(d.date)}
+                      {f.relativeDeadline(d.date)}
                     </div>
                   </div>
                 </div>
@@ -189,17 +194,16 @@ export default async function DashboardPage() {
 
           <div className="spotlight-violet mt-5 overflow-hidden rounded-[30px] px-8 py-8">
             <div className="t-caption uppercase tracking-[0.1em] text-white/70">
-              Подбор вузов
+              {t(S.dashboard.spotlightEyebrow)}
             </div>
             <div className="mt-3 max-w-sm text-[24px] font-medium leading-[1.15] tracking-[-0.9px] text-white">
-              Соберите шорт-лист по TOPIK, бюджету, городу и направлению — за один
-              проход по каталогу.
+              {t(S.dashboard.spotlightTitle)}
             </div>
             <Link
               href="/universities"
               className="btn mt-6 bg-white text-black hover:bg-white/90"
             >
-              Открыть каталог <IconArrowUpRight size={14} />
+              {t(S.dashboard.spotlightCta)} <IconArrowUpRight size={14} />
             </Link>
           </div>
         </section>
@@ -208,20 +212,20 @@ export default async function DashboardPage() {
           <SectionTitle
             action={
               <Link href="/tasks" className="t-caption text-ink-muted hover:text-ink">
-                Все задачи
+                {t(S.dashboard.allTasks)}
               </Link>
             }
           >
-            Мои задачи
+            {t(S.dashboard.myTasks)}
           </SectionTitle>
           <div className="card divide-y divide-hairline-soft">
-            {myTasks.map((t) => {
-              const assignee = userById(t.assigneeId);
+            {myTasks.map((task) => {
+              const assignee = userById(task.assigneeId);
               return (
-                <div key={t.id} className="flex items-start gap-3.5 px-5 py-3.5">
+                <div key={task.id} className="flex items-start gap-3.5 px-5 py-3.5">
                   <span className="mt-1 h-3.5 w-3.5 flex-none rounded-[5px] border border-hairline" />
                   <div className="min-w-0 flex-1">
-                    <div className="t-body-sm">{t.title}</div>
+                    <div className="t-body-sm">{task.title}</div>
                     <div className="t-micro mt-1 flex items-center gap-2 text-ink-faint">
                       <Avatar name={assignee?.name ?? "—"} size={18} />
                       {assignee?.name}
@@ -229,24 +233,24 @@ export default async function DashboardPage() {
                       <span
                         style={{
                           color:
-                            t.dueAt <= "2026-09-18"
+                            task.dueAt <= "2026-09-18"
                               ? "var(--color-status-risk)"
                               : undefined,
                         }}
                       >
-                        {relativeDeadline(t.dueAt)}
+                        {f.relativeDeadline(task.dueAt)}
                       </span>
                     </div>
                   </div>
-                  {t.priority === "high" ? (
-                    <Chip dot="var(--color-status-risk)">важно</Chip>
+                  {task.priority === "high" ? (
+                    <Chip dot="var(--color-status-risk)">{t(S.dashboard.important)}</Chip>
                   ) : null}
                 </div>
               );
             })}
           </div>
 
-          <SectionTitle>Лента агентства</SectionTitle>
+          <SectionTitle>{t(S.dashboard.feed)}</SectionTitle>
           <div className="card divide-y divide-hairline-soft">
             {activity.slice(0, 7).map((e) => {
               const actor = userById(e.actorId);
@@ -259,7 +263,7 @@ export default async function DashboardPage() {
                       <span className="text-ink-muted">{e.verb}</span> {e.object}
                     </div>
                     <div className="t-micro mt-0.5 text-ink-faint">
-                      {relativeTime(e.at)}
+                      {f.relativeTime(e.at)}
                     </div>
                   </div>
                 </div>

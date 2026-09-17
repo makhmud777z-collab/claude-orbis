@@ -1,4 +1,4 @@
-import { DOCUMENT_CHECKLIST } from "../labels";
+import { checklistKey, DOCUMENT_CHECKLIST } from "../labels";
 import type { DocumentStatus, StudentDocument } from "../types";
 import { APPLICATIONS } from "./applications";
 import { STUDENTS } from "./students";
@@ -31,11 +31,13 @@ export const DOCUMENTS: StudentDocument[] = STUDENTS.flatMap((student) => {
   const primaryApp = apps[0]?.id ?? null;
 
   return DOCUMENT_CHECKLIST.filter((item) => {
-    if (item.kind === "Сертификат TOPIK" && student.profile.topik === 0) return false;
-    if (item.kind === "Сертификат IELTS" && student.profile.ielts === null) return false;
+    const key = checklistKey(item.kind);
+    if (key === "Сертификат TOPIK" && student.profile.topik === 0) return false;
+    if (key === "Сертификат IELTS" && student.profile.ielts === null) return false;
     return true;
   }).map((item, index) => {
-    const noise = seed(student.id + item.kind);
+    const key = checklistKey(item.kind);
+    const noise = seed(student.id + key);
     const status = statusFor(index, progress, noise);
     const hasFile = status !== "missing" && status !== "requested";
 
@@ -52,7 +54,7 @@ export const DOCUMENTS: StudentDocument[] = STUDENTS.flatMap((student) => {
       status,
       version: status === "rejected" ? 2 : 1,
       expiresAt:
-        item.kind === "Сертификат TOPIK"
+        key === "Сертификат TOPIK"
           ? student.profile.topikExpiresAt
           : status === "expiring"
             ? "2026-10-05"

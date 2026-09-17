@@ -3,25 +3,31 @@ import { IconExport } from "@/components/icons";
 import { NoAccess } from "@/components/NoAccess";
 import { Avatar, PageHeader, SectionTitle, StatusDot } from "@/components/ui";
 import { userById } from "@/lib/data/users";
-import { daysUntil, formatDate, relativeDeadline } from "@/lib/format";
+import { daysUntil, formatters } from "@/lib/format";
+import { translator, type Loc } from "@/lib/i18n";
 import { DEADLINE_KIND } from "@/lib/labels";
 import { can } from "@/lib/rbac";
 import { scopedDeadlines } from "@/lib/queries";
 import { getSession } from "@/lib/session";
+import { S } from "@/lib/strings";
 import type { Deadline } from "@/lib/types";
 
-const GROUPS = [
-  { key: "overdue", title: "Просрочено", test: (d: number) => d < 0 },
-  { key: "today", title: "Сегодня и завтра", test: (d: number) => d >= 0 && d <= 1 },
-  { key: "week", title: "Ближайшие 7 дней", test: (d: number) => d > 1 && d <= 7 },
-  { key: "month", title: "8–30 дней", test: (d: number) => d > 7 && d <= 30 },
-  { key: "later", title: "Позже", test: (d: number) => d > 30 },
+const GROUPS: { key: string; title: Loc; test: (d: number) => boolean }[] = [
+  { key: "overdue", title: S.deadlines.groupOverdue, test: (d) => d < 0 },
+  { key: "today", title: S.deadlines.groupToday, test: (d) => d >= 0 && d <= 1 },
+  { key: "week", title: S.deadlines.groupWeek, test: (d) => d > 1 && d <= 7 },
+  { key: "month", title: S.deadlines.groupMonth, test: (d) => d > 7 && d <= 30 },
+  { key: "later", title: S.deadlines.groupLater, test: (d) => d > 30 },
 ];
 
 export default async function DeadlinesPage() {
   const session = await getSession();
+  const t = translator(session.locale);
+  const f = formatters(session.locale);
   if (!can(session.role, "deadlines")) {
-    return <NoAccess role={session.role} module="Дедлайны" />;
+    return (
+      <NoAccess role={session.role} module={t(S.nav.deadlines)} locale={session.locale} />
+    );
   }
 
   const deadlines = scopedDeadlines(session);
@@ -37,22 +43,23 @@ export default async function DeadlinesPage() {
   return (
     <>
       <PageHeader
-        title="Дедлайны"
+        title={t(S.deadlines.title)}
         meta={
           <>
-            <span>{deadlines.length} событий</span>
-            <span className="text-ink-faint">·</span>
-            <span>{overdue} просрочено</span>
+            <span>
+              {deadlines.length} {t(S.deadlines.events)}
+            </span>
             <span className="text-ink-faint">·</span>
             <span>
-              собираются автоматически из заявок, документов и задач — вручную ничего
-              не дублируется
+              {overdue} {t(S.deadlines.overdue)}
             </span>
+            <span className="text-ink-faint">·</span>
+            <span>{t(S.deadlines.subtitle)}</span>
           </>
         }
         actions={
           <button className="btn btn-secondary btn-sm">
-            <IconExport size={15} /> В календарь (.ics)
+            <IconExport size={15} /> {t(S.deadlines.toCalendar)}
           </button>
         }
       />
@@ -66,7 +73,7 @@ export default async function DeadlinesPage() {
               <SectionTitle
                 action={<span className="t-caption text-ink-faint">{items.length}</span>}
               >
-                {group.title}
+                {t(group.title)}
               </SectionTitle>
               <div className="card divide-y divide-hairline-soft">
                 {items.map((d) => {
@@ -82,14 +89,14 @@ export default async function DeadlinesPage() {
                       <StatusDot color={kind.dot} />
                       <div className="min-w-[220px] flex-1">
                         <div className="t-body-sm">{d.title}</div>
-                        <div className="t-micro text-ink-faint">{kind.label}</div>
+                        <div className="t-micro text-ink-faint">{t(kind.label)}</div>
                       </div>
                       <div className="flex items-center gap-2">
                         <Avatar name={owner?.name ?? "—"} size={22} />
                         <span className="t-caption text-ink-muted">{owner?.name}</span>
                       </div>
                       <div className="w-36 text-right">
-                        <div className="t-caption t-num">{formatDate(d.date)}</div>
+                        <div className="t-caption t-num">{f.date(d.date)}</div>
                         <div
                           className="t-micro"
                           style={{
@@ -101,7 +108,7 @@ export default async function DeadlinesPage() {
                                   : "var(--color-ink-faint)",
                           }}
                         >
-                          {relativeDeadline(d.date)}
+                          {f.relativeDeadline(d.date)}
                         </div>
                       </div>
                     </Link>

@@ -11,16 +11,22 @@ import {
 import { studentById } from "@/lib/data/students";
 import { universityById } from "@/lib/data/universities";
 import { userById } from "@/lib/data/users";
-import { money } from "@/lib/format";
-import { stageMeta } from "@/lib/labels";
+import { formatters } from "@/lib/format";
+import { translator } from "@/lib/i18n";
+import { CITY_LABEL, ref, stageMeta } from "@/lib/labels";
 import { can } from "@/lib/rbac";
 import { scopedApplications, scopedTeam } from "@/lib/queries";
 import { getSession } from "@/lib/session";
+import { S } from "@/lib/strings";
 
 export default async function FinancePage() {
   const session = await getSession();
+  const t = translator(session.locale);
+  const f = formatters(session.locale);
   if (!can(session.role, "finance")) {
-    return <NoAccess role={session.role} module="Финансы" />;
+    return (
+      <NoAccess role={session.role} module={t(S.nav.finance)} locale={session.locale} />
+    );
   }
 
   const apps = scopedApplications(session).filter((a) => a.contractValue > 0);
@@ -45,40 +51,54 @@ export default async function FinancePage() {
   return (
     <>
       <PageHeader
-        title="Финансы"
+        title={t(S.finance.title)}
         meta={
           <>
-            <span>{apps.length} договоров в работе</span>
+            <span>
+              {apps.length} {t(S.finance.contractsInWork)}
+            </span>
             <span className="text-ink-faint">·</span>
-            <span>суммы по договорам с семьями, без стоимости обучения в вузе</span>
+            <span>{t(S.finance.subtitle)}</span>
+            <span className="text-ink-faint">·</span>
+            <span>
+              {t(S.finance.rate)}: 1$ = {f.som(session.tenant.usdRate)}
+            </span>
           </>
         }
         actions={
           <button className="btn btn-secondary btn-sm">
-            <IconExport size={15} /> Выгрузить реестр
+            <IconExport size={15} /> {t(S.finance.exportRegistry)}
           </button>
         }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile label="Законтрактовано" value={money(contracted)} accent="var(--color-status-open)" />
         <StatTile
-          label="Оплачено"
-          value={money(paid)}
-          hint={`${Math.round((paid / Math.max(1, contracted)) * 100)}% от суммы договоров`}
+          label={t(S.finance.contracted)}
+          value={f.som(contracted, { compact: true })}
+          accent="var(--color-status-open)"
+        />
+        <StatTile
+          label={t(S.finance.paid)}
+          value={f.som(paid, { compact: true })}
+          hint={`${Math.round((paid / Math.max(1, contracted)) * 100)}% ${t(S.finance.ofContracts)}`}
           accent="var(--color-status-deal)"
         />
-        <StatTile label="Дебиторка" value={money(debt)} accent="var(--color-status-progress)" />
         <StatTile
-          label="Закрыто успешно"
+          label={t(S.finance.receivable)}
+          value={f.som(debt, { compact: true })}
+          accent="var(--color-status-progress)"
+        />
+        <StatTile
+          label={t(S.finance.closedWon)}
           value={won.length}
-          hint={`${money(won.reduce((n, a) => n + a.paid, 0))} получено`}
+          hint={`${f.som(won.reduce((n, a) => n + a.paid, 0), { compact: true })} ${t(S.finance.received)}`}
           accent="var(--color-status-violet)"
         />
       </div>
 
       <section className="mt-9">
-        <SectionTitle>По менеджерам</SectionTitle>
+        <SectionTitle>{t(S.finance.byManager)}</SectionTitle>
         <div className="card divide-y divide-hairline-soft">
           {byManager.map((row) => (
             <div key={row.user.id} className="flex flex-wrap items-center gap-4 px-5 py-4">
@@ -91,12 +111,12 @@ export default async function FinancePage() {
                 <Progress percent={(row.paid / Math.max(1, row.contracted)) * 100} />
               </div>
               <div className="t-caption t-num w-20 text-right text-ink-muted">
-                {row.count} дог.
+                {row.count} {t(S.finance.contractsShort)}
               </div>
               <div className="t-body-sm t-num w-32 text-right">
-                {money(row.paid)}
+                {f.som(row.paid, { compact: true })}
                 <span className="t-micro block text-ink-faint">
-                  из {money(row.contracted)}
+                  {t(S.finance.outOf)} {f.som(row.contracted, { compact: true })}
                 </span>
               </div>
             </div>
@@ -105,13 +125,20 @@ export default async function FinancePage() {
       </section>
 
       <section className="mt-9">
-        <SectionTitle>Договоры</SectionTitle>
+        <SectionTitle>{t(S.finance.contracts)}</SectionTitle>
         <div className="card overflow-hidden">
           <div className="scroll-x">
             <table className="w-full min-w-[840px] border-collapse">
               <thead>
                 <tr className="border-b border-hairline-soft">
-                  {["Студент", "Вуз", "Этап", "Договор", "Оплачено", "Остаток"].map((h) => (
+                  {[
+                    t(S.applications.student),
+                    t(S.applications.university),
+                    t(S.finance.colStage),
+                    t(S.applications.contract),
+                    t(S.applications.paid),
+                    t(S.finance.colRest),
+                  ].map((h) => (
                     <th
                       key={h}
                       className="t-micro px-5 py-3 text-left font-medium uppercase tracking-[0.07em] text-ink-faint"
@@ -135,11 +162,13 @@ export default async function FinancePage() {
                       <td className="px-5 py-3">
                         <span className="chip">
                           <StatusDot color={meta.dot} />
-                          {meta.short}
+                          {t(meta.short)}
                         </span>
                       </td>
-                      <td className="t-body-sm t-num px-5 py-3">{money(a.contractValue)}</td>
-                      <td className="t-body-sm t-num px-5 py-3">{money(a.paid)}</td>
+                      <td className="t-body-sm t-num px-5 py-3">
+                        {f.som(a.contractValue)}
+                      </td>
+                      <td className="t-body-sm t-num px-5 py-3">{f.som(a.paid)}</td>
                       <td
                         className="t-body-sm t-num px-5 py-3"
                         style={{
@@ -149,7 +178,7 @@ export default async function FinancePage() {
                               : "var(--color-ink-faint)",
                         }}
                       >
-                        {money(a.contractValue - a.paid)}
+                        {f.som(a.contractValue - a.paid)}
                       </td>
                     </tr>
                   );

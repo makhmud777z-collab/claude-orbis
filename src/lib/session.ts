@@ -1,5 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { USERS, usersOfTenant } from "./data/users";
+import { isLocale, type Locale } from "./i18n";
 import { roleDef, type Scope } from "./rbac";
 import { tenantBySlug } from "./tenants";
 import type { Role, Tenant, User } from "./types";
@@ -11,6 +12,8 @@ export interface Session {
   scope: Scope;
   /** Host, по которому пришёл запрос — показываем в шапке настроек. */
   host: string;
+  /** язык интерфейса: выбор сотрудника поверх языка агентства */
+  locale: Locale;
 }
 
 /**
@@ -31,11 +34,14 @@ export async function getSession(): Promise<Session> {
     staff[0] ??
     USERS[0];
 
+  const requestedLocale = c.get("orbis_locale")?.value;
+
   return {
     tenant,
     user,
     role: user.role,
     scope: roleDef(user.role).scope,
     host: h.get("x-orbis-host") ?? "",
+    locale: isLocale(requestedLocale) ? requestedLocale : tenant.locale,
   };
 }
