@@ -31,6 +31,16 @@ export function daysUntil(value: string): number {
   return Math.round(ms / 86_400_000);
 }
 
+/**
+ * Сколько дней карточка стоит на одной стадии. Главный вопрос к доске —
+ * не «где карточки», а «где они встали»: неделя без движения обычно значит,
+ * что про сделку забыли.
+ */
+export const STALE_DAYS = 7;
+export function idleDays(stageEnteredAt: string): number {
+  return Math.max(0, -daysUntil(stageEnteredAt));
+}
+
 export function age(birthDate: string): number {
   const d = parseDate(birthDate);
   let years = TODAY.getFullYear() - d.getFullYear();

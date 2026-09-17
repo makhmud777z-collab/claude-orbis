@@ -151,6 +151,43 @@ export function renameDepartment(departmentId: string, name: Loc) {
 }
 
 /**
+ * Удаление подразделения. Корень удалить нельзя — это сама компания.
+ * Вложенные отделы и люди не пропадают: они поднимаются на уровень выше,
+ * иначе половина штата разом оказалась бы вне структуры.
+ */
+export function removeDepartment(departmentId: string) {
+  const department = departmentById(departmentId);
+  if (!department || !department.parentId) return { ok: false as const, reason: "root" as const };
+
+  for (const child of state.departments) {
+    if (child.parentId === departmentId) child.parentId = department.parentId;
+  }
+  for (const [userId, depId] of Object.entries(state.departmentOf)) {
+    if (depId === departmentId) state.departmentOf[userId] = department.parentId;
+  }
+  state.departments = state.departments.filter((d) => d.id !== departmentId);
+  return { ok: true as const };
+}
+
+/** Сотрудник вне структуры: числится в агентстве, но ни в каком отделе. */
+export function unassignEmployee(userId: string, actorId: string) {
+  const user = USERS.find((u) => u.id === userId);
+  const from = departmentById(state.departmentOf[userId] ?? "");
+  if (!user || !from) return;
+  delete state.departmentOf[userId];
+  if (from.headId === userId) from.headId = null;
+  addTimeline({
+    tenantId: user.tenantId, entity: "employee", entityId: userId, kind: "system",
+    title: loc(`Выведен из подразделения: ${from.name.ru}`, `Bo‘limdan chiqarildi: ${from.name.uz}`),
+    body: null, authorId: actorId, source: null, dueAt: null, done: null,
+  });
+}
+
+/** Кто ещё не в структуре — их и предлагаем добавить в подразделение. */
+export const unassignedOf = (tenantId: string) =>
+  USERS.filter((u) => u.tenantId === tenantId && !state.departmentOf[u.id]);
+
+/**
  * Перенос сотрудника в другое подразделение. Пишем в историю: перевод —
  * кадровое событие, и потом всегда спрашивают, когда и кто его сделал.
  */

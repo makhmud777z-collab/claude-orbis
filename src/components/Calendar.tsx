@@ -230,7 +230,7 @@ export function Calendar({
         </div>
       </aside>
 
-      <Modal open={adding} onClose={() => setAdding(false)} title={t(S.calendar.add)} width={460}>
+      <Modal open={adding} onClose={() => setAdding(false)} title={t(S.calendar.newEvent)} width={460}>
         <form
           action={(data) => {
             setAdding(false);
@@ -243,7 +243,7 @@ export function Calendar({
             <input name="title" required autoFocus className="field text-[13px]" />
           </label>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block">
               <span className="t-micro mb-1 block text-ink-faint">{t(S.calendar.date)}</span>
               <DatePicker name="date" value={selected} locale={locale} />
@@ -254,15 +254,23 @@ export function Calendar({
             </label>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">{t(S.calendar.from)}</span>
-              <TimePicker name="startTime" initial="10:00" locale={locale} />
-            </label>
-            <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">{t(S.calendar.to)}</span>
-              <TimePicker name="endTime" initial="11:00" locale={locale} />
-            </label>
+          {/* Время одной строкой: «с 10:00 до 11:00» читается как фраза,
+              а не как два одинаковых поля с отдельными подписями. */}
+          <div>
+            <span className="t-micro mb-1 block text-ink-faint">{t(S.calendar.time)}</span>
+            <div className="flex items-center gap-2.5">
+              <span className="t-caption flex-none text-ink-muted">{t(S.calendar.timeFrom)}</span>
+              <span className="w-[86px] flex-none">
+                <TimePicker name="startTime" initial="10:00" />
+              </span>
+              <span className="t-caption flex-none text-ink-muted">{t(S.calendar.timeTo)}</span>
+              <span className="w-[86px] flex-none">
+                <TimePicker name="endTime" initial="11:00" />
+              </span>
+              <span className="t-micro t-num min-w-0 flex-1 whitespace-nowrap text-ink-faint">
+                {t(S.calendar.timeHint)}
+              </span>
+            </div>
           </div>
 
           <label className="block">
@@ -615,17 +623,72 @@ function EventKindPicker({ locale }: { locale: Locale }) {
   );
 }
 
-/** Время с шагом в полчаса: набирать руками на портале неудобно. */
-function TimePicker({ name, initial, locale }: { name: string; initial: string; locale: Locale }) {
+/**
+ * Время набирается руками: «14:45» быстрее напечатать, чем найти в списке
+ * из сорока восьми получасовых шагов — и встречу можно поставить на любую
+ * минуту, а не только на ровные полчаса.
+ *
+ * Поле терпит то, как люди на самом деле печатают: «9» → 09:00,
+ * «930» → 09:30, «9:5» → 09:05. Разбор идёт при уходе из поля, чтобы
+ * не мешать набору на середине.
+ */
+function TimePicker({ name, initial }: { name: string; initial: string }) {
   const [value, setValue] = useState(initial);
-  const options = Array.from({ length: 48 }, (_, i) => {
-    const time = `${pad(Math.floor(i / 2))}:${i % 2 ? "30" : "00"}`;
-    return { value: time, label: time };
-  });
+  const [text, setText] = useState(initial);
+
+  const commit = (raw: string) => {
+    const parsed = parseTime(raw);
+    setValue(parsed ?? value);
+    setText(parsed ?? value);
+  };
+
   return (
     <>
       <input type="hidden" name={name} value={value} />
-      <Select locale={locale} width="100%" value={value} options={options} onChange={setValue} searchable />
+      <input
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={(e) => commit(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit((e.target as HTMLInputElement).value);
+          }
+          // стрелками — шаг в пять минут: мышью до поля уже дотянулись
+          if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+            e.preventDefault();
+            const step = e.key === "ArrowUp" ? 5 : -5;
+            const base = parseTime(text) ?? value;
+            const [h, m] = base.split(":").map(Number);
+            const total = (h * 60 + m + step + 1440) % 1440;
+            const next = `${pad(Math.floor(total / 60))}:${pad(total % 60)}`;
+            setValue(next);
+            setText(next);
+          }
+        }}
+        inputMode="numeric"
+        placeholder="10:00"
+        aria-label={name}
+        className="field t-num h-9 text-center text-[13px]"
+      />
     </>
   );
+}
+
+/** «9», «930», «9:5», «21.15» → «09:00», «09:30», «09:05», «21:15». */
+function parseTime(raw: string): string | null {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return null;
+  let hours: number;
+  let minutes: number;
+  if (digits.length <= 2) {
+    hours = Number(digits);
+    minutes = 0;
+  } else {
+    minutes = Number(digits.slice(-2));
+    hours = Number(digits.slice(0, -2));
+  }
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  if (hours > 23 || minutes > 59) return null;
+  return `${pad(hours)}:${pad(minutes)}`;
 }

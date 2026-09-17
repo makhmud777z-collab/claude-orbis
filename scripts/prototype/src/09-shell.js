@@ -195,21 +195,59 @@ function renderModal() {
       `<button class="btn btn-primary" data-act="filter.save">${t(loc("Сохранить", "Saqlash"))}</button>`);
   }
   if (m.kind === "event") {
-    const times = [];
-    for (let h = 7; h <= 21; h++) { times.push(`${String(h).padStart(2, "0")}:00`); times.push(`${String(h).padStart(2, "0")}:30`); }
     return modal(t(loc("Новое дело", "Yangi ish")), `
       <p class="t-caption muted" style="margin:0 0 14px">${esc(fmtDate(S.cal.date))}</p>
-      <input class="field" id="ev-title" placeholder="${t(loc("Что за дело", "Qanday ish"))}" style="margin-bottom:14px">
+      <input class="field" id="ev-title" placeholder="${t(loc("Что за дело", "Qanday ish"))}" style="margin-bottom:14px" autofocus>
       <span class="t-micro faint" style="display:block;margin-bottom:8px">${t(loc("Тип", "Turi"))}</span>
-      <span style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+      <span style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
         ${Object.entries(EVENT_KIND).map(([key, k]) => `<button class="chip${m.kindValue === key ? " on" : ""}" data-act="cal.kind" data-value="${key}">${dot(k.color)}${esc(t(k.label))}</button>`).join("")}
       </span>
-      <span style="display:flex;gap:10px;align-items:center">
-        ${select("cal.start", m.start, times.map((x) => ({ value: x, label: x })), 120)}
-        <span class="faint">—</span>
-        ${select("cal.end", m.end, times.map((x) => ({ value: x, label: x })), 120)}
+      <span class="t-micro faint" style="display:block;margin-bottom:8px">${t(loc("Время", "Vaqt"))}</span>
+      <span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span class="t-caption muted">${t(loc("с", "dan"))}</span>
+        <input class="field num" id="ev-start" value="${esc(m.start)}" style="width:86px;text-align:center" inputmode="numeric">
+        <span class="t-caption muted">${t(loc("до", "gacha"))}</span>
+        <input class="field num" id="ev-end" value="${esc(m.end)}" style="width:86px;text-align:center" inputmode="numeric">
+        <span class="t-micro faint num">9 · 930 · 21:15</span>
       </span>`,
       `<button class="btn btn-primary" data-act="cal.save">${t(loc("Добавить", "Qo‘shish"))}</button>`);
+  }
+  if (m.kind === "renamedep") {
+    const dep = allDepartments().find((d) => d.id === m.id);
+    return modal(t(loc("Переименовать подразделение", "Bo‘lim nomini o‘zgartirish")), `
+      <input class="field" id="dep-rename" autofocus value="${esc(dep ? t(dep.name) : "")}">`,
+      `<button class="btn btn-primary" data-act="org.saverename">${t(loc("Сохранить", "Saqlash"))}</button>`);
+  }
+  if (m.kind === "deldep") {
+    const dep = allDepartments().find((d) => d.id === m.id);
+    return modal(t(loc("Удалить подразделение", "Bo‘limni o‘chirish")), `
+      <p class="t-body-sm" style="margin:0 0 8px">${esc(dep ? t(dep.name) : "")}</p>
+      <p class="t-caption muted" style="margin:0;line-height:1.6">${t(loc(
+        "Вложенные отделы и сотрудники поднимутся на уровень выше — никто не потеряется.",
+        "Ichki bo‘limlar va xodimlar yuqori darajaga ko‘tariladi."))}</p>`,
+      `<button class="btn btn-primary" data-act="org.confirmdel">${t(loc("Удалить", "O‘chirish"))}</button>`);
+  }
+  if (m.kind === "addperson") {
+    const people = D.users.filter((u) => u.tenantId === S.tenant && departmentOf(u.id) !== m.id);
+    return modal(t(loc("Добавить сотрудника", "Xodim qo‘shish")), `
+      <p class="t-caption muted" style="margin:0 0 14px;line-height:1.6">${t(loc(
+        "Сотрудник переедет сюда из своего подразделения; история перевода сохранится.",
+        "Xodim bu yerga ko‘chiriladi; ko‘chirish tarixi saqlanadi."))}</p>
+      <div style="display:grid;gap:2px;max-height:52vh;overflow-y:auto">
+        ${people.map((u) => {
+          const dep = allDepartments().find((d) => d.id === departmentOf(u.id));
+          return `<button data-act="org.move" data-value="${esc(u.id)}:${esc(m.id)}"
+            style="display:flex;gap:12px;align-items:center;width:100%;padding:8px 10px;border:0;border-radius:10px;
+            background:none;cursor:pointer;color:inherit;text-align:left">
+            ${avatar(u.name, 30)}
+            <span style="flex:1;min-width:0">
+              <span class="t-caption truncate" style="display:block">${esc(u.name)}</span>
+              <span class="t-micro faint truncate" style="display:block">${esc(dep ? t(dep.name) : t(loc("Вне структуры", "Tuzilmadan tashqarida")))}</span>
+            </span>
+            ${icon("plus", 14)}
+          </button>`;
+        }).join("")}
+      </div>`);
   }
   if (m.kind === "department") {
     const parents = allDepartments();
@@ -588,20 +626,26 @@ const ACTIONS = {
   theme: (v) => { S.theme = v; try { localStorage.setItem("orbis-theme", v); } catch { /* приватное окно */ } },
   move: (v) => { const [entity, id, stage] = v.split(":"); moveCard(entity, id, stage); },
   pipeline: () => { S.popover = null; },
+  view: (v) => { S.view = v; },
   "cal.view": (v) => { S.cal.view = v; },
   "cal.day": (v) => { S.cal.date = v; S.cal.view = "day"; },
   "cal.today": () => { S.cal.date = TODAY_ISO; },
   "cal.shift": (v) => { S.cal.date = shiftDay(S.cal.date, Number(v)); },
   "cal.new": () => { S.modal = { kind: "event", kindValue: "meeting", start: "10:00", end: "11:00" }; },
   "cal.kind": (v) => { S.modal = { ...S.modal, kindValue: v }; S.popover = null; },
-  "cal.start": (v) => { S.modal = { ...S.modal, start: v }; S.popover = null; },
-  "cal.end": (v) => { S.modal = { ...S.modal, end: v }; S.popover = null; },
+  /**
+   * Время набирается руками: «9» → 09:00, «930» → 09:30, «21:15» → 21:15.
+   * Список из сорока восьми получасовых шагов был медленнее и не давал
+   * поставить встречу на 14:45.
+   */
   "cal.save": () => {
     const title = document.getElementById("ev-title")?.value.trim();
     if (!title) return;
+    const start = parseTime(document.getElementById("ev-start")?.value) ?? S.modal.start;
+    const end = parseTime(document.getElementById("ev-end")?.value) ?? S.modal.end;
     S.events.push({
       id: "ev_" + Math.random().toString(36).slice(2, 7), date: S.cal.date,
-      startTime: S.modal.start, endTime: S.modal.end, kind: S.modal.kindValue,
+      startTime: start, endTime: end, kind: S.modal.kindValue,
       title, ownerId: S.userId, relation: "",
     });
     S.cal.view = "day";
@@ -612,7 +656,40 @@ const ACTIONS = {
   "org.q": (v) => { S.org.q = v; },
   "org.me": () => { S.org.selected = departmentOf(S.userId); S.org.q = user().name; },
   "org.head": (v) => { if (S.org.selected) S.heads[S.org.selected] = v || null; S.popover = null; },
-  "org.new": () => { S.modal = { kind: "department", parent: S.org.selected ?? allDepartments()[0]?.id ?? null }; },
+  "org.new": (v) => { S.modal = { kind: "department", parent: v ?? S.org.selected ?? allDepartments()[0]?.id ?? null }; },
+  "org.rename": (v) => { S.modal = { kind: "renamedep", id: v }; },
+  "org.del": (v) => { S.modal = { kind: "deldep", id: v }; },
+  "org.addperson": (v) => { S.org.selected = v; S.modal = { kind: "addperson", id: v }; },
+  "org.saverename": () => {
+    const name = document.getElementById("dep-rename")?.value.trim();
+    if (!name) return;
+    S.deptNames[S.modal.id] = { ru: name, uz: name };
+    S.modal = null;
+  },
+  /*
+   * Удаление отдела: вложенные отделы и люди поднимаются на уровень выше,
+   * иначе половина штата разом оказалась бы вне структуры.
+   */
+  "org.confirmdel": () => {
+    const id = S.modal.id;
+    const dep = allDepartments().find((d) => d.id === id);
+    if (!dep) { S.modal = null; return; }
+    for (const child of allDepartments()) {
+      if (child.parentId === id) S.deptParent[child.id] = dep.parentId;
+    }
+    for (const u of D.users) {
+      if (departmentOf(u.id) === id) S.moves[u.id] = dep.parentId;
+    }
+    S.deptHidden = [...S.deptHidden, id];
+    S.org.selected = dep.parentId;
+    S.modal = null;
+  },
+  "org.move": (v) => {
+    const [userId, depId] = v.split(":");
+    S.moves[userId] = depId;
+    S.modal = null;
+  },
+  "org.unassign": (v) => { S.moves[v] = null; },
   "org.parent": (v) => { S.modal = { ...S.modal, parent: v }; S.popover = null; },
   "org.save": () => {
     const name = document.getElementById("dep-name")?.value.trim();
@@ -856,8 +933,13 @@ document.addEventListener("click", (e) => {
   }
   const actor = e.target.closest("[data-act]");
   if (actor && actor.tagName !== "INPUT") {
-    // клик внутри модального окна не должен закрывать его самим фоном
-    if (actor.dataset.act === "closemodal" && e.target.closest("[data-stop]")) return;
+    /*
+     * Фон закрывает окно только при клике по самому фону. Раньше здесь
+     * стояла проверка «клик внутри окна — не закрывать», и она убивала
+     * кнопку «Отмена»: эта кнопка тоже лежит внутри окна и тоже
+     * closemodal, поэтому не срабатывала никогда.
+     */
+    if (actor.classList.contains("modal-scrim") && e.target !== actor) return;
     e.preventDefault();
     handle(actor.dataset.act, actor.dataset.value);
     return;

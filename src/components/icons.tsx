@@ -51,6 +51,18 @@ export const IconFinance = (p: IconProps) => (
 export const IconSettings = (p: IconProps) => (
   <Icon {...p}><circle cx="12" cy="12" r="3" /><path d="M19.4 14.5a1.6 1.6 0 0 0 .32 1.77l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.6 1.6 0 0 0-1.77-.32 1.6 1.6 0 0 0-.97 1.46V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.77.32l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.6 1.6 0 0 0 4.6 15a1.6 1.6 0 0 0-1.46-.97H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.32-1.77l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.6 1.6 0 0 0 9 4.6a1.6 1.6 0 0 0 .97-1.46V3a2 2 0 1 1 4 0v.1A1.6 1.6 0 0 0 15 4.6a1.6 1.6 0 0 0 1.77-.32l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.6 1.6 0 0 0 19.4 9v.03a1.6 1.6 0 0 0 1.46.97H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5.5Z" /></Icon>
 );
+export const IconBoard = (p: IconProps) => (
+  <Icon {...p}><rect x="3" y="4" width="6" height="16" rx="1.6" /><rect x="11" y="4" width="6" height="10" rx="1.6" /></Icon>
+);
+export const IconList = (p: IconProps) => (
+  <Icon {...p}><path d="M8 6h13" /><path d="M8 12h13" /><path d="M8 18h13" /><path d="M3.5 6h.01" /><path d="M3.5 12h.01" /><path d="M3.5 18h.01" /></Icon>
+);
+export const IconPencil = (p: IconProps) => (
+  <Icon {...p}><path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3Z" /><path d="M14.5 6.5 17.5 9.5" /></Icon>
+);
+export const IconClose = (p: IconProps) => (
+  <Icon {...p}><path d="m6 6 12 12" /><path d="m18 6-12 12" /></Icon>
+);
 export const IconLock = (p: IconProps) => (
   <Icon {...p}><rect x="4" y="10.5" width="16" height="10.5" rx="2.4" /><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" /><path d="M12 15v2" /></Icon>
 );

@@ -165,7 +165,9 @@ export default async function DashboardPage() {
                 <span className="mt-[3px] flex-none">
                   <StatusDot color={dot} />
                 </span>
-                <span className="min-w-0 leading-snug">{label}</span>
+                <span className="min-w-0 leading-snug" style={{ overflowWrap: "anywhere" }}>
+                  {label}
+                </span>
               </div>
               <div className="t-num mt-3 text-[26px] font-medium tracking-[-1.2px]">
                 {count}

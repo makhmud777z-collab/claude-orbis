@@ -70,7 +70,7 @@ export default async function RootLayout({
                 breakSeconds: work ? breakSeconds(work) : 0,
               }}
             />
-            <main className="min-w-0 flex-1 px-5 py-7 lg:px-8">{children}</main>
+            <main className="page-in min-w-0 flex-1 px-5 py-7 lg:px-8">{children}</main>
           </div>
         </div>
       </body>

@@ -2,6 +2,7 @@ import { channelsOf } from "./store";
 import { userById } from "./data/users";
 import { DEPARTMENTS } from "./data/org";
 import { UNIVERSITIES } from "./data/universities";
+import { STALE_DAYS } from "./format";
 import { loc, type Translate } from "./i18n";
 import {
   CITY_LABEL, DEGREE_LABEL, DEADLINE_KIND, DOCUMENT_STATUS, FIELD_LABEL, INTAKE_LABEL,
@@ -58,6 +59,7 @@ export function dealFields(team: User[], pipeline: Pipeline | undefined, t: Tran
     { key: "degreeLevel", label: loc("Уровень", "Daraja"), kind: "select", options: dictOptions(DEGREE_LABEL, t) },
     { key: "priority", label: loc("Приоритет", "Ustuvorlik"), kind: "select", options: dictOptions(PRIORITY_LABEL, t) },
     { key: "contact", label: loc("Контакт", "Kontakt"), kind: "text" },
+    { key: "idle", label: loc("Дней без движения", "Harakatsiz kunlar"), kind: "number", range: true },
   ];
 }
 
@@ -190,6 +192,9 @@ export function dealPresets(session: Session, today: string): FilterPreset[] {
     { key: "mine", label: loc("Мои сделки", "Mening bitimlarim"), values: { ownerId: session.user.id } },
     { key: "docs", label: loc("Сбор документов", "Hujjat yig‘ish"), values: { stage: "documents" } },
     { key: "overdue", label: loc("Просроченные", "Kechikkan"), values: { deadlineTo: today } },
+    // «Зависшие» — сделки, которые неделю стоят на одной стадии: главный
+    // повод открыть доску утром.
+    { key: "stale", label: loc("Зависшие", "Qotib qolganlar"), values: { idleFrom: String(STALE_DAYS) } },
     { key: "lost", label: loc("Закрытые сделки", "Yopilgan bitimlar"), values: { stage: "lost" } },
   ];
 }

@@ -126,11 +126,25 @@ function screenLeads() {
       `<span>${plural(leads.length, ["лид", "лида", "лидов"], "lid")}</span><span class="faint">·</span>
        <span>${leads.filter(isActiveLead).length} ${t(loc("в работе", "ishda"))}</span><span class="faint">·</span>
        <span>${esc(scopeLabel())}</span>`,
-      `${pipelinePicker(pipeline)}
+      `${viewSwitch()}
+       ${pipelinePicker(pipeline)}
        ${allow(user().role, "leads", "create")
         ? `<button class="btn btn-primary" data-act="newlead">${icon("plus", 15)} ${t(loc("Новый лид", "Yangi lid"))}</button>` : ""}`)}
     ${smartFilter("leads", fields, leadPresets(), { shown: leads.length, total: all.length })}
-    ${kanban("lead", stages, leads.map(leadCard), {
+    ${S.view === "list" ? crmList(leads.map((l) => {
+      const stage = stageOf(pipeline, currentStage(l));
+      const idle = idleDaysOf(l.stageEnteredAt);
+      return {
+        go: "lead/" + l.id, title: l.name,
+        subtitle: `${t(ref(L.source, l.source))} · ${l.phone}`,
+        stageLabel: stage ? t(stage.label) : currentStage(l),
+        stageColor: stage?.color ?? "var(--ink-faint)",
+        ownerName: userById(l.ownerId)?.name ?? "—",
+        value: fmtShort(l.createdAt), valueHint: null,
+        phone: l.phone, email: l.email, idleDays: idle,
+        stale: isActiveLead(l) && idle >= STALE_DAYS,
+      };
+    }), loc("Создан", "Yaratilgan")) : kanban("lead", stages, leads.map(leadCard), {
       totals: false,
       fields: S.cardFields.filter((f) => ["phone", "source", "comment", "owner"].includes(f)).concat(["phone"]).filter((v, i, a) => a.indexOf(v) === i),
     })}`;
@@ -208,11 +222,27 @@ function screenDeals() {
       `<span>${plural(deals.length, ["сделка", "сделки", "сделок"], "bitim")}</span><span class="faint">·</span>
        <span class="num">${esc(som(total, true))}</span><span class="faint">·</span>
        <span>${esc(scopeLabel())}</span>`,
-      `${pipelinePicker(pipeline)}
+      `${viewSwitch()}
+       ${pipelinePicker(pipeline)}
        ${allow(user().role, "deals", "create")
         ? `<button class="btn btn-primary" data-go="leads">${icon("plus", 15)} ${t(loc("Новая сделка", "Yangi bitim"))}</button>` : ""}`)}
     ${smartFilter("deals", fields, dealPresets(), { shown: deals.length, total: all.length })}
-    ${kanban("deal", stagesOf(pipeline), deals.map(dealCard))}`;
+    ${S.view === "list" ? crmList(deals.map((d) => {
+      const stage = stageOf(pipeline, currentStage(d));
+      const contact = studentById(d.studentId);
+      const idle = idleDaysOf(d.stageEnteredAt);
+      return {
+        go: "deal/" + d.id, title: contact?.fullName ?? d.id.toUpperCase(),
+        subtitle: uniById(d.universityId)?.name ?? "—",
+        stageLabel: stage ? t(stage.label) : currentStage(d),
+        stageColor: stage?.color ?? "var(--ink-faint)",
+        ownerName: userById(d.ownerId)?.name ?? "—",
+        value: d.contractValue ? som(d.contractValue, true) : "—",
+        valueHint: d.deadline ? relDeadline(d.deadline) : null,
+        phone: contact?.phone ?? null, email: contact?.email ?? null,
+        idleDays: idle, stale: !stage?.final && idle >= STALE_DAYS,
+      };
+    }), loc("Договор", "Shartnoma")) : kanban("deal", stagesOf(pipeline), deals.map(dealCard))}`;
 }
 
 function screenDeal(id) {

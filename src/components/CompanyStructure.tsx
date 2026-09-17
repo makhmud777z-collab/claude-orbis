@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { addDepartmentAction, moveEmployeeAction, setDepartmentHeadAction } from "@/app/actions";
+import {
+  addDepartmentAction, moveEmployeeAction, removeDepartmentAction,
+  renameDepartmentAction, setDepartmentHeadAction, unassignEmployeeAction,
+} from "@/app/actions";
 import { Modal, Select, Tooltip } from "./controls";
-import { IconChevron, IconPlus, IconSearch } from "./icons";
+import { IconChevron, IconClose, IconPencil, IconPlus, IconSearch, IconTrash } from "./icons";
 import { Avatar } from "./ui";
 import { translator, type Locale } from "@/lib/i18n";
 import { S } from "@/lib/strings";
@@ -60,6 +63,9 @@ export function CompanyStructure({
   const [zoom, setZoom] = useState(90);
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<StructureNode | null>(null);
+  const [removing, setRemoving] = useState<StructureNode | null>(null);
+  const [addingPerson, setAddingPerson] = useState<StructureNode | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [dragging, setDragging] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
@@ -170,9 +176,27 @@ export function CompanyStructure({
               <span className="t-micro mt-2.5 block text-ink-faint">{t(S.structure.noHead)}</span>
             )}
 
-            <span className="t-micro mt-2.5 block text-ink-faint">
+            <span className="t-micro mt-2.5 flex items-center gap-1 text-ink-faint">
               {t(S.structure.subordinates)}
-              <span className="t-num ml-1 text-ink-muted">{node.totalIds.length}</span>
+              <span className="t-num text-ink-muted">{node.totalIds.length}</span>
+
+              {/* Действия живут на самом узле: отдел создаётся внутри того,
+                  на который смотришь, а не «где-то в шапке страницы». */}
+              {canEdit ? (
+                <span className="ml-auto flex items-center gap-0.5">
+                  <NodeAction label={t(S.structure.addSub)} onClick={() => setAdding(node.id)}>
+                    <IconPlus size={12} />
+                  </NodeAction>
+                  <NodeAction label={t(S.structure.renameDepartment)} onClick={() => setRenaming(node)}>
+                    <IconPencil size={12} />
+                  </NodeAction>
+                  {node.parentId ? (
+                    <NodeAction label={t(S.structure.removeDepartment)} onClick={() => setRemoving(node)}>
+                      <IconTrash size={12} />
+                    </NodeAction>
+                  ) : null}
+                </span>
+              ) : null}
             </span>
           </span>
 
@@ -299,8 +323,19 @@ export function CompanyStructure({
             </form>
           ) : null}
 
-          <div className="t-micro mb-2 mt-4 uppercase tracking-[0.07em] text-ink-faint">
-            {t(S.structure.subordinates)} <span className="t-num">{subordinates.length}</span>
+          <div className="mb-2 mt-4 flex items-center gap-2">
+            <span className="t-micro uppercase tracking-[0.07em] text-ink-faint">
+              {t(S.structure.subordinates)} <span className="t-num">{subordinates.length}</span>
+            </span>
+            {canEdit && open ? (
+              <button
+                type="button"
+                onClick={() => setAddingPerson(open)}
+                className="t-micro ml-auto flex items-center gap-1 text-ink-faint transition-colors hover:text-accent"
+              >
+                <IconPlus size={12} /> {t(S.structure.addPerson)}
+              </button>
+            ) : null}
           </div>
           <div className="max-h-[38vh] space-y-1 overflow-y-auto pr-1">
             {visible.map((person) => (
@@ -310,6 +345,7 @@ export function CompanyStructure({
                 canEdit={canEdit}
                 onDragStart={setDragging}
                 onDragEnd={() => setDragging(null)}
+                removeLabel={t(S.structure.removePerson)}
               />
             ))}
             {!visible.length ? (
@@ -367,6 +403,98 @@ export function CompanyStructure({
           </div>
         </form>
       </Modal>
+
+      <Modal
+        open={renaming !== null}
+        onClose={() => setRenaming(null)}
+        title={t(S.structure.renameDepartment)}
+        width={440}
+      >
+        <form
+          action={(data) => {
+            setRenaming(null);
+            return renameDepartmentAction(data);
+          }}
+          className="space-y-3"
+        >
+          <input type="hidden" name="departmentId" value={renaming?.id ?? ""} />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="t-micro mb-1 block text-ink-faint">{t(S.structure.name)} · RU</span>
+              <input name="nameRu" required autoFocus defaultValue={renaming?.name ?? ""} className="field text-[13px]" />
+            </label>
+            <label className="block">
+              <span className="t-micro mb-1 block text-ink-faint">{t(S.structure.name)} · UZ</span>
+              <input name="nameUz" defaultValue={renaming?.name ?? ""} className="field text-[13px]" />
+            </label>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRenaming(null)}>
+              {t(S.common.cancel)}
+            </button>
+            <button type="submit" className="btn btn-primary btn-sm">{t(S.common.save)}</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={removing !== null}
+        onClose={() => setRemoving(null)}
+        title={t(S.structure.removeDepartment)}
+        width={440}
+      >
+        <form
+          action={(data) => {
+            setRemoving(null);
+            return removeDepartmentAction(data);
+          }}
+        >
+          <input type="hidden" name="departmentId" value={removing?.id ?? ""} />
+          <p className="t-body-sm mb-2">{removing?.name}</p>
+          <p className="t-caption leading-relaxed text-ink-muted">{t(S.structure.removeHint)}</p>
+          <div className="mt-6 flex justify-end gap-2">
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setRemoving(null)}>
+              {t(S.common.cancel)}
+            </button>
+            <button type="submit" className="btn btn-primary btn-sm">{t(S.common.delete)}</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={addingPerson !== null}
+        onClose={() => setAddingPerson(null)}
+        title={t(S.structure.addPerson)}
+        width={460}
+      >
+        <p className="t-caption mb-4 leading-relaxed text-ink-muted">{t(S.structure.addPersonHint)}</p>
+        <div className="max-h-[52vh] space-y-1 overflow-y-auto pr-1">
+          {people
+            .filter((person) => person.departmentId !== addingPerson?.id)
+            .map((person) => (
+              <form key={person.id} action={moveEmployeeAction}>
+                <input type="hidden" name="userId" value={person.id} />
+                <input type="hidden" name="departmentId" value={addingPerson?.id ?? ""} />
+                <button
+                  type="submit"
+                  onClick={() => setAddingPerson(null)}
+                  className="flex w-full items-center gap-3 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-surface-2"
+                >
+                  <Avatar name={person.name} size={30} />
+                  <span className="min-w-0 flex-1">
+                    <span className="t-caption block truncate">{person.name}</span>
+                    <span className="t-micro block truncate text-ink-faint">
+                      {person.departmentId
+                        ? (nodes.find((n) => n.id === person.departmentId)?.name ?? person.title)
+                        : t(S.structure.unassigned)}
+                    </span>
+                  </span>
+                  <IconPlus size={14} className="flex-none text-ink-faint" />
+                </button>
+              </form>
+            ))}
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -377,33 +505,86 @@ function Person({
   canEdit,
   onDragStart,
   onDragEnd,
+  removeLabel,
 }: {
   person: StructurePerson;
   lead?: boolean;
   canEdit: boolean;
   onDragStart: (id: string) => void;
   onDragEnd: () => void;
+  /** крестик «вывести из подразделения»; у руководителя его нет */
+  removeLabel?: string;
 }) {
   return (
-    <Link
-      href={`/team/${person.id}`}
-      draggable={canEdit}
-      onDragStart={(e) => {
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", person.id);
-        onDragStart(person.id);
-      }}
-      onDragEnd={onDragEnd}
-      className="flex items-center gap-2.5 rounded-[9px] px-2 py-1.5 transition-colors hover:bg-surface-2"
-      style={{ cursor: canEdit ? "grab" : "pointer" }}
-    >
-      <Avatar name={person.name} size={30} />
-      <span className="min-w-0 flex-1">
-        <span className="t-caption block truncate">{person.name}</span>
-        <span className="t-micro block truncate text-ink-faint">{person.title}</span>
+    <div className="group flex items-center gap-1">
+      <Link
+        href={`/team/${person.id}`}
+        draggable={canEdit}
+        onDragStart={(e) => {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", person.id);
+          onDragStart(person.id);
+        }}
+        onDragEnd={onDragEnd}
+        className="flex min-w-0 flex-1 items-center gap-2.5 rounded-[9px] px-2 py-1.5 transition-colors hover:bg-surface-2"
+        style={{ cursor: canEdit ? "grab" : "pointer" }}
+      >
+        <Avatar name={person.name} size={30} />
+        <span className="min-w-0 flex-1">
+          <span className="t-caption block truncate">{person.name}</span>
+          <span className="t-micro block truncate text-ink-faint">{person.title}</span>
+        </span>
+        {lead ? <span className="chip chip-active">★</span> : null}
+      </Link>
+
+      {canEdit && removeLabel ? (
+        <form action={unassignEmployeeAction} className="flex-none">
+          <input type="hidden" name="userId" value={person.id} />
+          <button
+            className="btn-icon h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
+            aria-label={removeLabel}
+            title={removeLabel}
+          >
+            <IconClose size={12} />
+          </button>
+        </form>
+      ) : null}
+    </div>
+  );
+}
+
+/** Мелкая кнопка-действие на карточке подразделения. */
+function NodeAction({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Tooltip text={label}>
+      <span
+        role="button"
+        tabIndex={0}
+        aria-label={label}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onClick();
+        }}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          e.preventDefault();
+          e.stopPropagation();
+          onClick();
+        }}
+        className="flex h-6 w-6 items-center justify-center rounded-[7px] text-ink-faint transition-colors hover:bg-surface-3 hover:text-ink"
+      >
+        {children}
       </span>
-      {lead ? <span className="chip chip-active">★</span> : null}
-    </Link>
+    </Tooltip>
   );
 }
 

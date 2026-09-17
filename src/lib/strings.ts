@@ -559,6 +559,10 @@ export const S = {
     mainFields: loc("Основные поля", "Asosiy maydonlar"),
     contract: loc("Договор", "Shartnoma"),
     paid: loc("Оплачено", "To‘langan"),
+    idle: loc("завис", "qotib qoldi"),
+    idleDays: loc("дней без движения", "kun harakatsiz"),
+    stalePreset: loc("Зависшие", "Qotib qolganlar"),
+    owner: loc("Ответственный", "Mas’ul"),
   },
 
   pipelines: {
@@ -696,6 +700,25 @@ export const S = {
       "Сотрудника можно перетащить из списка на карточку отдела — перевод попадёт в его историю.",
       "Xodimni ro‘yxatdan bo‘lim kartasiga tortish mumkin — ko‘chirish tarixga tushadi.",
     ),
+    addSub: loc("Добавить подразделение внутрь", "Ichkariga bo‘lim qo‘shish"),
+    renameDepartment: loc("Переименовать подразделение", "Bo‘lim nomini o‘zgartirish"),
+    removeDepartment: loc("Удалить подразделение", "Bo‘limni o‘chirish"),
+    removeHint: loc(
+      "Вложенные отделы и сотрудники поднимутся на уровень выше — никто не потеряется.",
+      "Ichki bo‘limlar va xodimlar yuqori darajaga ko‘tariladi.",
+    ),
+    addPerson: loc("Добавить сотрудника", "Xodim qo‘shish"),
+    addPersonHint: loc(
+      "Сотрудник переедет сюда из своего подразделения; история перевода сохранится.",
+      "Xodim bu yerga ko‘chiriladi; ko‘chirish tarixi saqlanadi.",
+    ),
+    removePerson: loc("Вывести из подразделения", "Bo‘limdan chiqarish"),
+    unassigned: loc("Вне структуры", "Tuzilmadan tashqarida"),
+    unassignedHint: loc(
+      "Эти сотрудники не числятся ни в одном подразделении — перетащите их на нужный отдел.",
+      "Bu xodimlar hech qaysi bo‘limda emas — kerakli bo‘limga torting.",
+    ),
+    rootLocked: loc("Компанию удалить нельзя", "Kompaniyani o‘chirib bo‘lmaydi"),
   },
 
   workday: {
@@ -762,6 +785,11 @@ export const S = {
     deadline: loc("Дедлайн", "Muddat"),
     task: loc("Задача", "Vazifa"),
     activity: loc("Дело", "Ish"),
+    time: loc("Время", "Vaqt"),
+    timeFrom: loc("с", "dan"),
+    timeTo: loc("до", "gacha"),
+    timeHint: loc("9 · 930 · 21:15", "9 · 930 · 21:15"),
+    newEvent: loc("Новое дело", "Yangi ish"),
   },
 
   admin: {

@@ -231,7 +231,7 @@ export function SmartFilter({
       ) : null}
 
       {open ? (
-        <div className="card-raised absolute left-0 top-12 z-50 flex w-full max-w-[860px] flex-col overflow-hidden sm:flex-row">
+        <div className="pop-in card-raised absolute left-0 top-12 z-50 flex w-full max-w-[860px] flex-col overflow-hidden sm:flex-row">
           {/* срезы: готовые слева, как в портале */}
           <aside className="w-full flex-none border-b border-hairline-soft bg-surface-2 p-3 sm:w-[240px] sm:border-b-0 sm:border-r">
             <div className="t-micro mb-2 px-2 uppercase tracking-[0.08em] text-ink-faint">

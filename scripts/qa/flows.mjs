@@ -319,6 +319,53 @@ const stageColor = await page
   .evaluate((el) => getComputedStyle(el).backgroundColor);
 check(stageColor === "rgb(34, 197, 94)", `цвет стадии на доске не обновился: ${stageColor}`);
 
+/*
+ * 11b. «Отмена» закрывает окно во всех диалогах.
+ * Кнопка внутри окна — не то же самое, что клик по фону: однажды защита
+ * от закрытия фоном убила её во всех окнах сразу, и заметили это не мы.
+ */
+const dialogs = [
+  ["новый лид", "/crm/leads", () => page.getByRole("button", { name: /Новый лид/ }).click()],
+  ["стадия воронки", "/admin/pipelines", () => page.locator("button[data-stage]").first().click()],
+  ["добавить стадию", "/admin/pipelines", () => page.getByRole("button", { name: /Добавить стадию/ }).first().click()],
+  ["новая воронка", "/admin/pipelines", () => page.getByRole("button", { name: /Новая воронка/ }).click()],
+  ["дело в календаре", "/calendar", () => page.getByRole("button", { name: "Добавить", exact: true }).click()],
+  ["новый отдел", "/team/structure", () => page.locator("[aria-label='Добавить подразделение внутрь']").first().click()],
+  ["переименование отдела", "/team/structure", () => page.locator("[aria-label='Переименовать подразделение']").first().click()],
+];
+for (const [name, route, open] of dialogs) {
+  await page.goto(`${BASE}${route}`, { waitUntil: "networkidle" });
+  await open();
+  await page.waitForTimeout(350);
+  check(await page.locator("[role=dialog]").count() === 1, `окно «${name}» не открылось`);
+  await page.locator("[role=dialog] button").filter({ hasText: /^Отмена$/ }).first().click();
+  await page.waitForTimeout(350);
+  check(await page.locator("[role=dialog]").count() === 0, `«Отмена» не закрыла окно «${name}»`);
+}
+
+/* 11c. Выпадающий список внутри панели фильтра не обрезается панелью */
+await page.goto(`${BASE}/crm/leads?fields=source`, { waitUntil: "networkidle" });
+await page.getByText("Фильтр + поиск").click();
+await page.waitForTimeout(350);
+await page.locator("button[aria-haspopup=listbox]").last().click();
+await page.waitForTimeout(350);
+const listVisible = await page.evaluate(() => {
+  const pop = document.querySelector("[role=listbox]");
+  if (!pop) return "нет списка";
+  const r = pop.getBoundingClientRect();
+  const el = document.elementFromPoint(r.left + r.width / 2, r.top + 20);
+  return pop.contains(el) ? "ok" : "перекрыт";
+});
+check(listVisible === "ok", `выпадающий список в фильтре перекрыт: ${listVisible}`);
+
+/* 11d. Канбан и список — два вида одного раздела */
+await page.goto(`${BASE}/crm/deals?view=list`, { waitUntil: "networkidle" });
+check(await page.locator("table").count() > 0, "вид «Список» не показал таблицу");
+check(
+  !(await page.locator("body").innerText()).includes("Перетащите карточку"),
+  "вид «Список» всё ещё рисует доску",
+);
+
 /* 12. Лента событий не показывает чужую активность роли «только свои» */
 const own = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
 await own.addCookies([

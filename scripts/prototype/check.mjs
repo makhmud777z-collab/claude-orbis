@@ -153,6 +153,65 @@ await page.waitForTimeout(150);
 check(await page.locator(".tree-node").count() > 1, "дерево структуры не построилось");
 check(/подчинённые/i.test(await page.locator("#content").innerText()), "в структуре нет панели подчинённых");
 
+/*
+ * «Отмена» закрывает окно во всех диалогах. Однажды защита от закрытия
+ * фоном убила эту кнопку во всех окнах сразу — проверяем каждое.
+ */
+const dialogs = [
+  ["новый лид", () => { window.go("leads"); window.handle("newlead", ""); }],
+  ["стадия", () => { window.go("pipelines"); window.handle("stage", "pl_sw_main:new"); }],
+  ["новая стадия", () => window.handle("newstage", "pl_sw_main")],
+  ["новая воронка", () => window.handle("newpipeline", "")],
+  ["дело в календаре", () => { window.go("calendar"); window.handle("cal.new", ""); }],
+  ["новый отдел", () => { window.go("structure"); window.handle("org.new", "dep_sw_root"); }],
+  ["переименование отдела", () => window.handle("org.rename", "dep_sw_root")],
+  ["карточка просмотра", () => window.handle("cardfields", "")],
+];
+for (const [name, open] of dialogs) {
+  await page.evaluate(open);
+  await page.waitForTimeout(150);
+  check(await page.locator(".modal").count() === 1, `окно «${name}» не открылось`);
+  await page.locator(".modal button").filter({ hasText: /^Отмена$/ }).first().click();
+  await page.waitForTimeout(150);
+  check(await page.locator(".modal").count() === 0, `«Отмена» не закрыла окно «${name}»`);
+}
+
+/* выпадающий список в панели фильтра не обрезается самой панелью */
+await page.evaluate(() => { window.go("leads"); window.handle("f.open:leads", ""); window.handle("f.field:leads:source", ""); });
+await page.waitForTimeout(200);
+await page.locator(".filter-fields .select").last().click();
+await page.waitForTimeout(250);
+const popState = await page.evaluate(() => {
+  const pop = document.querySelector(".filter-fields .pop");
+  if (!pop) return "нет списка";
+  const r = pop.getBoundingClientRect();
+  const el = document.elementFromPoint(r.left + r.width / 2, r.bottom - 8);
+  return pop.contains(el) ? "ok" : "перекрыт";
+});
+check(popState === "ok", `выпадающий список в фильтре перекрыт: ${popState}`);
+await page.keyboard.press("Escape");
+
+/* структура редактируется: переименование и добавление сотрудника */
+await page.evaluate(() => window.go("structure"));
+await page.waitForTimeout(150);
+await page.evaluate(() => window.handle("org.rename", "dep_sw_root"));
+await page.waitForTimeout(150);
+await page.locator("#dep-rename").fill("Проверка переименования");
+await page.getByRole("button", { name: "Сохранить" }).click();
+await page.waitForTimeout(200);
+check(
+  /Проверка переименования/.test(await page.locator("#content").innerText()),
+  "подразделение не переименовалось",
+);
+
+/* канбан и список — два вида одного раздела */
+await page.evaluate(() => { window.handle("view", "list"); window.go("deals"); });
+await page.waitForTimeout(200);
+check(await page.locator("#content table").count() > 0, "вид «Список» не показал таблицу");
+await page.evaluate(() => window.handle("view", "board"));
+await page.waitForTimeout(200);
+check(await page.locator(".kan-col").count() > 0, "вид «Канбан» не вернулся");
+
 /* переключение роли перестраивает меню */
 await page.evaluate(() => window.handle("user", "u_partner1"));
 await page.waitForTimeout(150);

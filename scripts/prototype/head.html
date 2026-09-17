@@ -228,14 +228,17 @@
 
   /* ── канбан ──────────────────────────────────────────────── */
   .kan { display: flex; gap: 12px; min-width: max-content; padding-bottom: 8px; align-items: flex-start; }
+  /* Колонка окрашена своим цветом, но едва-едва: доска должна читаться
+     с одного взгляда и не превращаться в светофор. */
   .kan-col {
-    width: 264px; flex: none; display: flex; flex-direction: column; gap: 8px;
-    border: 1px solid transparent; border-radius: 12px; padding: 8px;
-    transition: border-color .14s ease, background-color .14s ease;
+    width: 272px; flex: none; display: flex; flex-direction: column;
+    border: 1px solid var(--hairline); border-radius: 14px; overflow: hidden;
+    transition: border-color .14s ease, background-color .14s ease, box-shadow .14s ease;
   }
-  .kan-col.over { border-color: var(--accent); background: var(--surface-1); }
-  .kan-head { padding: 4px 6px 8px; }
-  .kan-rule { height: 2px; border-radius: 999px; margin-top: 8px; }
+  .kan-col.over { animation: orbis-pulse .9s ease-in-out infinite; }
+  .kan-head { padding: 10px 12px; border-bottom: 1px solid var(--hairline-soft); }
+  .kan-body { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
+  .kan-count { border-radius: 999px; padding: 1px 7px; font-size: 11px; font-weight: 600; }
   .kan-card { position: relative; display: block; padding: 10px 12px; cursor: grab; }
   .kan-card.drag { opacity: .4; }
   .kan-flag { position: absolute; left: 0; top: 12px; width: 2px; height: 24px; border-radius: 0 999px 999px 0; }
@@ -292,12 +295,17 @@
     font-size: 13px; color: var(--ink); padding: 6px 0;
   }
   .filter-bar input::placeholder { color: var(--ink-faint); }
+  /* overflow: hidden здесь стоять не может — он обрезает выпадающие списки
+     полей прямо внутри панели. Скругление даём самим углам сетки. */
   .filter-panel {
     display: grid; grid-template-columns: 210px 1fr; gap: 0;
     margin-top: 10px; background: var(--surface-1); border: 1px solid var(--hairline);
-    border-radius: 15px; overflow: hidden; box-shadow: var(--shadow-raised), var(--edge-top);
+    border-radius: 15px; box-shadow: var(--shadow-raised), var(--edge-top);
   }
-  .filter-presets { background: var(--surface-2); border-right: 1px solid var(--hairline-soft); padding: 12px 10px; }
+  .filter-presets {
+    background: var(--surface-2); border-right: 1px solid var(--hairline-soft); padding: 12px 10px;
+    border-radius: 15px 0 0 15px;
+  }
   .filter-preset {
     display: flex; width: 100%; align-items: center; gap: 8px; padding: 8px 10px;
     border: 0; border-radius: 8px; background: none; color: var(--ink-muted);
@@ -308,7 +316,7 @@
   .filter-fields { padding: 16px; display: grid; gap: 12px; }
   .filter-field { display: grid; grid-template-columns: 150px 1fr auto; gap: 10px; align-items: center; }
   .filter-field > label { font-size: 12px; color: var(--ink-muted); }
-  .filter-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 14px 16px; border-top: 1px solid var(--hairline-soft); grid-column: 1 / -1; }
+  .filter-foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 14px 16px; border-top: 1px solid var(--hairline-soft); grid-column: 1 / -1; border-radius: 0 0 15px 15px; background: var(--surface-1); }
   .chip-x { border: 0; background: none; color: inherit; cursor: pointer; opacity: .6; padding: 0; display: inline-flex; }
   .chip-x:hover { opacity: 1; }
 
@@ -359,6 +367,27 @@
   .tree-child:last-child::before { display: none; }
   .tree-child > .tree-node::before { content: ""; position: absolute; top: -18px; left: 50%; width: 1px; height: 18px; background: var(--hairline); }
   .tree-child.drop .card { border-color: var(--accent); }
+
+  /* ── движение ────────────────────────────────────────────── */
+  /* Анимации показывают, откуда взялся элемент, и длятся 120–180 мс:
+     портал должен ощущаться быстрым, а не плавным. */
+  @keyframes orbis-rise { from { opacity: 0; transform: translateY(-6px) scale(.985); } to { opacity: 1; transform: none; } }
+  @keyframes orbis-pop { from { opacity: 0; transform: translateY(8px) scale(.97); } to { opacity: 1; transform: none; } }
+  @keyframes orbis-fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes orbis-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  @keyframes orbis-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+
+  .pop, .filter-panel { animation: orbis-rise .14s cubic-bezier(.22,1,.36,1); }
+  .modal { animation: orbis-pop .18s cubic-bezier(.22,1,.36,1); }
+  .modal-scrim { animation: orbis-fade .16s ease; }
+  .content { animation: orbis-in .22s cubic-bezier(.22,1,.36,1); }
+
+  .card-hover:hover { transform: translateY(-1px); }
+  .card-hover:active { transform: translateY(0); transition-duration: 60ms; }
+  .nav-item { transition: background-color .14s ease, color .14s ease, transform .12s ease; }
+  .nav-item:active { transform: scale(.985); }
+  .icon-btn:active { transform: scale(.92); }
+  button.chip:active { transform: scale(.96); }
 
   @media (max-width: 900px) {
     .rail {

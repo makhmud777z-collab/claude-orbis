@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { CrmList } from "@/components/CrmList";
 import { Kanban } from "@/components/Kanban";
 import { PipelinePicker } from "@/components/PipelinePicker";
 import { SectionFilter } from "@/components/SectionFilter";
+import { ViewSwitch } from "@/components/ViewSwitch";
 import { moduleGate } from "@/components/guard";
 import { IconPlus } from "@/components/icons";
 import { EmptyState, PageHeader } from "@/components/ui";
@@ -9,14 +11,15 @@ import { CARD_FIELD_LABEL, boardStages, dealCard } from "@/lib/crm";
 import { universityById } from "@/lib/data/universities";
 import { userById } from "@/lib/data/users";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
-import { TODAY_ISO, formatters } from "@/lib/format";
+import { TODAY_ISO, formatters, idleDays, STALE_DAYS } from "@/lib/format";
 import { translator } from "@/lib/i18n";
 import { scopedContacts, scopedDeals, scopedTeam } from "@/lib/queries";
 import { allow } from "@/lib/rbac";
 import { dealFields, dealPresets } from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
-import { CARD_FIELDS, cardFieldsOf, defaultPipeline, pipelineById, pipelinesOf } from "@/lib/store";
+import { CARD_FIELDS, cardFieldsOf, defaultPipeline, pipelineById, pipelinesOf, stageOf } from "@/lib/store";
 import { P, S } from "@/lib/strings";
+import { readView } from "@/lib/view";
 import type { Deal, Student } from "@/lib/types";
 
 /**
@@ -47,6 +50,7 @@ export default async function DealsPage({
   const contacts = new Map(scopedContacts(session).map((s) => [s.id, s]));
   const all = scopedDeals(session).filter((d) => d.pipelineId === pipeline?.id);
   const deals = all.filter((d) => matchesFilter(dealRow(d, contacts.get(d.studentId)), fields, values, query));
+  const view = readView(params);
   const total = deals.reduce((sum, d) => sum + d.contractValue, 0);
 
   return (
@@ -72,6 +76,7 @@ export default async function DealsPage({
         }
         actions={
           <>
+            <ViewSwitch view={view} locale={session.locale} />
             <PipelinePicker
               locale={session.locale}
               current={pipeline?.id ?? ""}
@@ -96,7 +101,34 @@ export default async function DealsPage({
         shown={deals.length}
       />
 
-      {deals.length ? (
+      {!deals.length ? (
+        <EmptyState title={t(FILTER_TEXT.nothing)} />
+      ) : view === "list" ? (
+        <CrmList
+          locale={session.locale}
+          valueLabel={t(S.applications.contract)}
+          rows={deals.map((deal) => {
+            const stage = stageOf(pipelineById(deal.pipelineId), deal.stage);
+            const contact = contacts.get(deal.studentId);
+            const idle = idleDays(deal.stageEnteredAt);
+            return {
+              id: deal.id,
+              href: `/crm/deals/${deal.id}`,
+              title: contact?.fullName ?? deal.id.toUpperCase(),
+              subtitle: universityById(deal.universityId)?.name ?? "—",
+              stageLabel: stage ? t(stage.label) : deal.stage,
+              stageColor: stage?.color ?? "var(--color-ink-faint)",
+              ownerName: userById(deal.ownerId)?.name ?? "—",
+              value: deal.contractValue ? f.som(deal.contractValue, { compact: true }) : "—",
+              valueHint: deal.deadline ? f.relativeDeadline(deal.deadline) : null,
+              phone: contact?.phone ?? null,
+              email: contact?.email ?? null,
+              idleDays: idle,
+              stale: !stage?.final && idle >= STALE_DAYS,
+            };
+          })}
+        />
+      ) : (
         <Kanban
           entity="deal"
           locale={session.locale}
@@ -105,8 +137,6 @@ export default async function DealsPage({
           cards={deals.map((d) => dealCard(d, contacts.get(d.studentId), t, f))}
           fields={cardFieldsOf(session.user.id)}
         />
-      ) : (
-        <EmptyState title={t(FILTER_TEXT.nothing)} />
       )}
     </>
   );
@@ -119,6 +149,7 @@ function dealRow(deal: Deal, contact: Student | undefined): FilterRow {
   return {
     search: `${contact?.fullName ?? ""} ${contact?.phone ?? ""} ${university} ${deal.note} ${owner}`,
     stage: deal.stage,
+    idle: idleDays(deal.stageEnteredAt),
     ownerId: deal.ownerId,
     contractValue: deal.contractValue,
     deadline: deal.deadline,

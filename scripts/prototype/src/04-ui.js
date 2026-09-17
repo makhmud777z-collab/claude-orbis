@@ -92,26 +92,28 @@ const CARD_FIELDS = [
 function kanban(entity, stages, cards, opts = {}) {
   const fields = opts.fields ?? S.cardFields;
   return `
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px">
-    <span class="t-micro faint">${t(loc("Перетащите карточку на другую стадию", "Kartani boshqa bosqichga torting"))}</span>
-    <button class="icon-btn" data-act="cardfields" title="${t(loc("Карточка просмотра", "Ko‘rish kartasi"))}">${icon("gear", 16)}</button>
-  </div>
+  <div class="t-micro faint" style="margin-bottom:12px">${t(loc("Перетащите карточку на другую стадию", "Kartani boshqa bosqichga torting"))}</div>
   <div class="scroll-x"><div class="kan">
     ${stages.map((stage) => {
       const list = cards.filter((c) => c.stage === stage.key);
       const total = list.reduce((n, c) => n + (c.amount ?? 0), 0);
-      return `<section class="kan-col${S.over === stage.key ? " over" : ""}" data-drop="${esc(stage.key)}" data-entity="${esc(entity)}">
-        <header class="kan-head">
+      const over = S.over === stage.key;
+      return `<section class="kan-col${over ? " over" : ""}" data-drop="${esc(stage.key)}" data-entity="${esc(entity)}"
+        style="border-color:${over ? stage.color : `color-mix(in srgb, ${stage.color} 22%, var(--hairline))`};
+               background:color-mix(in srgb, ${stage.color} ${over ? 9 : 4}%, var(--surface-2))">
+        <header class="kan-head" style="background:color-mix(in srgb, ${stage.color} 13%, var(--surface-1));
+          border-bottom-color:color-mix(in srgb, ${stage.color} 26%, transparent)">
           <div style="display:flex;align-items:center;gap:8px">
             ${dot(stage.color)}
-            <span class="t-caption truncate" style="flex:1;min-width:0">${esc(t(stage.label))}</span>
-            <span class="t-micro num faint">${list.length}</span>
+            <span class="t-caption truncate" style="flex:1;min-width:0;font-weight:600;color:${stage.color}">${esc(t(stage.label))}</span>
+            <span class="kan-count num" style="background:color-mix(in srgb, ${stage.color} 18%, transparent);color:${stage.color}">${list.length}</span>
           </div>
-          ${opts.totals === false ? "" : `<div class="t-micro num faint" style="margin-top:4px;padding-left:14px">${total ? som(total, true) : "—"}</div>`}
-          <div class="kan-rule" style="background:${stage.color};opacity:${list.length ? .9 : .25}"></div>
+          ${opts.totals === false ? "" : `<div class="t-micro num muted" style="margin-top:4px;padding-left:14px">${total ? som(total, true) : "—"}</div>`}
         </header>
-        ${list.map((c) => card(c, fields, entity)).join("") ||
-          `<div class="empty-col">${t(loc("Пусто", "Bo‘sh"))}</div>`}
+        <div class="kan-body">
+          ${list.map((c) => card(c, fields, entity)).join("") ||
+            `<div class="empty-col" style="border-color:color-mix(in srgb, ${stage.color} 28%, transparent)">${t(loc("Пусто", "Bo‘sh"))}</div>`}
+        </div>
       </section>`;
     }).join("")}
   </div></div>`;
@@ -461,8 +463,58 @@ const taskPresets = () => [
  */
 function pipelinePicker(pipeline) {
   const list = pipelinesOf(pipeline.entity);
-  return `<span style="display:inline-flex;align-items:center;gap:6px">
-    ${select("pipeline", pipeline.id, list.map((p) => ({ value: p.id, label: t(p.name) })), 200)}
-    <button class="icon-btn" data-go="pipelines" title="${t(loc("Настроить воронку", "Voronkani sozlash"))}">${icon("gear", 16)}</button>
+  return select("pipeline", pipeline.id, list.map((p) => ({ value: p.id, label: t(p.name) })), 200);
+}
+
+/**
+ * Канбан или список. Доска нужна, когда ведёшь работу: видно, где затор.
+ * Список нужен, когда работу проверяешь: суммы, сроки и ответственные
+ * видны подряд, а не по одной карточке.
+ */
+function viewSwitch() {
+  const options = [
+    ["board", "board", loc("Канбан", "Kanban")],
+    ["list", "list", loc("Список", "Ro‘yxat")],
+  ];
+  return `<span style="display:inline-flex;gap:2px;padding:2px;border-radius:100px;background:var(--surface-1);border:1px solid var(--hairline)">
+    ${options.map(([key, ic, label]) => `<button class="t-micro" data-act="view" data-value="${key}"
+      style="display:inline-flex;align-items:center;gap:6px;border:0;border-radius:100px;padding:6px 10px;cursor:pointer;
+      background:${S.view === key ? "var(--surface-3)" : "transparent"};color:${S.view === key ? "var(--ink)" : "var(--ink-faint)"}">
+      ${icon(ic, 13)}${esc(t(label))}
+    </button>`).join("")}
   </span>`;
+}
+
+/** Строка списка: стадия, ответственный, сумма и быстрые действия. */
+function crmList(rows, valueLabel) {
+  return `<div class="card scroll-x" style="padding:0;overflow:hidden">
+    <table style="min-width:880px">
+      <thead><tr>
+        ${[loc("Контакт", "Kontakt"), loc("Стадия", "Bosqich"), loc("Ответственный", "Mas’ul"), valueLabel, loc("", "")]
+          .map((h) => `<th>${esc(t(h))}</th>`).join("")}
+      </tr></thead>
+      <tbody>
+        ${rows.map((r) => `<tr>
+          <td><a href="#" data-go="${esc(r.go)}" style="display:block;min-width:0">
+            <span class="t-body-sm truncate" style="display:block">${esc(r.title)}</span>
+            <span class="t-micro faint truncate" style="display:block">${esc(r.subtitle)}</span>
+          </a></td>
+          <td><span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <span class="chip">${dot(r.stageColor)}${esc(r.stageLabel)}</span>
+            ${r.stale ? `<span class="t-micro nowrap" style="border-radius:999px;padding:2px 8px;
+              background:color-mix(in srgb, var(--progress) 16%, transparent);color:var(--progress)">
+              ${t(loc("завис", "qotdi"))} ${r.idleDays}</span>` : ""}
+          </span></td>
+          <td><span style="display:flex;gap:8px;align-items:center">${avatar(r.ownerName, 24)}
+            <span class="t-caption muted nowrap">${esc(r.ownerName)}</span></span></td>
+          <td><span class="t-body-sm num nowrap" style="display:block">${esc(r.value)}</span>
+            ${r.valueHint ? `<span class="t-micro faint nowrap" style="display:block">${esc(r.valueHint)}</span>` : ""}</td>
+          <td><span style="display:flex;gap:4px;justify-content:flex-end">
+            ${r.phone ? `<a class="icon-btn" href="tel:${esc(r.phone)}" title="${esc(r.phone)}">${icon("phone", 14)}</a>` : ""}
+            ${r.email ? `<a class="icon-btn" href="mailto:${esc(r.email)}" title="${esc(r.email)}">${icon("mail", 14)}</a>` : ""}
+          </span></td>
+        </tr>`).join("")}
+      </tbody>
+    </table>
+  </div>`;
 }

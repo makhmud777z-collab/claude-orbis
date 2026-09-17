@@ -124,31 +124,49 @@ export function Kanban({
                   e.preventDefault();
                   drop(stage.key);
                 }}
-                className="flex w-[264px] flex-none flex-col rounded-[12px] border p-2 transition-colors"
+                className={`kan-col flex w-[272px] flex-none flex-col overflow-hidden rounded-[14px] border transition-[background-color,border-color,box-shadow] duration-150 ${active ? "is-over" : ""}`}
                 style={{
-                  borderColor: active ? stage.color : "var(--color-hairline-soft)",
-                  background: active ? "var(--color-surface-1)" : "transparent",
+                  borderColor: active
+                    ? stage.color
+                    : `color-mix(in srgb, ${stage.color} 22%, var(--color-hairline))`,
+                  // Колонка окрашена своим цветом, но едва-едва: доска должна
+                  // читаться с одного взгляда и не превращаться в светофор.
+                  background: `color-mix(in srgb, ${stage.color} ${active ? 9 : 4}%, var(--color-surface-2))`,
+                  boxShadow: active ? `0 0 0 2px color-mix(in srgb, ${stage.color} 35%, transparent)` : undefined,
                 }}
               >
-                <header className="px-1.5 pb-2 pt-1">
+                {/* Шапка колонки — плотная плашка цвета стадии: именно она
+                    даёт доске ритм, которого не хватало в чистом минимализме. */}
+                <header
+                  className="px-3 pb-2.5 pt-2.5"
+                  style={{
+                    background: `color-mix(in srgb, ${stage.color} 13%, var(--color-surface-1))`,
+                    borderBottom: `1px solid color-mix(in srgb, ${stage.color} 26%, transparent)`,
+                  }}
+                >
                   <div className="flex items-center gap-2">
                     <StatusDot color={stage.color} />
-                    <span className="t-caption min-w-0 flex-1 truncate">{stage.label}</span>
-                    <span className="t-micro t-num text-ink-faint">{list.length}</span>
+                    <span className="t-caption min-w-0 flex-1 truncate font-semibold" style={{ color: stage.color }}>
+                      {stage.label}
+                    </span>
+                    <span
+                      className="t-micro t-num rounded-full px-1.5 py-0.5 font-semibold"
+                      style={{
+                        background: `color-mix(in srgb, ${stage.color} 18%, transparent)`,
+                        color: stage.color,
+                      }}
+                    >
+                      {list.length}
+                    </span>
                   </div>
                   {showTotals ? (
-                    <div className="t-micro t-num mt-1 pl-3.5 text-ink-faint">
+                    <div className="t-micro t-num mt-1 pl-3.5 text-ink-muted">
                       {total ? som(total, { compact: true, locale }) : "—"}
                     </div>
                   ) : null}
-                  {/* тонкая линия цвета стадии — единственная заливка цветом на доске */}
-                  <div
-                    className="mt-2 h-[2px] rounded-full"
-                    style={{ background: stage.color, opacity: list.length ? 0.9 : 0.25 }}
-                  />
                 </header>
 
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 p-2">
                   {list.map((card) => (
                     <Card
                       key={card.id}
@@ -164,7 +182,10 @@ export function Kanban({
                     />
                   ))}
                   {!list.length ? (
-                    <div className="t-micro rounded-[10px] border border-dashed border-hairline-soft px-3 py-6 text-center text-ink-faint">
+                    <div
+                      className="t-micro rounded-[10px] border border-dashed px-3 py-6 text-center text-ink-faint"
+                      style={{ borderColor: `color-mix(in srgb, ${stage.color} 28%, transparent)` }}
+                    >
                       {t(S.common.empty)}
                     </div>
                   ) : null}

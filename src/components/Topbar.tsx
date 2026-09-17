@@ -153,7 +153,7 @@ export function Topbar({
         </button>
 
         {open ? (
-          <div className="card-raised absolute right-0 top-11 z-40 w-[320px] p-4">
+          <div className="pop-in card-raised absolute right-0 top-11 z-40 w-[320px] p-4">
             <div className="mb-4">
               <WorkdayPanel workday={workday} locale={locale} />
             </div>

@@ -43,6 +43,10 @@ const S = {
   stageOrder: {},      // pipelineId → свой порядок стадий
   stageHidden: {},     // pipelineId → удалённые стадии
   stageExtra: {},      // pipelineId → добавленные стадии
+  deptNames: {},       // departmentId → переименование
+  deptParent: {},      // departmentId → новый родитель после удаления
+  deptHidden: [],      // удалённые подразделения
+  view: "board",       // канбан или список в лидах и сделках
 };
 try {
   const savedNav = localStorage.getItem("orbis-nav");
@@ -327,6 +331,25 @@ function weekStart(isoDate) {
   d.setDate(d.getDate() - shift);
   return iso(d);
 }
+/** «9», «930», «9:5», «21.15» → «09:00», «09:30», «09:05», «21:15». */
+function parseTime(raw) {
+  const digits = String(raw ?? "").replace(/\D/g, "");
+  if (!digits) return null;
+  const hours = digits.length <= 2 ? Number(digits) : Number(digits.slice(0, -2));
+  const minutes = digits.length <= 2 ? 0 : Number(digits.slice(-2));
+  if (hours > 23 || minutes > 59) return null;
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${pad(hours)}:${pad(minutes)}`;
+}
+
+/**
+ * Сколько дней карточка стоит на одной стадии. Главный вопрос к доске —
+ * не «где карточки», а «где они встали»: неделя без движения обычно
+ * значит, что про сделку забыли.
+ */
+const STALE_DAYS = 7;
+const idleDaysOf = (stageEnteredAt) => Math.max(0, -daysUntil(stageEnteredAt));
+
 const minutesOf = (hhmmStr) => {
   const [h, m] = String(hhmmStr).split(":").map(Number);
   return h * 60 + (m || 0);
@@ -368,7 +391,16 @@ const itemsOn = (isoDate) => calendarItems().filter((x) => x.date === isoDate)
   .sort((a, b) => minutesOf(a.startTime) - minutesOf(b.startTime));
 
 /* ── структура компании ──────────────────────────────────── */
-const allDepartments = () => [...D.departments.filter((d) => d.tenantId === S.tenant), ...S.depts];
-const departmentOf = (userId) => S.moves[userId] ?? D.departmentOf[userId] ?? null;
+/** Подразделения с учётом правок: переименования, переносы и удаления. */
+const allDepartments = () =>
+  [...D.departments.filter((d) => d.tenantId === S.tenant), ...S.depts]
+    .filter((d) => !S.deptHidden.includes(d.id))
+    .map((d) => ({
+      ...d,
+      name: S.deptNames[d.id] ?? d.name,
+      parentId: d.id in S.deptParent ? S.deptParent[d.id] : d.parentId,
+    }));
+const departmentOf = (userId) =>
+  (userId in S.moves ? S.moves[userId] : D.departmentOf[userId]) ?? null;
 const headOf = (deptId) => S.heads[deptId] ?? allDepartments().find((d) => d.id === deptId)?.headId ?? null;
 const staffOf = (deptId) => D.users.filter((u) => u.tenantId === S.tenant && departmentOf(u.id) === deptId);

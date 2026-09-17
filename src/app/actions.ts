@@ -508,5 +508,35 @@ export async function moveEmployeeAction(formData: FormData) {
     String(formData.get("departmentId") ?? ""),
     session.user.id,
   );
+  revalidateStructure();
+}
+
+export async function renameDepartmentAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "structure", "edit")) return;
+  const ru = String(formData.get("nameRu") ?? "").trim();
+  const uz = String(formData.get("nameUz") ?? "").trim() || ru;
+  if (!ru) return;
+  db.renameDepartment(String(formData.get("departmentId") ?? ""), { ru, uz });
+  revalidateStructure();
+}
+
+export async function removeDepartmentAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "structure", "edit")) return;
+  db.removeDepartment(String(formData.get("departmentId") ?? ""));
+  revalidateStructure();
+}
+
+export async function unassignEmployeeAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "structure", "edit")) return;
+  db.unassignEmployee(String(formData.get("userId") ?? ""), session.user.id);
+  revalidateStructure();
+}
+
+/** Структура видна и на схеме, и в карточках сотрудников. */
+function revalidateStructure() {
   revalidatePath("/team/structure");
+  revalidatePath("/team");
 }

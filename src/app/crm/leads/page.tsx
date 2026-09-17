@@ -1,22 +1,25 @@
 import { NewLeadDialog } from "@/components/NewLeadDialog";
+import { CrmList } from "@/components/CrmList";
 import { Kanban } from "@/components/Kanban";
 import { PipelinePicker } from "@/components/PipelinePicker";
 import { SectionFilter } from "@/components/SectionFilter";
+import { ViewSwitch } from "@/components/ViewSwitch";
 import { moduleGate } from "@/components/guard";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { CARD_FIELD_LABEL, boardStages, leadCard } from "@/lib/crm";
 import { isActiveLead } from "@/lib/data/leads";
 import { userById } from "@/lib/data/users";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
-import { formatters } from "@/lib/format";
+import { formatters, idleDays, STALE_DAYS } from "@/lib/format";
 import { translator, type Loc } from "@/lib/i18n";
-import { SOURCE_LABEL } from "@/lib/labels";
+import { ref, SOURCE_LABEL } from "@/lib/labels";
 import { scopedLeads, scopedTeam } from "@/lib/queries";
 import { allow } from "@/lib/rbac";
 import { leadFields, leadPresets } from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
-import { CARD_FIELDS, cardFieldsOf, channelsOf, defaultPipeline } from "@/lib/store";
+import { CARD_FIELDS, cardFieldsOf, channelsOf, defaultPipeline, stageOf } from "@/lib/store";
 import { P, S } from "@/lib/strings";
+import { readView } from "@/lib/view";
 import type { Lead } from "@/lib/types";
 
 /**
@@ -44,6 +47,7 @@ export default async function LeadsPage({
   const all = scopedLeads(session);
   const leads = all.filter((lead) => matchesFilter(leadRow(lead), fields, values, query));
   const canEdit = allow(session.tenant.id, session.role, "leads", "edit");
+  const view = readView(params);
 
   return (
     <>
@@ -68,6 +72,7 @@ export default async function LeadsPage({
         }
         actions={
           <>
+            <ViewSwitch view={view} locale={session.locale} />
             <PipelinePicker
               locale={session.locale}
               current={pipeline?.id ?? ""}
@@ -103,7 +108,32 @@ export default async function LeadsPage({
         shown={leads.length}
       />
 
-      {leads.length ? (
+      {!leads.length ? (
+        <EmptyState title={t(FILTER_TEXT.nothing)} />
+      ) : view === "list" ? (
+        <CrmList
+          locale={session.locale}
+          valueLabel={t(S.applications.created)}
+          rows={leads.map((lead) => {
+            const stage = stageOf(pipeline, lead.stage);
+            return {
+              id: lead.id,
+              href: `/crm/leads/${lead.id}`,
+              title: lead.name,
+              subtitle: `${t(ref(SOURCE_LABEL, lead.source))} · ${lead.phone}`,
+              stageLabel: stage ? t(stage.label) : lead.stage,
+              stageColor: stage?.color ?? "var(--color-ink-faint)",
+              ownerName: team.find((u) => u.id === lead.ownerId)?.name ?? "—",
+              value: f.shortDate(lead.createdAt),
+              valueHint: null,
+              phone: lead.phone,
+              email: lead.email,
+              idleDays: idleDays(lead.stageEnteredAt),
+              stale: isActiveLead(lead) && idleDays(lead.stageEnteredAt) >= STALE_DAYS,
+            };
+          })}
+        />
+      ) : (
         <Kanban
           entity="lead"
           locale={session.locale}
@@ -115,8 +145,6 @@ export default async function LeadsPage({
             ["phone", "source", "comment", "owner"].includes(key),
           )}
         />
-      ) : (
-        <EmptyState title={t(FILTER_TEXT.nothing)} />
       )}
     </>
   );

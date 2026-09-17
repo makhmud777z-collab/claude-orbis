@@ -162,6 +162,18 @@ function screenStructure() {
         ${avatar(head2.name, 22)}
         <span class="t-micro truncate" style="min-width:0">${esc(head2.name)}</span>
       </div>` : `<div class="t-micro faint" style="margin-top:10px">${t(loc("Руководитель не назначен", "Rahbar tayinlanmagan"))}</div>`}
+
+      ${allow(user().role, "structure", "edit") ? `<div style="display:flex;gap:2px;margin-top:10px;padding-top:8px;border-top:1px solid var(--hairline-soft)">
+        <button class="icon-btn" style="width:26px;height:26px" data-act="org.new" data-value="${esc(dep.id)}"
+          title="${t(loc("Добавить подразделение внутрь", "Ichkariga bo‘lim qo‘shish"))}">${icon("plus", 12)}</button>
+        <button class="icon-btn" style="width:26px;height:26px" data-act="org.rename" data-value="${esc(dep.id)}"
+          title="${t(loc("Переименовать подразделение", "Bo‘lim nomini o‘zgartirish"))}">${icon("pencil", 12)}</button>
+        ${dep.parentId ? `<button class="icon-btn" style="width:26px;height:26px" data-act="org.del" data-value="${esc(dep.id)}"
+          title="${t(loc("Удалить подразделение", "Bo‘limni o‘chirish"))}">${icon("trash", 12)}</button>` : ""}
+        <span style="flex:1"></span>
+        <button class="icon-btn" style="width:26px;height:26px" data-act="org.addperson" data-value="${esc(dep.id)}"
+          title="${t(loc("Добавить сотрудника", "Xodim qo‘shish"))}">${icon("people", 12)}</button>
+      </div>` : ""}
     </section>`;
   };
 

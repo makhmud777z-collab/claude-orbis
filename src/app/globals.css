@@ -254,6 +254,13 @@
   .card-hover:hover {
     border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-hairline));
     box-shadow: var(--shadow-raised), var(--edge-top);
+    /* карточка чуть приподнимается — ровно настолько, чтобы палец понял,
+       что по ней можно нажать, и не настолько, чтобы прыгал текст */
+    transform: translateY(-1px);
+  }
+  .card-hover:active {
+    transform: translateY(0);
+    transition-duration: 60ms;
   }
   /* Шапка блока: отделяет заголовок от содержимого без лишней рамки. */
   .card-head {
@@ -265,6 +272,100 @@
     border-bottom: 1px solid var(--color-hairline-soft);
     background: var(--color-surface-2);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  /* ── движение ─────────────────────────────────────────────── */
+  /*
+   * Анимации в портале служат одному: показать, откуда взялся элемент.
+   * Выпадающий список «выезжает» из своего поля, модальное окно — из
+   * центра экрана, панель фильтра — из строки поиска. Длительности
+   * короткие (120–180 мс): портал должен ощущаться быстрым, а не плавным.
+   */
+  @keyframes orbis-rise {
+    from { opacity: 0; transform: translateY(-6px) scale(0.985); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes orbis-pop {
+    from { opacity: 0; transform: translateY(8px) scale(0.97); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes orbis-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes orbis-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes orbis-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+
+  /* выпадающие списки, календарь, панель фильтра */
+  [role="listbox"],
+  [data-date],
+  .pop-in {
+    animation: orbis-rise 140ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  /* модальное окно и его затемнение */
+  [role="dialog"] {
+    animation: orbis-pop 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .scrim-in {
+    animation: orbis-fade 160ms ease;
+  }
+  /* содержимое страницы проявляется, а не возникает рывком */
+  .page-in {
+    animation: orbis-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  /* колонка канбана под перетаскиваемой карточкой */
+  .kan-col.is-over {
+    animation: orbis-pulse 900ms ease-in-out infinite;
+  }
+
+  .nav-item {
+    transition:
+      background-color 140ms ease,
+      color 140ms ease,
+      transform 120ms ease;
+  }
+  .nav-item:active {
+    transform: scale(0.985);
+  }
+  .btn-icon {
+    transition:
+      background-color 140ms ease,
+      color 140ms ease,
+      transform 120ms ease;
+  }
+  .btn-icon:active {
+    transform: scale(0.92);
+  }
+  .chip {
+    transition:
+      background-color 140ms ease,
+      border-color 140ms ease,
+      color 140ms ease,
+      transform 120ms ease;
+  }
+  button.chip:active {
+    transform: scale(0.96);
+  }
+
+  /*
+   * Кому анимации мешают — у того их нет. Это не вежливость, а требование:
+   * у части людей движение на экране вызывает настоящее недомогание.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 
   /* ── buttons ──────────────────────────────────────────────── */
