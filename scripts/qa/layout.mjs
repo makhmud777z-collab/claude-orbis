@@ -1,5 +1,7 @@
 import { chromium } from "playwright";
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+
+const BASE = process.env.QA_BASE_URL ?? "http://localhost:3000";
+const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const routes = ["/", "/students", "/applications", "/universities", "/documents", "/tasks", "/settings"];
 const out = [];
 for (const width of [390, 810]) {
@@ -7,7 +9,7 @@ for (const width of [390, 810]) {
   await ctx.addCookies([{ name: "orbis_tenant", value: "seoulway", domain: "localhost", path: "/" }]);
   const page = await ctx.newPage();
   for (const r of routes) {
-    await page.goto("http://localhost:3000" + r, { waitUntil: "networkidle" });
+    await page.goto(BASE + r, { waitUntil: "networkidle" });
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     const navVisible = await page.locator("aside").first().isVisible().catch(() => false);
     out.push(`${width}px ${r.padEnd(16)} горизонт.прокрутка: ${overflow}px  боковое меню: ${navVisible ? "видно" : "скрыто"}`);

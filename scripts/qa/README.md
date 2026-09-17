@@ -5,7 +5,8 @@ TypeScript: пустые экраны, сорванную вёрстку, дос
 между агентствами.
 
 ```bash
-npm i -D playwright              # один раз
+# playwright уже в devDependencies; браузер ставится один раз:
+npx playwright install chromium
 npx tsx scripts/qa/integrity.ts  # целостность данных, браузер не нужен
 node scripts/qa/i18n.mjs         # забытые переводы, браузер не нужен
 
@@ -17,6 +18,9 @@ node scripts/qa/layout.mjs       # горизонтальная прокрутк
 node scripts/qa/mobile-nav.mjs   # меню на телефоне
 
 npm run qa                       # всё подряд
+
+Переменные: `QA_BASE_URL` — адрес приложения (по умолчанию localhost:3000),
+`CHROMIUM_PATH` — путь к готовому браузеру, если он уже установлен в системе.
 ```
 
 Каждый скрипт печатает либо «прошли», либо список проблем и завершается

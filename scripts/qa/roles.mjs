@@ -1,5 +1,7 @@
 import { chromium } from "playwright";
 
+const BASE = process.env.QA_BASE_URL ?? "http://localhost:3000";
+
 // ожидания из матрицы прав + версии продукта (seoulway = CRM)
 const EXPECT = {
   u_aziz:      { role: "Владелец",                 nav: ["/","/students","/applications","/documents","/tasks","/deadlines","/universities","/finance","/team","/settings"] },
@@ -12,7 +14,7 @@ const EXPECT = {
   u_partner1:  { role: "Агент-партнёр",            nav: ["/students","/applications","/tasks"] },
 };
 
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const issues = [];
 
 for (const [userId, exp] of Object.entries(EXPECT)) {
@@ -45,7 +47,7 @@ for (const [userId, exp] of Object.entries(EXPECT)) {
   // прямой заход в запрещённый раздел должен давать заглушку, а не данные
   const forbidden = ["/finance", "/team", "/settings", "/documents", "/universities"].filter((r) => !want.includes(r));
   for (const route of forbidden) {
-    await page.goto("http://localhost:3000" + route, { waitUntil: "networkidle" });
+    await page.goto(BASE + route, { waitUntil: "networkidle" });
     const txt = await page.locator("body").innerText();
     if (!/Раздел недоступен|Модуль не входит/.test(txt))
       issues.push(`${userId}: ${route} открылся без прав`);

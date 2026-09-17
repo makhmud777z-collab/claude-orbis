@@ -1,5 +1,7 @@
 import { chromium } from "playwright";
 
+const BASE = process.env.QA_BASE_URL ?? "http://localhost:3000";
+
 const ROUTES = ["/", "/students", "/students/s_001", "/applications", "/applications/a_001",
   "/documents", "/tasks", "/deadlines", "/universities", "/universities/u_hallim",
   "/universities/compare", "/finance", "/team", "/settings"];
@@ -15,7 +17,7 @@ const FOREIGN = {
 };
 const LOCALES = ["ru", "uz"];
 
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const problems = [];
 
 for (const tenant of TENANTS) {
@@ -34,7 +36,7 @@ for (const tenant of TENANTS) {
       errors.length = 0;
       let status = 0;
       try {
-        const resp = await page.goto("http://localhost:3000" + route, { waitUntil: "networkidle", timeout: 20000 });
+        const resp = await page.goto(BASE + route, { waitUntil: "networkidle", timeout: 20000 });
         status = resp?.status() ?? 0;
       } catch (e) { problems.push([tenant, locale, route, "NAV_FAIL", String(e).slice(0, 80)]); continue; }
 

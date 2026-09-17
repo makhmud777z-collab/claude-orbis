@@ -1,5 +1,7 @@
 import { chromium } from "playwright";
-const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" });
+
+const BASE = process.env.QA_BASE_URL ?? "http://localhost:3000";
+const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
 await ctx.addCookies([{ name: "orbis_tenant", value: "seoulway", domain: "localhost", path: "/" }]);
 const page = await ctx.newPage();
