@@ -1,23 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { switchLocale, switchTenant, switchUser, workdayAction } from "@/app/actions";
-import { IconBell, IconChevron, IconMail, IconSearch } from "./icons";
+import { switchLocale, switchTenant, switchTheme, switchUser } from "@/app/actions";
+import { IconBell, IconChevron, IconMail, IconMoon, IconSearch, IconSun } from "./icons";
 import { Select } from "./controls";
-import { Avatar, StatusDot } from "./ui";
+import { Avatar } from "./ui";
 import { MobileNav } from "./MobileNav";
+import { WorkdayPanel, WorkdayPill, type WorkdayState } from "./Workday";
 import type { Module } from "@/lib/rbac";
 import { LOCALES, translator, type Loc, type Locale } from "@/lib/i18n";
 import { S } from "@/lib/strings";
+import { THEMES, type Theme } from "@/lib/theme";
 import type { Tenant, User } from "@/lib/types";
-
-/** Состояние рабочего дня сотрудника — считается на сервере из отметок. */
-export interface WorkdayState {
-  started: boolean;
-  onBreak: boolean;
-  startedAt: string | null;
-  minutes: number;
-}
 
 /**
  * Шапка. Переключатели агентства и сотрудника существуют только в демо-режиме —
@@ -35,6 +29,7 @@ export function Topbar({
   modules,
   home,
   workday,
+  theme,
 }: {
   user: User;
   roleLabel: Loc;
@@ -45,6 +40,7 @@ export function Topbar({
   modules: Module[];
   home: string;
   workday: WorkdayState;
+  theme: Theme;
 }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -65,9 +61,6 @@ export function Topbar({
     };
   }, [open]);
 
-  const h = Math.floor(workday.minutes / 60);
-  const m = workday.minutes % 60;
-  const hhmm = `${h} ${t(S.common.hoursShort)} ${m} ${t(S.common.minutesShort)}`;
   const statusColor = workday.onBreak
     ? "var(--color-status-progress)"
     : workday.started
@@ -75,7 +68,8 @@ export function Topbar({
       : "var(--color-ink-faint)";
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-hairline-soft bg-canvas/85 px-5 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-hairline px-5 backdrop-blur-xl"
+      style={{ background: "color-mix(in srgb, var(--color-rail) 88%, transparent)" }}>
       <MobileNav modules={modules} locale={locale} tenantName={tenant.name} home={home} />
 
       <label className="relative hidden max-w-[320px] flex-1 items-center sm:flex">
@@ -106,6 +100,8 @@ export function Topbar({
           </button>
         ))}
       </form>
+
+      <WorkdayPill workday={workday} locale={locale} />
 
       <button className="btn-icon" aria-label={t(S.common.mail)}>
         <IconMail size={17} />
@@ -143,38 +139,26 @@ export function Topbar({
 
         {open ? (
           <div className="card-raised absolute right-0 top-11 z-40 w-[320px] p-4">
-            <div className="mb-4 rounded-[10px] border border-hairline-soft bg-surface-1 p-3">
-              <div className="t-caption flex items-center gap-2">
-                <StatusDot color={statusColor} />
-                {workday.onBreak
-                  ? t(S.workday.onBreak)
-                  : workday.started
-                    ? t(S.workday.working)
-                    : t(S.workday.notStarted)}
-              </div>
-              {workday.started ? (
-                <div className="t-micro mt-1.5 text-ink-faint">
-                  {t(S.workday.todayTotal)}: <span className="t-num">{hhmm}</span>
-                </div>
-              ) : null}
-
-              <form action={workdayAction} className="mt-3 flex gap-1.5">
-                {workday.started ? (
-                  <>
-                    <button name="what" value="break" className="btn btn-ghost btn-sm flex-1 justify-center">
-                      {workday.onBreak ? t(S.workday.breakEnd) : t(S.workday.breakStart)}
-                    </button>
-                    <button name="what" value="end" className="btn btn-primary btn-sm flex-1 justify-center">
-                      {t(S.workday.end)}
-                    </button>
-                  </>
-                ) : (
-                  <button name="what" value="start" className="btn btn-primary btn-sm w-full justify-center">
-                    {t(S.workday.start)}
-                  </button>
-                )}
-              </form>
+            <div className="mb-4">
+              <WorkdayPanel workday={workday} locale={locale} />
             </div>
+
+            <div className="t-micro mb-2 uppercase tracking-[0.08em] text-ink-faint">
+              {t(S.workday.theme)}
+            </div>
+            <form action={switchTheme} className="mb-4 flex gap-1.5">
+              {THEMES.map((item) => (
+                <button
+                  key={item.key}
+                  name="theme"
+                  value={item.key}
+                  className={`chip flex-1 justify-center ${item.key === theme ? "chip-active" : ""}`}
+                >
+                  {item.key === "light" ? <IconSun size={13} /> : <IconMoon size={13} />}
+                  {t(item.label)}
+                </button>
+              ))}
+            </form>
 
             <div className="t-micro mb-2 uppercase tracking-[0.08em] text-ink-faint">
               {t(S.common.workspace)}

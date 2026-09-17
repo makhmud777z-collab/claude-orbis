@@ -55,7 +55,7 @@ export function StageBar({
               className="t-micro whitespace-nowrap rounded-[6px] px-2.5 py-1.5 transition-colors"
               style={{
                 background: passed ? stage.color : "var(--color-surface-1)",
-                color: passed ? "#0b0b0b" : "var(--color-ink-faint)",
+                color: passed ? "#10151c" : "var(--color-ink-faint)",
                 fontWeight: active ? 600 : 500,
                 opacity: passed && !active ? 0.55 : 1,
                 cursor: canEdit ? "pointer" : "default",

@@ -9,7 +9,7 @@ import { usersOfTenant } from "@/lib/data/users";
 import { homeHref } from "@/lib/edition";
 import { roleLabel } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
-import { openSession, sessionMinutes } from "@/lib/store";
+import { breakSeconds, openSession, sessionSeconds } from "@/lib/store";
 import { ROOT_DOMAIN, TENANTS } from "@/lib/tenants";
 
 const inter = Inter({
@@ -42,7 +42,7 @@ export default async function RootLayout({
   const work = openSession(session.user.id);
 
   return (
-    <html lang={session.locale} className={inter.variable}>
+    <html lang={session.locale} data-theme={session.theme} className={inter.variable}>
       <body className="grain min-h-screen bg-canvas text-ink antialiased">
         <div className="flex min-h-screen">
           <Sidebar
@@ -64,11 +64,13 @@ export default async function RootLayout({
               locale={session.locale}
               modules={modules}
               home={home}
+              theme={session.theme}
               workday={{
                 started: Boolean(work),
                 onBreak: Boolean(work?.onBreakSince),
-                startedAt: work?.startedAt ?? null,
-                minutes: work ? sessionMinutes(work) : 0,
+                startedAt: work ? work.startedAt.slice(11, 16) : null,
+                seconds: work ? sessionSeconds(work) : 0,
+                breakSeconds: work ? breakSeconds(work) : 0,
               }}
             />
             <main className="min-w-0 flex-1 px-5 py-7 lg:px-8">{children}</main>

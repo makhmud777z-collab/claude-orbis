@@ -1,29 +1,25 @@
 /* ── задачи и проекты ────────────────────────────────────── */
 const TASK_ORDER = ["todo", "in_progress", "review", "done"];
 
+const taskRow = (x) => ({
+  search: `${x.title} ${x.description}`,
+  status: x.status, assigneeId: x.assigneeId, priority: x.priority, projectId: x.projectId,
+});
+
 function screenTasks() {
   const all = scopedTasks();
-  const list = all.filter((x) => {
-    if (S.tasks.mine && x.assigneeId !== S.userId) return false;
-    if (S.tasks.assignee !== "all" && x.assigneeId !== S.tasks.assignee) return false;
-    return true;
-  });
+  const fields = taskFields();
+  const st = filterState("tasks");
+  const list = all.filter((x) => matchesFilter(taskRow(x), fields, st.values, st.q));
   return `
     ${head(t(loc("Задачи", "Vazifalar")),
       `<span>${list.filter((x) => x.status !== "done").length} ${t(loc("в работе", "ishda"))}</span><span class="faint">·</span>
+       <span>${list.filter((x) => x.status !== "done" && isPast(x.dueAt)).length} ${t(loc("просрочено", "kechikkan"))}</span><span class="faint">·</span>
        <a href="#" data-go="projects">${t(loc("Проекты", "Loyihalar"))}</a>
-       <a href="#" data-go="taskreports">${t(loc("Отчёты", "Hisobotlar"))}</a>
-       <a href="#" data-go="templates">${t(loc("Шаблоны", "Shablonlar"))}</a>`,
+       <a href="#" data-go="taskreports">${t(loc("Отчёты", "Hisobotlar"))}</a>`,
       allow(user().role, "tasks", "create") ? `<button class="btn btn-primary">${icon("plus", 15)} ${t(loc("Новая задача", "Yangi vazifa"))}</button>` : "")}
 
-    <div class="toolbar">
-      <button class="chip${S.tasks.mine ? " on" : ""}" data-act="tasks.mine">${t(loc("Только мои", "Faqat meniki"))}</button>
-      ${select("tasks.assignee", S.tasks.assignee, [{ value: "all", label: t(loc("Все исполнители", "Barcha ijrochilar")) },
-        ...scopedTeam().map((u) => ({ value: u.id, label: u.name }))], 190)}
-      <span class="t-micro faint" style="margin-left:auto">
-        ${list.filter((x) => x.status !== "done" && isPast(x.dueAt)).length} ${t(loc("просрочено", "kechikkan"))}
-      </span>
-    </div>
+    ${smartFilter("tasks", fields, taskPresets(), { shown: list.length, total: all.length })}
 
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr));align-items:start">
       ${TASK_ORDER.map((status) => {
@@ -145,28 +141,129 @@ function screenTaskReports() {
     </div>`;
 }
 
-function screenTemplates() {
-  const templates = D.templates.filter((x) => x.tenantId === S.tenant);
+
+/* ── календарь ───────────────────────────────────────────── */
+const DOW = [loc("Пн", "Du"), loc("Вт", "Se"), loc("Ср", "Ch"), loc("Чт", "Pa"), loc("Пт", "Ju"), loc("Сб", "Sh"), loc("Вс", "Ya")];
+const HOUR_PX = 52;
+const DAY_START = 7;
+const DAY_END = 22;
+
+const itemColor = (x) => (x.source === "deadline" ? "var(--progress)" : EVENT_KIND[x.kind]?.color ?? "var(--accent)");
+
+/** Красная линия настоящего времени — то, ради чего в календарь и заходят. */
+function nowLine() {
+  const now = new Date();
+  const minutes = now.getHours() * 60 + now.getMinutes();
+  if (minutes < DAY_START * 60 || minutes > DAY_END * 60) return "";
+  const top = ((minutes - DAY_START * 60) / 60) * HOUR_PX;
+  const label = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  return `<div class="now-line" data-now style="top:${top}px"><span class="now-badge">${label}</span></div>`;
+}
+
+function hourGrid(isoDate) {
+  const items = itemsOn(isoDate);
+  const hours = [];
+  for (let h = DAY_START; h <= DAY_END; h++) hours.push(h);
+  return `<div class="card" style="padding:0;overflow:hidden">
+    <div class="card-head" style="display:flex;align-items:center;gap:10px">
+      <span class="t-caption">${esc(fmtDate(isoDate))}</span>
+      <span class="t-micro faint">${plural(items.length, ["дело", "дела", "дел"], "ish")}</span>
+    </div>
+    <div style="position:relative;overflow-y:auto;max-height:560px" data-scroll="day">
+      <div class="hours" style="position:relative">
+        <div>${hours.map((h) => `<div class="hour-label">${String(h).padStart(2, "0")}:00</div>`).join("")}</div>
+        <div style="position:relative">
+          ${hours.map(() => `<div class="hour-slot"></div>`).join("")}
+          ${items.map((x) => {
+            const from = Math.max(minutesOf(x.startTime), DAY_START * 60);
+            const to = Math.max(minutesOf(x.endTime), from + 30);
+            const top = ((from - DAY_START * 60) / 60) * HOUR_PX;
+            const height = Math.max(24, ((to - from) / 60) * HOUR_PX - 4);
+            const color = itemColor(x);
+            return `<div class="ev-card" style="top:${top}px;height:${height}px;border-left-color:${color};background:color-mix(in srgb, ${color} 12%, var(--surface-1))">
+              <span class="t-micro" style="font-weight:600">${esc(x.title)}</span>
+              <span class="t-micro faint" style="display:block">${esc(x.startTime)}–${esc(x.endTime)}${x.relation ? " · " + esc(x.relation) : ""}</span>
+            </div>`;
+          }).join("")}
+        </div>
+      </div>
+      ${nowLine()}
+    </div>
+  </div>`;
+}
+
+function monthGrid(isoDate) {
+  const anchor = parseDate(isoDate);
+  const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+  const start = parseDate(weekStart(iso(first)));
+  const cells = [];
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    cells.push(iso(d));
+  }
+  return `<div class="cal-month">
+    ${DOW.map((d) => `<div class="cal-dow">${esc(t(d))}</div>`).join("")}
+    ${cells.map((day) => {
+      const items = itemsOn(day);
+      const out = parseDate(day).getMonth() !== anchor.getMonth();
+      return `<button class="cal-day${out ? " out" : ""}${day === TODAY_ISO ? " today" : ""}" data-act="cal.day" data-value="${day}">
+        <span class="cal-num">${parseDate(day).getDate()}</span>
+        ${items.slice(0, 3).map((x) => `<span class="cal-ev">${dot(itemColor(x))}${esc(x.startTime)} ${esc(x.title)}</span>`).join("")}
+        ${items.length > 3 ? `<span class="t-micro faint">+${items.length - 3}</span>` : ""}
+      </button>`;
+    }).join("")}
+  </div>`;
+}
+
+function weekGrid(isoDate) {
+  const start = weekStart(isoDate);
+  const days = Array.from({ length: 7 }, (_, i) => shiftDay(start, i));
+  return `<div class="grid" style="grid-template-columns:repeat(7,minmax(0,1fr));gap:10px">
+    ${days.map((day) => {
+      const items = itemsOn(day);
+      return `<section class="card" style="padding:0;min-width:0">
+        <button class="card-head" style="width:100%;border:0;cursor:pointer;color:inherit;text-align:left;display:flex;gap:8px;align-items:center"
+          data-act="cal.day" data-value="${day}">
+          <span class="t-micro faint">${esc(t(DOW[(parseDate(day).getDay() + 6) % 7]))}</span>
+          <span class="cal-num" style="${day === TODAY_ISO ? "background:var(--accent);color:#fff;font-weight:600" : ""}">${parseDate(day).getDate()}</span>
+        </button>
+        <div style="padding:10px;display:grid;gap:6px">
+          ${items.length ? items.map((x) => `<span class="t-micro truncate" style="display:flex;gap:6px;align-items:center">
+            ${dot(itemColor(x))}<span class="num">${esc(x.startTime)}</span>
+            <span class="truncate" style="min-width:0">${esc(x.title)}</span></span>`).join("")
+            : `<span class="t-micro faint">—</span>`}
+        </div>
+      </section>`;
+    }).join("")}
+  </div>`;
+}
+
+function screenCalendar() {
+  const view = S.cal.view;
+  const date = S.cal.date;
+  const views = [["month", loc("Месяц", "Oy")], ["week", loc("Неделя", "Hafta")], ["day", loc("День", "Kun")]];
+  const step = view === "month" ? 30 : view === "week" ? 7 : 1;
+  const title = view === "day" ? fmtDate(date) : `${t(loc("Месяц", "Oy"))} · ${esc(fmtShort(date))}`;
+
   return `
-    ${head(t(loc("Шаблоны задач", "Vazifa shablonlari")),
-      `<span>${plural(templates.length, ["шаблон", "шаблона", "шаблонов"], "shablon")}</span><span class="faint">·</span>
-       <a href="#" data-go="tasks">${t(loc("Задачи", "Vazifalar"))}</a>`)}
-    ${templates.length ? `<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
-      ${templates.map((x) => `<article class="card" style="padding:18px">
-        <h2 class="t-headline">${esc(t(x.title))}</h2>
-        <p class="t-caption muted" style="margin:10px 0 0;line-height:1.5">${esc(t(x.description))}</p>
-        <div class="t-micro faint" style="margin-top:14px;text-transform:uppercase;letter-spacing:.07em">
-          ${t(loc("Чек-лист", "Ro‘yxat"))} · ${x.checklist.length}
-        </div>
-        <ul style="list-style:none;margin:8px 0 0;padding:0">
-          ${x.checklist.map((item) => `<li class="t-caption muted" style="display:flex;gap:8px;align-items:flex-start;padding:3px 0">
-            <span class="faint" style="margin-top:2px">${icon("tick", 11)}</span>${esc(t(item))}
-          </li>`).join("")}
-        </ul>
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px">
-          ${chip(t(roleDef(x.defaultAssigneeRole).label))}
-          <button class="btn btn-secondary">${t(loc("Создать по шаблону", "Shablon bo‘yicha yaratish"))}</button>
-        </div>
-      </article>`).join("")}
-    </div>` : emptyCard(t(loc("Пусто", "Bo‘sh")))}`;
+    ${head(t(loc("Календарь", "Kalendar")),
+      `<span>${t(loc("свои встречи и сроки из других разделов — в одной сетке", "o‘z uchrashuvlari va boshqa bo‘limlardagi muddatlar"))}</span>`,
+      `<button class="btn btn-primary" data-act="cal.new">${icon("plus", 15)} ${t(loc("Добавить дело", "Ish qo‘shish"))}</button>`)}
+
+    <div class="toolbar">
+      <button class="btn btn-secondary" data-act="cal.shift" data-value="${-step}">${t(loc("Назад", "Orqaga"))}</button>
+      <button class="btn btn-secondary" data-act="cal.today">${t(loc("Сегодня", "Bugun"))}</button>
+      <button class="btn btn-secondary" data-act="cal.shift" data-value="${step}">${t(loc("Вперёд", "Oldinga"))}</button>
+      <span class="t-body-sm" style="margin-left:6px">${esc(title)}</span>
+      <span style="margin-left:auto;display:flex;gap:6px">
+        ${views.map(([key, label]) => `<button class="chip${view === key ? " on" : ""}" data-act="cal.view" data-value="${key}">${esc(t(label))}</button>`).join("")}
+      </span>
+    </div>
+
+    ${view === "month" ? monthGrid(date) : view === "week" ? weekGrid(date) : hourGrid(date)}
+
+    ${view === "day" ? "" : `<p class="t-micro faint" style="margin-top:12px">${t(loc(
+      "Нажмите на число — откроется разбивка по часам с красной линией текущего времени.",
+      "Sanani bosing — soatlar bo‘yicha kesim va joriy vaqt chizig‘i ochiladi."))}</p>`}`;
 }

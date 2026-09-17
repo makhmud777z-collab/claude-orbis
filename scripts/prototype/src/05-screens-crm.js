@@ -109,16 +109,27 @@ function screenDashboard() {
 }
 
 /* ── лиды ────────────────────────────────────────────────── */
+const leadRow = (l) => ({
+  search: `${l.name} ${l.phone} ${l.email ?? ""} ${l.comment ?? ""}`,
+  stage: currentStage(l), ownerId: l.ownerId, source: l.source,
+});
+
 function screenLeads() {
-  const leads = scopedLeads();
-  const stages = stagesOf(defaultPipeline("lead"));
+  const all = scopedLeads();
+  const pipeline = defaultPipeline("lead");
+  const stages = stagesOf(pipeline);
+  const fields = leadFields();
+  const st = filterState("leads");
+  const leads = all.filter((l) => matchesFilter(leadRow(l), fields, st.values, st.q));
   return `
     ${head(t(loc("Лиды", "Lidlar")),
       `<span>${plural(leads.length, ["лид", "лида", "лидов"], "lid")}</span><span class="faint">·</span>
        <span>${leads.filter(isActiveLead).length} ${t(loc("в работе", "ishda"))}</span><span class="faint">·</span>
        <span>${esc(scopeLabel())}</span>`,
-      allow(user().role, "leads", "create")
-        ? `<button class="btn btn-primary" data-act="newlead">${icon("plus", 15)} ${t(loc("Новый лид", "Yangi lid"))}</button>` : "")}
+      `${pipelinePicker(pipeline)}
+       ${allow(user().role, "leads", "create")
+        ? `<button class="btn btn-primary" data-act="newlead">${icon("plus", 15)} ${t(loc("Новый лид", "Yangi lid"))}</button>` : ""}`)}
+    ${smartFilter("leads", fields, leadPresets(), { shown: leads.length, total: all.length })}
     ${kanban("lead", stages, leads.map(leadCard), {
       totals: false,
       fields: S.cardFields.filter((f) => ["phone", "source", "comment", "owner"].includes(f)).concat(["phone"]).filter((v, i, a) => a.indexOf(v) === i),
@@ -174,17 +185,33 @@ function screenLead(id) {
 }
 
 /* ── сделки ──────────────────────────────────────────────── */
+const dealRow = (d) => {
+  const contact = studentById(d.studentId);
+  const uni = uniById(d.universityId);
+  return {
+    search: `${contact?.fullName ?? ""} ${uni?.name ?? ""} ${d.note ?? ""}`,
+    stage: currentStage(d), ownerId: d.ownerId, universityId: d.universityId,
+    intake: d.intake, degreeLevel: d.degreeLevel, priority: d.priority,
+    contractValue: d.contractValue, deadline: d.deadline,
+  };
+};
+
 function screenDeals() {
-  const deals = scopedDeals();
+  const all = scopedDeals();
   const pipeline = defaultPipeline("deal");
+  const fields = dealFields();
+  const st = filterState("deals");
+  const deals = all.filter((d) => matchesFilter(dealRow(d), fields, st.values, st.q));
   const total = deals.reduce((n, d) => n + d.contractValue, 0);
   return `
     ${head(t(loc("Сделки", "Bitimlar")),
       `<span>${plural(deals.length, ["сделка", "сделки", "сделок"], "bitim")}</span><span class="faint">·</span>
        <span class="num">${esc(som(total, true))}</span><span class="faint">·</span>
-       <a href="#" data-go="pipelines">${esc(t(pipeline.name))}</a>`,
-      allow(user().role, "deals", "create")
-        ? `<button class="btn btn-primary" data-go="leads">${icon("plus", 15)} ${t(loc("Новая сделка", "Yangi bitim"))}</button>` : "")}
+       <span>${esc(scopeLabel())}</span>`,
+      `${pipelinePicker(pipeline)}
+       ${allow(user().role, "deals", "create")
+        ? `<button class="btn btn-primary" data-go="leads">${icon("plus", 15)} ${t(loc("Новая сделка", "Yangi bitim"))}</button>` : ""}`)}
+    ${smartFilter("deals", fields, dealPresets(), { shown: deals.length, total: all.length })}
     ${kanban("deal", stagesOf(pipeline), deals.map(dealCard))}`;
 }
 
@@ -259,18 +286,19 @@ function screenDeal(id) {
 }
 
 /* ── контакты ────────────────────────────────────────────── */
+/** Плоская строка контакта для фильтра — всё, по чему его можно искать. */
+const contactRow = (s) => ({
+  search: `${s.fullName} ${s.latinName} ${s.phone} ${s.email} ${s.city}`,
+  status: s.status, ownerId: s.ownerId, city: s.city, source: s.source,
+  topik: s.profile.topik, budget: s.profile.budgetPerYear,
+});
+
 function screenContacts() {
-  const f = S.contacts;
   const deals = scopedDeals();
-  const rows = scopedContacts().filter((s) => {
-    if (f.status !== "all" && s.status !== f.status) return false;
-    if (f.owner !== "all" && s.ownerId !== f.owner) return false;
-    if (f.topik !== "all" && s.profile.topik < Number(f.topik)) return false;
-    if (f.q && !`${s.fullName} ${s.latinName} ${s.phone} ${s.email} ${s.city}`.toLowerCase().includes(f.q.toLowerCase())) return false;
-    return true;
-  });
-  const statuses = [["all", loc("Все", "Barchasi")], ["lead", loc("Лиды", "Lidlar")], ["active", loc("В работе", "Ishda")],
-    ["enrolled", loc("Зачислены", "Qabul qilingan")], ["paused", loc("На паузе", "To‘xtatilgan")], ["lost", loc("Потеряны", "Yo‘qotilgan")]];
+  const all = scopedContacts();
+  const fields = contactFields();
+  const st = filterState("contacts");
+  const rows = all.filter((s) => matchesFilter(contactRow(s), fields, st.values, st.q));
 
   return `
     ${head(t(loc("Контакты", "Kontaktlar")),
@@ -278,21 +306,7 @@ function screenContacts() {
        <span>${t(loc("один человек — одна карточка: повторные обращения падают в её историю", "bir odam — bitta karta"))}</span>`,
       allow(user().role, "contacts", "export") ? `<button class="btn btn-secondary">${icon("export", 15)} ${t(loc("Экспорт", "Eksport"))}</button>` : "")}
 
-    <div class="toolbar">
-      ${statuses.map(([key, label]) => `<button class="chip${f.status === key ? " on" : ""}" data-act="contacts.status" data-value="${key}">
-        ${esc(t(label))} <span class="num faint">${key === "all" ? scopedContacts().length : scopedContacts().filter((s) => s.status === key).length}</span>
-      </button>`).join("")}
-      <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        ${select("contacts.owner", f.owner, [{ value: "all", label: t(loc("Все кураторы", "Barcha kuratorlar")) },
-          ...scopedTeam().map((u) => ({ value: u.id, label: u.name }))], 170)}
-        ${select("contacts.topik", f.topik, [{ value: "all", label: t(loc("Любой TOPIK", "Istalgan TOPIK")) },
-          ...[1, 2, 3, 4, 5, 6].map((l) => ({ value: String(l), label: `TOPIK ${l}+` }))], 130)}
-        <span style="position:relative;display:inline-flex;align-items:center">
-          <span style="position:absolute;left:11px;color:var(--ink-faint);pointer-events:none">${icon("search", 13)}</span>
-          <input class="field pill-field" style="padding-left:30px;width:190px" data-act="contacts.q" value="${esc(f.q)}" placeholder="${t(loc("Поиск по базе", "Bazadan qidirish"))}">
-        </span>
-      </span>
-    </div>
+    ${smartFilter("contacts", fields, contactPresets(), { shown: rows.length, total: all.length })}
 
     <div class="card scroll-x">
       <table style="min-width:960px">
@@ -427,10 +441,40 @@ function screenContact(id) {
     </div>`;
 }
 
-/* ── воронки и каналы ────────────────────────────────────── */
+/* ── настройки CRM, воронки и каналы ─────────────────────── */
+/** Одна точка входа во всё, что настраивается в воронке. */
+function screenCrmSettings() {
+  const pipelines = [...pipelinesOf("lead"), ...pipelinesOf("deal")];
+  const channels = D.channels.filter((c) => c.tenantId === S.tenant);
+  const items = [
+    { go: "pipelines", title: loc("Воронки и стадии", "Voronkalar va bosqichlar"),
+      hint: loc("названия, порядок и цвета стадий", "bosqich nomlari, tartibi va ranglari"), value: String(pipelines.length) },
+    { go: "channels", title: loc("Каналы продаж", "Sotuv kanallari"),
+      hint: loc("откуда приходят обращения", "murojaatlar qayerdan keladi"),
+      value: `${channels.filter((c) => c.status === "connected").length} / ${channels.length}` },
+    { go: "deals", title: loc("Карточка просмотра", "Ko‘rish kartasi"),
+      hint: loc("какие поля показывать на канбане", "kanbanda qaysi maydonlar ko‘rinadi"), value: String(S.cardFields.length) },
+  ];
+  return `
+    ${head(t(loc("Настройки CRM", "CRM sozlamalari")),
+      `<span>${t(loc("воронки, каналы и вид карточки", "voronkalar, kanallar va karta ko‘rinishi"))}</span>`)}
+    <div class="card divide">
+      ${items.map((x) => `<a href="#" data-go="${x.go}" class="row">
+        ${dot("var(--accent)")}
+        <span style="flex:1;min-width:0">
+          <span class="t-body-sm" style="display:block">${esc(t(x.title))}</span>
+          <span class="t-micro faint" style="display:block">${esc(t(x.hint))}</span>
+        </span>
+        <span class="t-caption num muted">${esc(x.value)}</span>
+        ${icon("right", 15)}
+      </a>`).join("")}
+    </div>`;
+}
+
 function screenPipelines() {
   const list = [...pipelinesOf("lead"), ...pipelinesOf("deal")];
   return `
+    ${crumb("crmsettings", t(loc("Настройки CRM", "CRM sozlamalari")), t(loc("Воронки", "Voronkalar")))}
     ${head(t(loc("Воронки", "Voronkalar")),
       `<span>${t(loc("стадии, их порядок и цвета — то, как агентство видит свою работу", "bosqichlar, tartibi va ranglari"))}</span>`)}
     <div class="grid">

@@ -55,7 +55,7 @@ const MODULES_BY_EDITION: Record<Edition, Module[]> = {
   // проекты, структура компании и отчётность по часам.
   crm: [
     "dashboard", "leads", "deals", "crmSettings", "documents",
-    "tasks", "projects", "deadlines", "team", "structure",
+    "tasks", "projects", "deadlines", "calendar", "team", "structure",
     "staffReports", "finance", "admin",
   ],
   advanced: [],

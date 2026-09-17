@@ -1,31 +1,30 @@
 function screenUniversities() {
-  const f = S.catalog;
   const rate = tenant().usdRate;
   const students = scopedContacts().filter((s) => s.status !== "lost");
-  const student = students.find((s) => s.id === f.student);
+  const student = students.find((s) => s.id === S.catalog.student);
   const key = student ? student.id : "_";
   const picked = S.shortlist[key] ?? [];
-  const cities = [...new Set(D.universities.map((u) => u.city))].sort();
-  const fields = [...new Set(D.universities.flatMap((u) => u.fields))].sort();
-  const intakes = [...new Set(D.universities.flatMap((u) => u.intakes))].sort();
+  const fields = universityFields();
+  const st = filterState("universities");
+  const v = st.values;
 
+  /**
+   * Фильтр сужает и вуз, и его программы: «TOPIK от 3» — это не свойство
+   * вуза, а условие для программ, которые ему подходят.
+   */
   const rows = [];
   for (const u of D.universities) {
-    if (f.q && !`${u.name} ${u.nameKo} ${u.city}`.toLowerCase().includes(f.q.toLowerCase())) continue;
-    if (f.cities.length && !f.cities.includes(u.city)) continue;
-    if (f.ownership.length && !f.ownership.includes(u.ownership)) continue;
-    if (f.dorm && !u.dormAvailable) continue;
-    if (f.grant && u.scholarshipMax < 50) continue;
-    if (f.english && !hasEnglish(u)) continue;
-    if (f.intake !== "all" && !u.intakes.includes(f.intake)) continue;
+    const uniRow = {
+      search: `${u.name} ${u.nameKo} ${u.city}`,
+      city: u.city, ownership: u.ownership, field: u.fields, intake: u.intakes,
+      dorm: u.dormAvailable ? "yes" : "no", english: hasEnglish(u) ? "yes" : "no",
+    };
+    if (!matchesFilter(uniRow, fields.filter((f) => !["topik", "tuition", "degree"].includes(f.key)), v, st.q)) continue;
     const programs = u.programs.filter((p) => {
-      if (f.degree !== "all" && p.degreeLevel !== f.degree) return false;
-      if (f.fields.length && !f.fields.includes(p.field)) return false;
-      if (f.topik !== "all" && p.topikMin > Number(f.topik)) return false;
-      if (f.budget !== "all") {
-        const total = p.tuitionPerYear + (f.dorm && u.dormCostPerYear ? u.dormCostPerYear : 0) + u.admissionFee;
-        if (total > Number(f.budget) * 1.15) return false;
-      }
+      if (v.degree && p.degreeLevel !== v.degree) return false;
+      if (v.topikFrom && p.topikMin > Number(v.topikFrom)) return false;
+      if (v.tuitionFrom && p.tuitionPerYear < Number(v.tuitionFrom)) return false;
+      if (v.tuitionTo && p.tuitionPerYear > Number(v.tuitionTo)) return false;
       return true;
     });
     if (!programs.length) continue;
@@ -33,12 +32,6 @@ function screenUniversities() {
     rows.push({ u, programs, match });
   }
   rows.sort((a, b) => (a.match && b.match ? b.match.score - a.match.score : (a.u.nationalRank ?? 999) - (b.u.nationalRank ?? 999)));
-
-  const filterGroup = (title, body) => `
-    <div style="margin-bottom:16px">
-      <div class="t-micro faint" style="text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">${esc(title)}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">${body}</div>
-    </div>`;
 
   return `
     ${head(t(loc("Каталог вузов", "Universitetlar katalogi")),
@@ -53,48 +46,23 @@ function screenUniversities() {
         "1-bosqich: tuzilma va filtrlar. Kartalar demo ma’lumotlar bilan to‘ldirilgan va «qoralama» deb belgilangan. 2-bosqichda ma’lumotlar universitetlarning rasmiy sahifalaridan olinadi."))}</span>
     </div>
 
+    ${smartFilter("universities", fields, simplePresets(), { shown: rows.length, total: D.universities.length })}
+
     <div class="grid" style="grid-template-columns:272px minmax(0,1fr);align-items:start">
       <aside class="card" style="padding:18px;min-width:0">
         <div class="t-micro faint" style="text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">${t(loc("Подобрать под студента", "Talaba uchun tanlash"))}</div>
-        ${select("catalog.student", f.student, [
+        ${select("catalog.student", S.catalog.student, [
           { value: "none", label: t(loc("— выбрать контакт —", "— kontaktni tanlang —")) },
           ...students.map((s) => ({ value: s.id, label: s.fullName })),
         ], 224)}
         ${student ? `
-          <button class="chip ${f.strict ? "on" : ""}" style="margin-top:10px" data-act="catalog.strict">${t(loc("Фильтровать по профилю", "Profil bo‘yicha filtrlash"))}</button>
+          <button class="chip ${S.catalog.strict ? "on" : ""}" style="margin-top:10px" data-act="catalog.strict">${t(loc("Фильтровать по профилю", "Profil bo‘yicha filtrlash"))}</button>
           <div class="t-micro faint" style="margin-top:8px;line-height:1.5">
             TOPIK ${student.profile.topik || "—"} · ${student.profile.ielts ? "IELTS " + student.profile.ielts + " · " : ""}${t(loc("бюджет", "byudjet"))} ${usd(student.profile.budgetPerYear)}
-          </div>` : ""}
-
-        <div style="border-top:1px solid var(--hairline-soft);margin:16px 0 0;padding-top:16px">
-          <input class="field" style="margin-bottom:16px" placeholder="${t(loc("Название вуза", "Universitet nomi"))}" value="${esc(f.q)}" data-act="catalog.q">
-          ${filterGroup(t(loc("Город", "Shahar")), cities.map((c) => `<button class="chip ${f.cities.includes(c) ? "on" : ""}" data-act="catalog.city" data-value="${esc(c)}">${esc(t(ref(L.city, c)))}</button>`).join(""))}
-          ${filterGroup(t(loc("Форма собственности", "Mulkchilik shakli")), ["national", "public", "private"].map((o) => `<button class="chip ${f.ownership.includes(o) ? "on" : ""}" data-act="catalog.ownership" data-value="${o}">${esc(t(L.ownership[o]))}</button>`).join(""))}
-          ${filterGroup(t(loc("Направление", "Yo‘nalish")), fields.map((x) => `<button class="chip ${f.fields.includes(x) ? "on" : ""}" data-act="catalog.field" data-value="${esc(x)}">${esc(t(ref(L.field, x)))}</button>`).join(""))}
-          ${filterGroup(t(loc("Уровень обучения", "Ta’lim bosqichi")), select("catalog.degree", f.degree, [
-            { value: "all", label: t(loc("Любой", "Istalgan")) },
-            ...["language", "bachelor", "master"].map((d) => ({ value: d, label: t(L.degree[d]) })),
-          ], 224))}
-          ${filterGroup(t(loc("TOPIK студента", "Talabaning TOPIK darajasi")), select("catalog.topik", String(f.topik), [
-            { value: "all", label: t(loc("Не важно", "Farqi yo‘q")) },
-            ...[0, 1, 2, 3, 4, 5, 6].map((n) => ({ value: String(n), label: n === 0 ? t(loc("Нет сертификата", "Sertifikat yo‘q")) : "TOPIK " + n })),
-          ], 224))}
-          ${filterGroup(t(loc("Бюджет на год", "Yillik byudjet")), select("catalog.budget", String(f.budget), [
-            { value: "all", label: t(loc("Любой", "Istalgan")) },
-            ...[4000, 6000, 8000, 10000, 12000, 15000].map((b) => ({
-              value: String(b), label: `${t(loc("до", "gacha"))} ${usd(b)}`, hint: som(b * rate, true),
-            })),
-          ], 224))}
-          ${filterGroup(t(loc("Набор", "Qabul")), select("catalog.intake", f.intake, [
-            { value: "all", label: t(loc("Любой", "Istalgan")) },
-            ...intakes.map((i) => ({ value: i, label: t(ref(L.intake, i)) })),
-          ], 224))}
-          ${filterGroup(t(loc("Условия", "Shartlar")), `
-            <button class="chip ${f.dorm ? "on" : ""}" data-act="catalog.dorm">${t(loc("Есть общежитие", "Yotoqxona bor"))}</button>
-            <button class="chip ${f.grant ? "on" : ""}" data-act="catalog.grant">${t(loc("Грант от 50%", "Grant 50% dan"))}</button>
-            <button class="chip ${f.english ? "on" : ""}" data-act="catalog.english">${t(loc("Есть английский трек", "Ingliz tili treki bor"))}</button>`)}
-          <button class="btn btn-secondary" style="width:100%" data-act="catalog.reset">${t(loc("Сбросить", "Tozalash"))}</button>
-        </div>
+          </div>
+          <p class="t-micro faint" style="margin:14px 0 0;line-height:1.55">${t(loc(
+            "Профиль сортирует выдачу и объясняет каждый вуз. Жёсткая фильтрация включается отдельно — иначе список схлопывается до одного варианта.",
+            "Profil ro‘yxatni saralaydi va har bir universitetni izohlaydi."))}</p>` : ""}
       </aside>
 
       <div style="min-width:0">
@@ -229,7 +197,15 @@ function screenCompare() {
     </div></div>`;
 }
 
+/** Папка попадает в выдачу, если ей подходит хоть один документ. */
+const docRow = (d, owner) => ({
+  search: `${t(d.kind)} ${owner} ${d.fileName ?? ""}`,
+  status: d.status, apostille: d.needsApostille ? "yes" : "no",
+});
+
 function screenDocuments() {
+  const fields = documentFields();
+  const st = filterState("documents");
   const folders = scopedContacts().map((s) => {
     const items = D.documents.filter((d) => d.studentId === s.id);
     const verified = items.filter((d) => d.status === "verified").length;
@@ -237,9 +213,8 @@ function screenDocuments() {
     return { s, items, verified, problems, percent: items.length ? Math.round((verified / items.length) * 100) : 0 };
   }).filter((f) => f.items.length).sort((a, b) => b.problems - a.problems);
 
-  const visible = folders.filter((f) => (S.docs.tab === "problem" ? f.problems > 0 : S.docs.tab === "expiring" ? f.items.some((i) => i.expiresAt) : true));
+  const visible = folders.filter((f) => f.items.some((d) => matchesFilter(docRow(d, f.s.fullName), fields, st.values, st.q)));
   const open = visible.find((f) => f.s.id === S.docs.open) ?? visible[0];
-  const tabs = [["all", loc("Все папки", "Barcha papkalar")], ["problem", loc("Требуют внимания", "E’tibor talab qiladi")], ["expiring", loc("Истекает срок", "Muddati tugayapti")]];
 
   return `
     ${head(t(loc("Документы", "Hujjatlar")),
@@ -248,9 +223,7 @@ function screenDocuments() {
        <span>${folders.reduce((n, f) => n + f.problems, 0)} ${t(loc("требуют внимания", "e’tibor talab qiladi"))}</span>`,
       `<button class="btn btn-primary">${icon("plus", 15)} ${t(loc("Загрузить документ", "Hujjat yuklash"))}</button>`)}
 
-    <div class="toolbar">
-      ${tabs.map(([key, label]) => `<button class="chip ${S.docs.tab === key ? "on" : ""}" data-act="docs.tab" data-value="${key}">${esc(t(label))}</button>`).join("")}
-    </div>
+    ${smartFilter("documents", fields, simplePresets(), { shown: visible.length, total: folders.length })}
 
     <div class="grid" style="grid-template-columns:320px minmax(0,1fr);align-items:start">
       <div class="grid" style="gap:10px;min-width:0">
@@ -304,8 +277,13 @@ function screenDocuments() {
     </div>`;
 }
 
+const deadlineRow = (d) => ({ search: t(d.title), kind: d.kind, ownerId: d.ownerId });
+
 function screenDeadlines() {
-  const items = scopedDeadlines();
+  const all = scopedDeadlines();
+  const fields = deadlineFields();
+  const st = filterState("deadlines");
+  const items = all.filter((d) => matchesFilter(deadlineRow(d), fields, st.values, st.q));
   const groups = [
     [loc("Просрочено", "Kechikkan"), (n) => n < 0],
     [loc("Сегодня и завтра", "Bugun va ertaga"), (n) => n >= 0 && n <= 1],
@@ -319,7 +297,9 @@ function screenDeadlines() {
       `<span>${items.length} ${t(loc("событий", "hodisa"))}</span><span class="faint">·</span>
        <span>${items.filter((d) => isPast(d.date)).length} ${t(loc("просрочено", "kechikkan"))}</span><span class="faint">·</span>
        <span>${t(loc("собираются автоматически из заявок, документов и задач", "arizalar, hujjatlar va vazifalardan avtomatik yig‘iladi"))}</span>`,
-      `<button class="btn btn-secondary">${icon("export", 15)} ${t(loc("В календарь (.ics)", "Kalendarga (.ics)"))}</button>`)}
+      `<button class="btn btn-secondary" data-go="calendar">${icon("calendar", 15)} ${t(loc("Открыть календарь", "Kalendarni ochish"))}</button>`)}
+
+    ${smartFilter("deadlines", fields, simplePresets(), { shown: items.length, total: all.length })}
 
     ${groups.map(([label, test]) => {
       const list = items.filter((d) => test(daysUntil(d.date)));
@@ -349,7 +329,10 @@ function screenDeadlines() {
 }
 
 function screenFinance() {
-  const apps = scopedDeals().filter((a) => a.contractValue > 0);
+  const withContract = scopedDeals().filter((a) => a.contractValue > 0);
+  const fields = dealFields();
+  const st = filterState("finance");
+  const apps = withContract.filter((a) => matchesFilter(dealRow(a), fields, st.values, st.q));
   const contracted = apps.reduce((n, a) => n + a.contractValue, 0);
   const paid = apps.reduce((n, a) => n + a.paid, 0);
   const won = apps.filter((a) => currentStage(a) === "departed");
@@ -364,6 +347,8 @@ function screenFinance() {
        <span>${t(loc("суммы договоров с семьями в сумах", "oilalar bilan shartnoma summalari so‘mda"))}</span><span class="faint">·</span>
        <span>${t(loc("курс", "kurs"))}: 1$ = ${som(tenant().usdRate)}</span>`,
       `<button class="btn btn-secondary">${icon("export", 15)} ${t(loc("Выгрузить реестр", "Reestrni yuklash"))}</button>`)}
+
+    ${smartFilter("finance", fields, simplePresets(), { shown: apps.length, total: withContract.length })}
 
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr))">
       ${tile(t(loc("Законтрактовано", "Shartnomalar summasi")), som(contracted, true), "", "var(--accent)")}

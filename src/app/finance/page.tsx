@@ -1,4 +1,5 @@
 import { IconExport } from "@/components/icons";
+import { SectionFilter } from "@/components/SectionFilter";
 import { moduleGate } from "@/components/guard";
 import {
   Avatar,
@@ -11,23 +12,37 @@ import {
 import { studentById } from "@/lib/data/students";
 import { universityById } from "@/lib/data/universities";
 import { userById } from "@/lib/data/users";
+import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
 import { formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
 import { CITY_LABEL, ref } from "@/lib/labels";
-import { can } from "@/lib/rbac";
 import { scopedDeals, scopedTeam } from "@/lib/queries";
+import { dealFields, simplePresets } from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
-import { pipelineById, stageOf } from "@/lib/store";
+import { defaultPipeline, pipelineById, stageOf } from "@/lib/store";
 import { S } from "@/lib/strings";
+import type { Deal } from "@/lib/types";
 
-export default async function FinancePage() {
+export default async function FinancePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await getSession();
+  const params = await searchParams;
   const t = translator(session.locale);
   const f = formatters(session.locale);
   const gate = moduleGate(session, "finance", t(S.nav.finance));
   if (gate) return gate;
 
-  const apps = scopedDeals(session).filter((a) => a.contractValue > 0);
+  const fields = dealFields(scopedTeam(session), defaultPipeline(session.tenant.id, "deal"), t);
+  const values = readFilter(params);
+  const query = readQuery(params);
+
+  const withContract = scopedDeals(session).filter((a) => a.contractValue > 0);
+  const apps = withContract.filter((deal) =>
+    matchesFilter(financeRow(deal), fields, values, query),
+  );
   const contracted = apps.reduce((n, a) => n + a.contractValue, 0);
   const paid = apps.reduce((n, a) => n + a.paid, 0);
   const debt = contracted - paid;
@@ -68,6 +83,16 @@ export default async function FinancePage() {
             <IconExport size={15} /> {t(S.finance.exportRegistry)}
           </button>
         }
+      />
+
+      <SectionFilter
+        scope="finance"
+        fields={fields}
+        presets={simplePresets()}
+        locale={session.locale}
+        userId={session.user.id}
+        total={withContract.length}
+        shown={apps.length}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -188,4 +213,22 @@ export default async function FinancePage() {
       </section>
     </>
   );
+}
+
+/** Плоское представление договора для фильтра. */
+function financeRow(deal: Deal): FilterRow {
+  const contact = studentById(deal.studentId);
+  const university = universityById(deal.universityId);
+  return {
+    search: `${contact?.fullName ?? ""} ${university?.name ?? ""}`,
+    stage: deal.stage,
+    ownerId: deal.ownerId,
+    contractValue: deal.contractValue,
+    deadline: deal.deadline,
+    universityId: deal.universityId,
+    intake: deal.intake,
+    degreeLevel: deal.degreeLevel,
+    priority: deal.priority,
+    contact: contact?.fullName ?? "",
+  };
 }

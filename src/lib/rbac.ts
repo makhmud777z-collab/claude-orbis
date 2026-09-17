@@ -14,6 +14,7 @@ export type Module =
   | "tasks"
   | "projects"
   | "deadlines"
+  | "calendar"
   | "team"
   | "structure"
   | "staffReports"
@@ -49,6 +50,7 @@ export const MODULE_LABEL: Record<Module, Loc> = {
   tasks: loc("Задачи", "Vazifalar"),
   projects: loc("Проекты", "Loyihalar"),
   deadlines: loc("Дедлайны", "Muddatlar"),
+  calendar: loc("Календарь", "Kalendar"),
   team: loc("Сотрудники", "Xodimlar"),
   structure: loc("Структура компании", "Kompaniya tuzilmasi"),
   staffReports: loc("Отчётность", "Hisobot"),
@@ -78,7 +80,8 @@ export const ROLES: RoleDefinition[] = [
     permissions: {
       dashboard: RO, leads: ALL, deals: ALL, contacts: ALL, crmSettings: ALL,
       universities: ALL, documents: ALL, tasks: ALL, projects: ALL, deadlines: ALL,
-      team: ALL, structure: ALL, staffReports: ALL, finance: ALL, admin: ALL, settings: ALL,
+      calendar: ALL, team: ALL, structure: ALL, staffReports: ALL, finance: ALL,
+      admin: ALL, settings: ALL,
     },
   },
   {
@@ -92,7 +95,8 @@ export const ROLES: RoleDefinition[] = [
     permissions: {
       dashboard: RO, leads: ALL, deals: ALL, contacts: ALL, crmSettings: ALL,
       universities: [...RW, "export"], documents: ALL, tasks: ALL, projects: ALL,
-      deadlines: ALL, team: [...RW, "assign"], structure: RW, staffReports: [...RO, "export"],
+      deadlines: ALL, calendar: ALL, team: [...RW, "assign"], structure: RW,
+      staffReports: [...RO, "export"],
       finance: [...RO, "export"], admin: RW, settings: RW,
     },
   },
@@ -107,7 +111,7 @@ export const ROLES: RoleDefinition[] = [
     permissions: {
       dashboard: RO, leads: [...RW, "assign"], deals: [...RW, "assign", "export"],
       contacts: [...RW, "assign", "export"], universities: RO, documents: RW,
-      tasks: [...RW, "assign", "delete"], projects: RW, deadlines: RO,
+      tasks: [...RW, "assign", "delete"], projects: RW, deadlines: RO, calendar: ALL,
       team: RO, structure: RO, staffReports: RO, finance: RO, settings: RO,
     },
   },
@@ -121,7 +125,7 @@ export const ROLES: RoleDefinition[] = [
     scope: "own",
     permissions: {
       dashboard: RO, leads: RW, deals: RW, contacts: RW, universities: RO,
-      documents: RO, tasks: RW, projects: RO, deadlines: RO,
+      documents: RO, tasks: RW, projects: RO, deadlines: RO, calendar: ALL,
     },
   },
   {
@@ -134,7 +138,7 @@ export const ROLES: RoleDefinition[] = [
     scope: "own",
     permissions: {
       dashboard: RO, leads: RO, deals: RW, contacts: RW, universities: RO,
-      documents: RW, tasks: RW, projects: RO, deadlines: RO,
+      documents: RW, tasks: RW, projects: RO, deadlines: RO, calendar: ALL,
     },
   },
   {
@@ -147,7 +151,7 @@ export const ROLES: RoleDefinition[] = [
     scope: "branch",
     permissions: {
       dashboard: RO, deals: RO, contacts: RO, documents: [...RW, "delete"],
-      tasks: RW, projects: RO, deadlines: RO,
+      tasks: RW, projects: RO, deadlines: RO, calendar: ALL,
     },
   },
   {
@@ -160,7 +164,7 @@ export const ROLES: RoleDefinition[] = [
     scope: "tenant",
     permissions: {
       dashboard: RO, deals: RO, contacts: RO, finance: [...RW, "export"],
-      tasks: RO, deadlines: RO, staffReports: RO,
+      tasks: RO, deadlines: RO, calendar: ALL, staffReports: RO,
     },
   },
   {

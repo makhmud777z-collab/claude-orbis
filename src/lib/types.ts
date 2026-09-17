@@ -283,8 +283,10 @@ export interface WorkSession {
   date: string;
   startedAt: string;
   endedAt: string | null;
-  /** суммарная пауза в минутах */
+  /** суммарная пауза в минутах — как её заполняют демо-данные */
   breakMinutes: number;
+  /** суммарная пауза в секундах: живая отметка считает точнее минуты */
+  breakSeconds?: number;
   /** пауза идёт прямо сейчас */
   onBreakSince: string | null;
 }
@@ -310,6 +312,30 @@ export interface TaskTemplate {
   description: Loc;
   checklist: Loc[];
   defaultAssigneeRole: Role;
+}
+
+/* ── Календарь ───────────────────────────────────────────────── */
+
+export type EventKind = "meeting" | "call" | "interview" | "personal";
+
+/**
+ * Событие календаря — единственная сущность, которую сотрудник заводит
+ * сам по времени. Дедлайны, задачи и дела в календарь попадают из своих
+ * разделов и здесь не хранятся.
+ */
+export interface CalendarEvent {
+  id: string;
+  tenantId: string;
+  title: string;
+  kind: EventKind;
+  date: string;
+  /** «14:30» — время начала и конца в часовой сетке дня */
+  startTime: string;
+  endTime: string;
+  ownerId: string;
+  /** с кем встреча: контакт, сделка или никто */
+  relation: { type: "student" | "deal"; id: string } | null;
+  note: string;
 }
 
 /* ── Документы ───────────────────────────────────────────────── */

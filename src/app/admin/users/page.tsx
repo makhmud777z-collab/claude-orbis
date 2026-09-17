@@ -1,25 +1,40 @@
 import Link from "next/link";
+import { SectionFilter } from "@/components/SectionFilter";
 import { moduleGate } from "@/components/guard";
 import { UsersAdmin, type AdminUserRow } from "@/components/UsersAdmin";
 import { IconPlus } from "@/components/icons";
-import { PageHeader } from "@/components/ui";
+import { EmptyState, PageHeader } from "@/components/ui";
+import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
 import { formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
 import { CITY_LABEL, ref } from "@/lib/labels";
 import { scopedTeam } from "@/lib/queries";
 import { allow, ROLES, roleDef } from "@/lib/rbac";
+import { simplePresets, teamFields } from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
+import { departmentOf } from "@/lib/store";
 import { S } from "@/lib/strings";
+import type { User } from "@/lib/types";
 
 /** Пользователи портала: кто имеет доступ, с какой ролью и зоной видимости. */
-export default async function AdminUsersPage() {
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await getSession();
+  const params = await searchParams;
   const t = translator(session.locale);
   const gate = moduleGate(session, "admin", t(S.admin.users));
   if (gate) return gate;
 
   const f = formatters(session.locale);
-  const team = scopedTeam(session);
+  const fields = teamFields(session, t);
+  const values = readFilter(params);
+  const query = readQuery(params);
+
+  const all = scopedTeam(session);
+  const team = all.filter((u) => matchesFilter(adminRow(u), fields, values, query));
   const branches = new Map(session.tenant.branches.map((b) => [b.id, b]));
   const owners = team.filter((u) => u.role === "owner");
 
@@ -75,6 +90,18 @@ export default async function AdminUsersPage() {
         }
       />
 
+      <SectionFilter
+        scope="users"
+        fields={fields}
+        presets={simplePresets()}
+        locale={session.locale}
+        userId={session.user.id}
+        total={all.length}
+        shown={team.length}
+      />
+
+      {!team.length ? <EmptyState title={t(FILTER_TEXT.nothing)} /> : null}
+
       <UsersAdmin
         rows={rows}
         locale={session.locale}
@@ -87,4 +114,16 @@ export default async function AdminUsersPage() {
       />
     </>
   );
+}
+
+/** Плоское представление пользователя портала для фильтра. */
+function adminRow(u: User): FilterRow {
+  return {
+    search: `${u.name} ${u.title} ${u.email}`,
+    role: u.role,
+    branchId: u.branchId,
+    status: u.status,
+    departmentId: departmentOf(u.id) ?? "",
+    joinedAt: u.joinedAt,
+  };
 }

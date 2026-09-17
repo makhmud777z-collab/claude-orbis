@@ -22,8 +22,8 @@ await page.goto(file, { waitUntil: "load" });
 const check = (ok, msg) => { if (!ok) fail.push(msg); };
 
 /* каждый раздел меню открывается и что-то показывает */
-const routes = ["dashboard", "leads", "deals", "contacts", "pipelines", "channels",
-  "tasks", "projects", "taskreports", "templates", "documents", "deadlines",
+const routes = ["dashboard", "leads", "deals", "contacts", "crmsettings", "pipelines", "channels",
+  "tasks", "projects", "taskreports", "documents", "deadlines", "calendar",
   "universities", "compare", "finance", "team", "structure", "staffreports",
   "users", "permissions", "settings"];
 for (const route of routes) {
@@ -63,10 +63,55 @@ await page.waitForTimeout(150);
 check(/Найден дубль/.test(await page.locator(".modal").innerText()), "дубль по телефону не найден");
 await page.keyboard.press("Escape");
 
-/* рабочий день из меню профиля */
-await page.locator("[data-pop='profile']").click();
+/* рабочий день из меню профиля: CSS поднимает подпись в верхний регистр */
+await page.locator("[data-pop='profile']").first().click();
 await page.waitForTimeout(100);
-check(/Рабочий день/.test(await page.locator(".pop").innerText()), "в меню профиля нет рабочего дня");
+check(/рабочий день/i.test(await page.locator(".pop").innerText()), "в меню профиля нет рабочего дня");
+
+/* тема переключается прямо оттуда и остаётся при переходе на другой экран */
+await page.getByRole("button", { name: "Тёмная" }).click();
+await page.waitForTimeout(120);
+check(await page.evaluate(() => document.documentElement.dataset.theme) === "dark", "тёмная тема не включилась");
+await page.evaluate(() => window.go("contacts"));
+await page.waitForTimeout(120);
+check(await page.evaluate(() => document.documentElement.dataset.theme) === "dark", "тема не пережила переход");
+await page.evaluate(() => window.handle("theme", "light"));
+await page.waitForTimeout(120);
+
+/* счётчик рабочего дня идёт вживую */
+await page.evaluate(() => { if (window.workOf(window.S.userId)) window.handle("work", "end"); window.handle("work", "start"); });
+await page.waitForTimeout(2200);
+const shown = await page.locator("[data-clock]").first().innerText();
+check(/^\d+:\d{2}:\d{2}$/.test(shown.trim()), `счётчик показывает «${shown}» вместо Ч:ММ:СС`);
+check(Number(shown.trim().split(":")[2]) >= 1, "счётчик рабочего дня стоит на месте");
+await page.evaluate(() => window.handle("work", "end"));
+
+/* умный фильтр сужает список и снимается крестиком на чипе */
+await page.evaluate(() => window.go("contacts"));
+await page.waitForTimeout(100);
+const rowsAll = await page.locator("tbody tr").count();
+await page.evaluate(() => window.handle("f.preset:contacts:enrolled", ""));
+await page.waitForTimeout(120);
+const rowsFiltered = await page.locator("tbody tr").count();
+check(rowsFiltered < rowsAll, `пресет фильтра не сузил список: было ${rowsAll}, стало ${rowsFiltered}`);
+check(await page.locator(".filter-bar .chip.on").count() > 0, "активное условие не показано чипом");
+await page.locator(".filter-bar .chip-x").first().click();
+await page.waitForTimeout(120);
+check(await page.locator("tbody tr").count() === rowsAll, "снятие условия не вернуло записи");
+
+/* календарь: день открывается по клику на число и рисует линию времени */
+await page.evaluate(() => window.go("calendar"));
+await page.waitForTimeout(120);
+check(await page.locator(".cal-day.today").count() === 1, "сегодняшнее число не выделено");
+await page.locator(".cal-day.today").click();
+await page.waitForTimeout(150);
+check(await page.locator(".now-line").count() === 1, "в дневном срезе нет красной линии текущего времени");
+
+/* структура компании: дерево и панель подчинённых */
+await page.evaluate(() => window.go("structure"));
+await page.waitForTimeout(150);
+check(await page.locator(".tree-node").count() > 1, "дерево структуры не построилось");
+check(/подчинённые/i.test(await page.locator("#content").innerText()), "в структуре нет панели подчинённых");
 
 /* переключение роли перестраивает меню */
 await page.evaluate(() => window.handle("user", "u_partner1"));
@@ -81,7 +126,7 @@ await page.evaluate(() => window.handle("locale", "uz"));
 await page.waitForTimeout(150);
 check(/Bitimlar|Lidlar/.test(await page.locator("#rail").innerText()), "меню не переключилось на узбекский");
 
-console.log(fail.length ? "ПРОБЛЕМЫ ПРОТОТИПА:" : "Прототип работает: экраны, доска, дубли, роли и язык");
+console.log(fail.length ? "ПРОБЛЕМЫ ПРОТОТИПА:" : "Прототип работает: экраны, доска, дубли, фильтр, тема, календарь, структура, роли и язык");
 fail.forEach((f) => console.log(" - " + f));
 await browser.close();
 process.exit(fail.length ? 1 : 0);

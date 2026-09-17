@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { IconSearch } from "./icons";
 import { Select } from "./controls";
 import { Chip, StatusDot } from "./ui";
 import { formatters } from "@/lib/format";
@@ -31,7 +30,7 @@ import type { DegreeLevel, Ownership, Student, University } from "@/lib/types";
 const OWNERSHIPS: Ownership[] = ["national", "public", "private"];
 const DEGREES: DegreeLevel[] = ["language", "bachelor", "master", "phd"];
 
-interface Filters {
+export interface Filters {
   query: string;
   cities: string[];
   ownership: Ownership[];
@@ -76,6 +75,7 @@ export function CatalogExplorer({
   locale,
   usdRate,
   shortlist,
+  urlFilters,
 }: {
   universities: University[];
   students: Pick<Student, "id" | "fullName" | "profile">[];
@@ -85,10 +85,11 @@ export function CatalogExplorer({
   locale: Locale;
   usdRate: number;
   shortlist: ShortlistMap;
+  /** условия, выбранные в умном фильтре раздела */
+  urlFilters: Filters;
 }) {
   const t = translator(locale);
   const f = formatters(locale);
-  const [filters, setFilters] = useState<Filters>(EMPTY);
   const [studentId, setStudentId] = useState<string>("none");
   /**
    * Профиль студента по умолчанию только сортирует выдачу и объясняет каждый вуз.
@@ -100,26 +101,9 @@ export function CatalogExplorer({
   const student = students.find((s) => s.id === studentId);
   const picked = shortlist[studentId !== "none" ? studentId : NO_STUDENT] ?? [];
 
-  const set = <K extends keyof Filters>(key: K, value: Filters[K]) =>
-    setFilters((f) => ({ ...f, [key]: value }));
-
-  const toggle = <K extends "cities" | "ownership" | "fields">(
-    key: K,
-    value: string,
-  ) =>
-    setFilters((f) => {
-      const list = f[key] as string[];
-      return {
-        ...f,
-        [key]: list.includes(value)
-          ? list.filter((v) => v !== value)
-          : [...list, value],
-      } as Filters;
-    });
-
-  /** Выбор студента переносит его портфолио в фильтры — одно действие вместо десяти. */
+  /** Портфолио контакта как набор жёстких условий — режим «фильтровать по профилю». */
   const preferencesOf = (s: Pick<Student, "profile">): Filters => ({
-    ...EMPTY,
+    ...urlFilters,
     cities: [...s.profile.preferredCities],
     ownership: [...s.profile.preferredOwnership],
     fields: [...s.profile.preferredMajors],
@@ -132,25 +116,24 @@ export function CatalogExplorer({
     scholarship: s.profile.needsScholarship,
   });
 
+  /*
+   * Условия приходят из умного фильтра раздела. Профиль контакта поверх них
+   * либо только сортирует выдачу и объясняет каждый вуз, либо — по отдельной
+   * кнопке — сужает её жёстко. Уровень обучения остаётся жёстким всегда:
+   * бакалавриат и языковые курсы это разные продукты.
+   */
+  const filters: Filters =
+    student && strict
+      ? preferencesOf(student)
+      : student && urlFilters.degree === "all"
+        ? { ...urlFilters, degree: student.profile.degreeLevel }
+        : urlFilters;
+
   const applyStudent = (id: string) => {
     setStudentId(id);
-    const s = students.find((x) => x.id === id);
-    if (!s) {
-      setStrict(false);
-      return setFilters(EMPTY);
-    }
-    // Уровень обучения — единственный жёсткий критерий: бакалавриат и языковые
-    // курсы это разные продукты, смешивать их в одной выдаче бессмысленно.
-    setFilters(strict ? preferencesOf(s) : { ...EMPTY, degree: s.profile.degreeLevel });
+    if (!students.some((x) => x.id === id)) setStrict(false);
   };
-
-  const toggleStrict = () => {
-    const next = !strict;
-    setStrict(next);
-    const s = students.find((x) => x.id === studentId);
-    if (!s) return;
-    setFilters(next ? preferencesOf(s) : { ...EMPTY, degree: s.profile.degreeLevel });
-  };
+  const toggleStrict = () => setStrict((v) => !v);
 
   const rows = useMemo(() => {
     const result: {
@@ -205,22 +188,6 @@ export function CatalogExplorer({
     );
   }, [universities, filters, student]);
 
-  const activeCount =
-    filters.cities.length +
-    filters.ownership.length +
-    filters.fields.length +
-    (filters.degree !== "all" ? 1 : 0) +
-    (filters.topik !== "all" ? 1 : 0) +
-    (filters.ielts !== "all" ? 1 : 0) +
-    (filters.budget !== "all" ? 1 : 0) +
-    (filters.intake !== "all" ? 1 : 0) +
-    [
-      filters.dorm,
-      filters.scholarship,
-      filters.languageCenter,
-      filters.certifiedOnly,
-      filters.englishTaught,
-    ].filter(Boolean).length;
 
   return (
     <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-[272px_1fr]">
@@ -260,155 +227,6 @@ export function CatalogExplorer({
                   .join(", ") || t(S.universities.cityAny)}
               </div>
             ) : null}
-          </div>
-
-          <div className="hairline-t pt-4">
-            <label className="relative mb-4 flex items-center">
-              <span className="pointer-events-none absolute left-3 text-ink-faint">
-                <IconSearch size={13} />
-              </span>
-              <input
-                value={filters.query}
-                onChange={(e) => set("query", e.target.value)}
-                placeholder={t(S.universities.universityName)}
-                className="field h-9 pl-8 text-[13px]"
-              />
-            </label>
-
-            <FilterGroup title={t(S.universities.city)}>
-              {cities.map((c) => (
-                <button key={c} onClick={() => toggle("cities", c)}>
-                  <Chip active={filters.cities.includes(c)}>{t(ref(CITY_LABEL, c))}</Chip>
-                </button>
-              ))}
-            </FilterGroup>
-
-            <FilterGroup title={t(S.universities.ownership)}>
-              {OWNERSHIPS.map((o) => (
-                <button key={o} onClick={() => toggle("ownership", o)}>
-                  <Chip active={filters.ownership.includes(o)}>
-                    {t(OWNERSHIP_LABEL[o])}
-                  </Chip>
-                </button>
-              ))}
-            </FilterGroup>
-
-            <FilterGroup title={t(S.universities.field)}>
-              {fields.map((item) => (
-                <button key={item} onClick={() => toggle("fields", item)}>
-                  <Chip active={filters.fields.includes(item)}>
-                    {t(ref(FIELD_LABEL, item))}
-                  </Chip>
-                </button>
-              ))}
-            </FilterGroup>
-
-            <FilterGroup title={t(S.universities.degree)}>
-              <Select
-                locale={locale}
-                width="100%"
-                value={filters.degree}
-                onChange={(v) => set("degree", v as Filters["degree"])}
-                options={[
-                  { value: "all", label: t(S.universities.any) },
-                  ...DEGREES.map((d) => ({ value: d, label: t(DEGREE_LABEL[d]) })),
-                ]}
-              />
-            </FilterGroup>
-
-            <FilterGroup title={t(S.universities.studentTopik)}>
-              <Select
-                locale={locale}
-                width="100%"
-                value={String(filters.topik)}
-                onChange={(v) => set("topik", v === "all" ? "all" : Number(v))}
-                options={[
-                  { value: "all", label: t(S.universities.notImportant) },
-                  ...[0, 1, 2, 3, 4, 5, 6].map((l) => ({
-                    value: String(l),
-                    label: l === 0 ? t(S.universities.noCertificate) : `TOPIK ${l}`,
-                  })),
-                ]}
-              />
-            </FilterGroup>
-
-            <FilterGroup title={t(S.universities.studentIelts)}>
-              <Select
-                locale={locale}
-                width="100%"
-                value={String(filters.ielts)}
-                onChange={(v) => set("ielts", v === "all" ? "all" : Number(v))}
-                options={[
-                  { value: "all", label: t(S.universities.notImportant) },
-                  ...[5, 5.5, 6, 6.5, 7].map((l) => ({
-                    value: String(l),
-                    label: `IELTS ${l}`,
-                  })),
-                ]}
-              />
-            </FilterGroup>
-
-            <FilterGroup title={t(S.universities.budgetPerYear)}>
-              <Select
-                locale={locale}
-                width="100%"
-                value={String(filters.budget)}
-                onChange={(v) => set("budget", v === "all" ? "all" : Number(v))}
-                options={[
-                  { value: "all", label: t(S.universities.any) },
-                  ...BUDGETS.map((b) => ({
-                    value: String(b),
-                    label: `${t(S.universities.upTo)} ${f.usd(b)}`,
-                    hint: f.som(b * usdRate, { compact: true }),
-                  })),
-                ]}
-              />
-            </FilterGroup>
-
-            <FilterGroup title={t(S.universities.intake)}>
-              <Select
-                locale={locale}
-                width="100%"
-                value={filters.intake}
-                onChange={(v) => set("intake", v)}
-                options={[
-                  { value: "all", label: t(S.universities.any) },
-                  ...intakes.map((i) => ({ value: i, label: t(ref(INTAKE_LABEL, i)) })),
-                ]}
-              />
-            </FilterGroup>
-
-            <FilterGroup title={t(S.universities.conditions)}>
-              <button onClick={() => set("dorm", !filters.dorm)}>
-                <Chip active={filters.dorm}>{t(S.universities.hasDorm)}</Chip>
-              </button>
-              <button onClick={() => set("scholarship", !filters.scholarship)}>
-                <Chip active={filters.scholarship}>{t(S.universities.grantFrom)}</Chip>
-              </button>
-              <button onClick={() => set("languageCenter", !filters.languageCenter)}>
-                <Chip active={filters.languageCenter}>
-                  {t(S.universities.languageCenter)}
-                </Chip>
-              </button>
-              <button onClick={() => set("certifiedOnly", !filters.certifiedOnly)}>
-                <Chip active={filters.certifiedOnly}>{t(S.universities.visaGradeA)}</Chip>
-              </button>
-              <button onClick={() => set("englishTaught", !filters.englishTaught)}>
-                <Chip active={filters.englishTaught}>
-                  {t(S.universities.englishTaught)}
-                </Chip>
-              </button>
-            </FilterGroup>
-
-            <button
-              onClick={() => {
-                setFilters(EMPTY);
-                setStudentId("none");
-              }}
-              className="btn btn-secondary btn-sm mt-2 w-full"
-            >
-              {t(S.common.reset)} {activeCount ? `(${activeCount})` : ""}
-            </button>
           </div>
         </div>
       </aside>
@@ -578,22 +396,6 @@ export function CatalogExplorer({
   );
 }
 
-function FilterGroup({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="mb-4">
-      <div className="t-micro mb-2 uppercase tracking-[0.07em] text-ink-faint">
-        {title}
-      </div>
-      <div className="flex flex-wrap gap-1.5">{children}</div>
-    </div>
-  );
-}
 
 function Metric({
   label,

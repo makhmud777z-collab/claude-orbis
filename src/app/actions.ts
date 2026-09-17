@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { loc } from "@/lib/i18n";
 import { allow, type Action, type Module } from "@/lib/rbac";
 import * as db from "@/lib/store";
-import type { Lead, Role, TimelineEvent } from "@/lib/types";
+import type { CalendarEvent, Lead, Role, TimelineEvent } from "@/lib/types";
 import {
   NO_STUDENT,
   parseShortlist,
@@ -239,9 +239,13 @@ export async function findDuplicateAction(probe: { phone?: string; email?: strin
 /** Правка полей прямо в карточке — кнопка «Изменить» у блока основных полей. */
 export async function updateCardAction(formData: FormData) {
   const session = await actor();
-  const entity = String(formData.get("entity") ?? "") as "lead" | "deal" | "contact";
+  const entity = String(formData.get("entity") ?? "") as "lead" | "deal" | "contact" | "employee";
   const id = String(formData.get("id") ?? "");
-  const module = entity === "lead" ? "leads" : entity === "deal" ? "deals" : "contacts";
+  const module =
+    entity === "lead" ? "leads"
+    : entity === "deal" ? "deals"
+    : entity === "employee" ? "team"
+    : "contacts";
   if (!allow(session.tenant.id, session.role, module, "edit")) return;
 
   const patch: Record<string, string> = {};
@@ -251,6 +255,10 @@ export async function updateCardAction(formData: FormData) {
   }
 
   db.updateCard(entity, id, patch, session.user.id);
+  if (entity === "employee") {
+    revalidatePath("/", "layout");
+    return;
+  }
   revalidatePath(`/crm/${module}/${id}`);
   revalidatePath(`/crm/${module}`);
 }
@@ -279,4 +287,116 @@ export async function setUserStatusAction(formData: FormData) {
     session.user.id,
   );
   revalidatePath("/", "layout");
+}
+
+/** Тема портала — настройка сотрудника, а не агентства: у каждого своя. */
+export async function switchTheme(formData: FormData) {
+  const value = String(formData.get("theme") ?? "");
+  const store = await cookies();
+  store.set("orbis_theme", value === "dark" ? "dark" : "light", {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  revalidatePath("/", "layout");
+}
+
+/* ── умный фильтр ────────────────────────────────────────────── */
+
+export async function saveFilterAction(formData: FormData) {
+  const session = await actor();
+  const scope = String(formData.get("scope") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  const query = String(formData.get("query") ?? "");
+  if (!scope || !name) return;
+
+  db.saveFilter(session.user.id, scope, name, query);
+  revalidatePath("/", "layout");
+}
+
+export async function deleteFilterAction(formData: FormData) {
+  const session = await actor();
+  db.deleteFilter(
+    session.user.id,
+    String(formData.get("scope") ?? ""),
+    String(formData.get("id") ?? ""),
+  );
+  revalidatePath("/", "layout");
+}
+
+/* ── Календарь ───────────────────────────────────────────────── */
+
+export async function addEventAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "calendar", "create")) return;
+
+  const title = String(formData.get("title") ?? "").trim();
+  const date = String(formData.get("date") ?? "").trim();
+  if (!title || !date) return;
+
+  const startTime = String(formData.get("startTime") || "10:00");
+  const endTime = String(formData.get("endTime") || "11:00");
+
+  db.addEvent({
+    tenantId: session.tenant.id,
+    title,
+    kind: String(formData.get("kind") || "meeting") as CalendarEvent["kind"],
+    date,
+    startTime,
+    // Событие не может кончаться раньше, чем началось: иначе оно исчезнет
+    // из часовой сетки, и сотрудник решит, что оно не сохранилось.
+    endTime: endTime > startTime ? endTime : startTime,
+    ownerId: session.user.id,
+    relation: null,
+    note: String(formData.get("note") ?? "").trim(),
+  });
+  revalidatePath("/calendar");
+}
+
+export async function removeEventAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "calendar", "delete")) return;
+  db.removeEvent(String(formData.get("id") ?? ""));
+  revalidatePath("/calendar");
+}
+
+/* ── Структура компании ──────────────────────────────────────── */
+
+export async function addDepartmentAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "structure", "edit")) return;
+
+  const ru = String(formData.get("nameRu") ?? "").trim();
+  const uz = String(formData.get("nameUz") ?? "").trim() || ru;
+  if (!ru) return;
+
+  db.addDepartment(
+    session.tenant.id,
+    { ru, uz },
+    String(formData.get("parentId") ?? "") || null,
+    String(formData.get("headId") ?? "") || null,
+  );
+  revalidatePath("/team/structure");
+}
+
+export async function setDepartmentHeadAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "structure", "edit")) return;
+
+  db.setDepartmentHead(
+    String(formData.get("departmentId") ?? ""),
+    String(formData.get("headId") ?? "") || null,
+  );
+  revalidatePath("/team/structure");
+}
+
+export async function moveEmployeeAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "structure", "edit")) return;
+
+  db.moveEmployee(
+    String(formData.get("userId") ?? ""),
+    String(formData.get("departmentId") ?? ""),
+    session.user.id,
+  );
+  revalidatePath("/team/structure");
 }

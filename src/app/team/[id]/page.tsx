@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { moduleGate } from "@/components/guard";
 import { IconMail, IconPhone } from "@/components/icons";
+import { EditableFields } from "@/components/EditableFields";
 import { Timeline } from "@/components/Timeline";
 import { Avatar, Chip, Field, PageHeader, SectionTitle, StatusDot } from "@/components/ui";
 import { DEPARTMENTS } from "@/lib/data/org";
@@ -76,7 +77,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
       <div className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-[360px_1fr]">
         <div className="space-y-5">
           <div className="card p-5">
-            <div className="mb-4 flex items-center gap-3">
+            <div className="flex items-center gap-3">
               <Avatar name={user.name} size={44} />
               <div className="min-w-0">
                 <div className="t-body-sm truncate">{user.email}</div>
@@ -85,10 +86,43 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
                 </div>
               </div>
             </div>
-            <Field label={t(S.team.birthDate)} value={f.date(user.birthDate)} />
-            <Field label={t(S.team.phoneWork)} value={user.phone} />
-            <Field label={t(S.team.phonePersonal)} value={user.phone2 ?? "—"} />
-            <Field label={t(S.team.hiredAt)} value={f.date(user.joinedAt)} />
+          </div>
+
+          <EditableFields
+            entity="employee"
+            id={user.id}
+            title={t(S.team.personal)}
+            locale={session.locale}
+            canEdit={canEdit}
+            fields={[
+              { name: "name", label: t(S.common.fullName), value: user.name, display: user.name },
+              { name: "title", label: t(S.team.position), value: user.title, display: user.title },
+              { name: "email", label: "Email", value: user.email, display: user.email },
+              { name: "phone", label: t(S.team.phoneWork), value: user.phone, display: user.phone },
+              {
+                name: "phone2",
+                label: t(S.team.phonePersonal),
+                value: user.phone2 ?? "",
+                display: user.phone2 ?? "—",
+              },
+              {
+                name: "birthDate",
+                label: t(S.team.birthDate),
+                value: user.birthDate,
+                display: f.date(user.birthDate),
+                kind: "date",
+              },
+              {
+                name: "joinedAt",
+                label: t(S.team.hiredAt),
+                value: user.joinedAt,
+                display: f.date(user.joinedAt),
+                kind: "date",
+              },
+            ]}
+          />
+
+          <div className="card p-5">
             <Field
               label={t(S.team.department)}
               value={

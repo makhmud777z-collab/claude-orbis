@@ -82,7 +82,8 @@ export function MobileNav({
                 onClick={() => setOpen(false)}
                 aria-label="Закрыть"
               />
-              <nav className="absolute left-0 top-0 flex h-full w-[264px] flex-col overflow-y-auto border-r border-hairline bg-canvas px-4 py-5">
+              <nav className="absolute left-0 top-0 flex h-full w-[264px] flex-col overflow-y-auto border-r border-hairline px-4 py-5"
+                style={{ background: "var(--color-rail)" }}>
                 <Link href={home} className="mb-7 flex items-center gap-3 px-2">
                   <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-ink text-canvas">
                     <IconLogo size={18} />

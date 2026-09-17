@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { SectionFilter } from "@/components/SectionFilter";
 import { moduleGate } from "@/components/guard";
-import { Avatar, Chip, PageHeader, Progress, StatusDot } from "@/components/ui";
+import { Avatar, Chip, EmptyState, PageHeader, Progress, StatusDot } from "@/components/ui";
 import { userById } from "@/lib/data/users";
+import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
 import { formatters, isPast } from "@/lib/format";
 import { translator, type Loc } from "@/lib/i18n";
-import { scopedProjects, scopedTasks } from "@/lib/queries";
+import { scopedProjects, scopedTasks, scopedTeam } from "@/lib/queries";
+import { projectFields, simplePresets } from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
 import { P, S } from "@/lib/strings";
 import type { Project } from "@/lib/types";
@@ -16,14 +19,24 @@ const STATUS: Record<Project["status"], { label: Loc; dot: string }> = {
 };
 
 /** Проекты объединяют задачи в общую цель: набор, сверка каталога, открытие филиала. */
-export default async function ProjectsPage() {
+export default async function ProjectsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await getSession();
+  const params = await searchParams;
   const t = translator(session.locale);
   const gate = moduleGate(session, "projects", t(S.projects.title));
   if (gate) return gate;
 
   const f = formatters(session.locale);
-  const projects = scopedProjects(session);
+  const fields = projectFields(scopedTeam(session), t);
+  const values = readFilter(params);
+  const query = readQuery(params);
+
+  const all = scopedProjects(session);
+  const projects = all.filter((p) => matchesFilter(projectRow(p, t(p.name)), fields, values, query));
   const tasks = scopedTasks(session);
 
   return (
@@ -32,12 +45,24 @@ export default async function ProjectsPage() {
         title={t(S.projects.title)}
         meta={
           <>
-            <span>{f.plural(projects.length, P.projects)}</span>
+            <span>{f.plural(all.length, P.projects)}</span>
             <span>·</span>
             <Link href="/tasks" className="hover:text-ink">{t(S.nav.tasks)}</Link>
           </>
         }
       />
+
+      <SectionFilter
+        scope="projects"
+        fields={fields}
+        presets={simplePresets()}
+        locale={session.locale}
+        userId={session.user.id}
+        total={all.length}
+        shown={projects.length}
+      />
+
+      {!projects.length ? <EmptyState title={t(FILTER_TEXT.nothing)} /> : null}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {projects.map((project) => {
@@ -104,4 +129,16 @@ export default async function ProjectsPage() {
       </div>
     </>
   );
+}
+
+/** Плоское представление проекта для фильтра. */
+function projectRow(project: Project, name: string): FilterRow {
+  return {
+    search: `${name} ${project.description}`,
+    status: project.status,
+    leadId: project.leadId,
+    memberIds: project.memberIds,
+    dueAt: project.dueAt,
+    name,
+  };
 }

@@ -20,7 +20,7 @@ export function PageHeader({
           </div>
         ) : null}
       </div>
-      {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div> : null}
     </header>
   );
 }
@@ -65,8 +65,8 @@ export function Avatar({
         height: size,
         fontSize: Math.round(size * 0.36),
         letterSpacing: "-0.02em",
-        background: tone === "light" ? "#ffffff" : "var(--color-surface-2)",
-        color: tone === "light" ? "#000000" : "var(--color-ink-muted)",
+        background: tone === "light" ? "var(--color-surface-1)" : "var(--color-surface-3)",
+        color: tone === "light" ? "var(--color-ink)" : "var(--color-ink-muted)",
         border: tone === "light" ? "none" : "1px solid var(--color-hairline)",
       }}
       title={name}

@@ -101,8 +101,8 @@ export default async function DashboardPage() {
             <button className="btn btn-secondary btn-sm">
               <IconExport size={15} /> {t(S.common.export)}
             </button>
-            <Link href="/crm/deals" className="btn btn-primary btn-sm">
-              <IconPlus size={15} /> {t(S.dashboard.newApplication)}
+            <Link href="/crm/leads" className="btn btn-primary btn-sm">
+              <IconPlus size={15} /> {t(S.crm.newLead)}
             </Link>
           </>
         }

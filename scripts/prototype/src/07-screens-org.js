@@ -1,6 +1,14 @@
 /* ── сотрудники, структура, отчётность ───────────────────── */
+const teamRow = (u) => ({
+  search: `${u.name} ${u.title} ${u.email} ${u.phone}`,
+  role: u.role, branchId: u.branchId, departmentId: departmentOf(u.id),
+});
+
 function screenTeam() {
-  const team = scopedTeam();
+  const all = scopedTeam();
+  const fields = teamFields();
+  const st = filterState("team");
+  const team = all.filter((u) => matchesFilter(teamRow(u), fields, st.values, st.q));
   const contacts = scopedContacts();
   const deals = scopedDeals();
   const tasks = scopedTasks();
@@ -15,11 +23,13 @@ function screenTeam() {
        <a href="#" data-go="staffreports">${t(loc("Отчётность", "Hisobot"))}</a>`,
       allow(user().role, "team", "create") ? `<button class="btn btn-primary" data-go="users">${icon("plus", 15)} ${t(loc("Пригласить", "Taklif qilish"))}</button>` : "")}
 
+    ${smartFilter("team", fields, simplePresets(), { shown: team.length, total: all.length })}
+
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
       ${team.map((u) => {
         const role = roleDef(u.role);
         const w = workOf(u.id);
-        const dep = D.departments.find((d) => d.id === D.departmentOf[u.id]);
+        const dep = allDepartments().find((d) => d.id === departmentOf(u.id));
         return `<a class="card card-hover" style="padding:18px;display:block" href="#" data-go="employee/${esc(u.id)}">
           <span style="display:flex;gap:12px;align-items:flex-start">
             <span style="position:relative;flex:none">
@@ -59,7 +69,7 @@ function screenEmployee(id) {
   const u = scopedTeam().find((x) => x.id === id);
   if (!u) return screenNotFound();
   const role = roleDef(u.role);
-  const dep = D.departments.find((d) => d.id === D.departmentOf[u.id]);
+  const dep = allDepartments().find((d) => d.id === departmentOf(u.id));
   const branch = tenant().branches.find((b) => b.id === u.branchId);
   const sessions = D.sessions.filter((s) => s.userId === u.id).sort((a, b) => b.date.localeCompare(a.date));
   const minutes = sessions.reduce((n, s) => n + sessionMinutes(s), 0);
@@ -72,7 +82,9 @@ function screenEmployee(id) {
        <span class="chip on">${esc(t(role.label))}</span>
        <span>${esc(branch ? t(ref(L.city, branch.city)) : "—")}</span>`,
       `<a class="btn btn-secondary" href="tel:${esc(u.phone)}">${icon("phone", 15)} ${t(loc("Позвонить", "Qo‘ng‘iroq"))}</a>
-       <a class="btn btn-secondary" href="mailto:${esc(u.email)}">${icon("mail", 15)} ${t(loc("Написать", "Yozish"))}</a>`)}
+       <a class="btn btn-secondary" href="mailto:${esc(u.email)}">${icon("mail", 15)} ${t(loc("Написать", "Yozish"))}</a>
+       ${allow(user().role, "team", "edit")
+         ? `<button class="btn btn-primary" data-act="employee.edit" data-value="${esc(u.id)}">${t(loc("Изменить", "O‘zgartirish"))}</button>` : ""}`)}
 
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr));align-items:start">
       <div class="grid">
@@ -124,41 +136,108 @@ function screenEmployee(id) {
     </div>`;
 }
 
+/* ── структура компании ──────────────────────────────────── */
+/**
+ * Дерево как в Битриксе: холст с подразделениями по центру и панель справа
+ * с руководителем и подчинёнными. Структура живая — отдел создаётся,
+ * руководитель назначается, сотрудник переносится перетаскиванием.
+ */
 function screenStructure() {
-  const team = scopedTeam();
-  const departments = D.departments.filter((d) => d.tenantId === S.tenant);
-  const members = (id) => team.filter((u) => D.departmentOf[u.id] === id);
+  const departments = allDepartments();
+  const zoom = S.org.zoom;
+  const roots = departments.filter((d) => !d.parentId);
 
-  const node = (dep, depth) => {
-    const head2 = dep.headId ? userById(dep.headId) : null;
-    const list = members(dep.id);
+  /** Сколько людей в отделе с учётом вложенных — иначе цифра врёт. */
+  const deep = (dep) => staffOf(dep.id).length
+    + departments.filter((d) => d.parentId === dep.id).reduce((n, d) => n + deep(d), 0);
+
+  const box = (dep) => {
+    const head2 = headOf(dep.id) ? userById(headOf(dep.id)) : null;
+    const on = S.org.selected === dep.id;
+    return `<section class="card card-hover tree-box" style="padding:12px;text-align:left;cursor:pointer;${on ? "border-color:var(--accent)" : ""}"
+        data-act="org.pick" data-value="${esc(dep.id)}" data-drop-dept="${esc(dep.id)}">
+      <div class="t-caption truncate">${esc(t(dep.name))}</div>
+      <div class="t-micro faint" style="margin-top:3px">${plural(deep(dep), ["сотрудник", "сотрудника", "сотрудников"], "xodim")}</div>
+      ${head2 ? `<div style="display:flex;gap:7px;align-items:center;margin-top:10px">
+        ${avatar(head2.name, 22)}
+        <span class="t-micro truncate" style="min-width:0">${esc(head2.name)}</span>
+      </div>` : `<div class="t-micro faint" style="margin-top:10px">${t(loc("Руководитель не назначен", "Rahbar tayinlanmagan"))}</div>`}
+    </section>`;
+  };
+
+  const branch = (dep) => {
     const children = departments.filter((d) => d.parentId === dep.id);
-    return `<div style="margin-left:${depth ? 20 : 0}px">
-      <section class="card" style="padding:18px;${depth ? "border-left:2px solid var(--hairline)" : ""}">
-        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center">
-          <div>
-            <h2 class="t-headline">${esc(t(dep.name))}</h2>
-            <div class="t-micro faint" style="margin-top:4px">${plural(list.length, ["сотрудник", "сотрудника", "сотрудников"], "xodim")}</div>
-          </div>
-          ${head2 ? `<a href="#" data-go="employee/${esc(head2.id)}" style="display:flex;gap:10px;align-items:center">
-            ${avatar(head2.name, 28)}
-            <span><span class="t-caption" style="display:block">${esc(head2.name)}</span>
-            <span class="t-micro faint">${t(loc("Руководитель", "Rahbar"))}</span></span>
-          </a>` : ""}
-        </div>
-        ${list.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
-          ${list.map((m) => `<a href="#" data-go="employee/${esc(m.id)}">
-            <span class="chip${m.id === dep.headId ? " on" : ""}">${avatar(m.name, 18)}${esc(m.name)}</span></a>`).join("")}
+    return `<div class="tree-node">
+      ${box(dep)}
+      ${children.length ? `<div class="tree-stem"></div>
+        <div class="tree-children">
+          ${children.map((c) => `<div class="tree-child" data-drop-dept="${esc(c.id)}">${branch(c)}</div>`).join("")}
         </div>` : ""}
-      </section>
-      ${children.length ? `<div class="grid" style="gap:12px;margin-top:12px">${children.map((c) => node(c, depth + 1)).join("")}</div>` : ""}
     </div>`;
   };
 
+  const selected = departments.find((d) => d.id === S.org.selected) ?? roots[0];
+  const selHead = selected && headOf(selected.id) ? userById(headOf(selected.id)) : null;
+  const nested = (dep) => [...staffOf(dep.id), ...departments.filter((d) => d.parentId === dep.id).flatMap(nested)];
+  const people = selected ? nested(selected).filter((u) => !S.org.q
+    || `${u.name} ${u.title}`.toLowerCase().includes(S.org.q.toLowerCase())) : [];
+
   return `
     ${head(t(loc("Структура компании", "Kompaniya tuzilmasi")),
-      `<span>${t(loc("подразделения и руководители", "bo‘limlar va rahbarlar"))}</span>`)}
-    <div class="grid" style="gap:12px">${departments.filter((d) => !d.parentId).map((d) => node(d, 0)).join("")}</div>`;
+      `<span>${plural(departments.length, ["подразделение", "подразделения", "подразделений"], "bo‘lim")}</span><span class="faint">·</span>
+       <span>${t(loc("сотрудника можно перетащить в другой отдел", "xodimni boshqa bo‘limga tortib o‘tkazish mumkin"))}</span>`,
+      allow(user().role, "structure", "edit")
+        ? `<button class="btn btn-primary" data-act="org.new">${icon("plus", 15)} ${t(loc("Добавить отдел", "Bo‘lim qo‘shish"))}</button>` : "")}
+
+    <div class="grid" style="grid-template-columns:minmax(0,1fr) 300px;align-items:start">
+      <div class="card" style="padding:0;overflow:hidden;min-width:0">
+        <div class="card-head" style="display:flex;align-items:center;gap:8px">
+          <button class="icon-btn" data-act="org.zoom" data-value="-10" aria-label="${t(loc("Уменьшить", "Kichraytirish"))}">−</button>
+          <span class="t-micro num" style="width:44px;text-align:center">${zoom}%</span>
+          <button class="icon-btn" data-act="org.zoom" data-value="10" aria-label="${t(loc("Увеличить", "Kattalashtirish"))}">+</button>
+          <span style="flex:1"></span>
+          <button class="btn btn-secondary" data-act="org.me">${t(loc("Найти меня", "Meni topish"))}</button>
+        </div>
+        <div style="overflow:auto;padding:26px 16px" data-scroll="tree">
+          <div class="tree" style="transform:scale(${zoom / 100});transform-origin:top center;min-width:max-content;margin:0 auto">
+            ${roots.map(branch).join("")}
+          </div>
+        </div>
+      </div>
+
+      <aside class="card" style="padding:0;position:sticky;top:76px;min-width:0">
+        <div class="card-head">
+          <div class="t-caption truncate">${esc(selected ? t(selected.name) : "—")}</div>
+          <div class="t-micro faint" style="margin-top:3px">${plural(people.length, ["человек", "человека", "человек"], "kishi")}</div>
+        </div>
+        <div style="padding:14px">
+          <div class="t-micro faint" style="text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">${t(loc("Руководитель", "Rahbar"))}</div>
+          ${selHead ? `<a href="#" data-go="employee/${esc(selHead.id)}" style="display:flex;gap:10px;align-items:center;margin-bottom:6px">
+            ${avatar(selHead.name, 30)}
+            <span style="min-width:0"><span class="t-caption truncate" style="display:block">${esc(selHead.name)}</span>
+            <span class="t-micro faint truncate" style="display:block">${esc(selHead.title)}</span></span>
+          </a>` : `<div class="t-micro faint" style="margin-bottom:6px">${t(loc("Не назначен", "Tayinlanmagan"))}</div>`}
+          ${selected && allow(user().role, "structure", "edit")
+            ? select("org.head", headOf(selected.id) ?? "", [
+                { value: "", label: t(loc("— не назначен —", "— tayinlanmagan —")) },
+                ...staffOf(selected.id).map((u) => ({ value: u.id, label: u.name })),
+              ], 250) : ""}
+
+          <div style="border-top:1px solid var(--hairline-soft);margin:14px 0;padding-top:14px">
+            <div class="t-micro faint" style="text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">${t(loc("Подчинённые", "Bo‘ysunuvchilar"))}</div>
+            <input class="field" style="border-radius:100px;margin-bottom:10px" placeholder="${t(loc("Поиск по сотрудникам", "Xodimlardan qidirish"))}" value="${esc(S.org.q)}" data-act="org.q">
+            <div style="display:grid;gap:4px;max-height:320px;overflow-y:auto">
+              ${people.length ? people.map((u) => `<div draggable="true" data-drag-user="${esc(u.id)}"
+                style="display:flex;gap:9px;align-items:center;padding:6px;border-radius:8px;cursor:grab">
+                ${avatar(u.name, 24)}
+                <span style="min-width:0"><span class="t-caption truncate" style="display:block">${esc(u.name)}</span>
+                <span class="t-micro faint truncate" style="display:block">${esc(u.title)}</span></span>
+              </div>`).join("") : `<span class="t-micro faint">${t(loc("Никого не найдено", "Hech kim topilmadi"))}</span>`}
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>`;
 }
 
 function screenStaffReports() {

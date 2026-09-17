@@ -1,22 +1,41 @@
 import { moduleGate } from "@/components/guard";
 import { DocumentsExplorer, type DossierFolder } from "@/components/DocumentsExplorer";
+import { SectionFilter } from "@/components/SectionFilter";
 import { IconPlus } from "@/components/icons";
-import { PageHeader } from "@/components/ui";
+import { EmptyState, PageHeader } from "@/components/ui";
 import { userById } from "@/lib/data/users";
-import { translator } from "@/lib/i18n";
+import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
+import { translator, type Translate } from "@/lib/i18n";
 import { allow } from "@/lib/rbac";
+import { documentFields, simplePresets } from "@/lib/section-filters";
 import { S } from "@/lib/strings";
-import { scopedDocuments, scopedContacts } from "@/lib/queries";
+import { scopedDocuments, scopedContacts, scopedTeam } from "@/lib/queries";
 import { getSession } from "@/lib/session";
+import type { Student, StudentDocument } from "@/lib/types";
 
-export default async function DocumentsPage() {
+export default async function DocumentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await getSession();
+  const params = await searchParams;
   const t = translator(session.locale);
   const gate = moduleGate(session, "documents", t(S.nav.documents));
   if (gate) return gate;
 
-  const docs = scopedDocuments(session);
-  const folders: DossierFolder[] = scopedContacts(session)
+  const fields = documentFields(scopedTeam(session), t);
+  const values = readFilter(params);
+  const query = readQuery(params);
+
+  const contacts = new Map(scopedContacts(session).map((s) => [s.id, s]));
+  const allDocs = scopedDocuments(session);
+  // Фильтр раздела работает по документу, а папки собираются уже из того,
+  // что прошло отбор: иначе «просроченные» показали бы и чистые досье.
+  const docs = allDocs.filter((d) =>
+    matchesFilter(documentRow(d, contacts.get(d.studentId), t), fields, values, query),
+  );
+  const folders: DossierFolder[] = [...contacts.values()]
     .map((s) => {
       const items = docs.filter((d) => d.studentId === s.id);
       const verified = items.filter((d) => d.status === "verified").length;
@@ -76,7 +95,38 @@ export default async function DocumentsPage() {
           ) : null
         }
       />
-      <DocumentsExplorer folders={folders} locale={session.locale} />
+      <SectionFilter
+        scope="documents"
+        fields={fields}
+        presets={simplePresets()}
+        locale={session.locale}
+        userId={session.user.id}
+        total={allDocs.length}
+        shown={docs.length}
+      />
+
+      {folders.length ? (
+        <DocumentsExplorer folders={folders} locale={session.locale} />
+      ) : (
+        <EmptyState title={t(FILTER_TEXT.nothing)} />
+      )}
     </>
   );
+}
+
+/** Плоское представление документа для фильтра. */
+function documentRow(
+  doc: StudentDocument,
+  student: Student | undefined,
+  t: Translate,
+): FilterRow {
+  return {
+    search: `${t(doc.kind)} ${student?.fullName ?? ""} ${doc.fileName ?? ""}`,
+    status: doc.status,
+    kind: t(doc.kind),
+    student: student?.fullName ?? "",
+    uploadedById: doc.uploadedById,
+    expiresAt: doc.expiresAt,
+    needsApostille: doc.needsApostille ? "yes" : "no",
+  };
 }

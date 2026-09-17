@@ -1,30 +1,44 @@
 import Link from "next/link";
 import { moduleGate } from "@/components/guard";
 import { IconPlus } from "@/components/icons";
-import { Avatar, Chip, PageHeader, StatusDot } from "@/components/ui";
+import { SectionFilter } from "@/components/SectionFilter";
+import { Avatar, Chip, EmptyState, PageHeader, StatusDot } from "@/components/ui";
 import { DEPARTMENTS } from "@/lib/data/org";
+import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
 import { age, formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
 import { CITY_LABEL, ref } from "@/lib/labels";
 import { scopedContacts, scopedDeals, scopedTasks, scopedTeam } from "@/lib/queries";
 import { allow, ROLES } from "@/lib/rbac";
+import { simplePresets, teamFields } from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
 import { departmentOf, openSession, sessionMinutes } from "@/lib/store";
 import { S } from "@/lib/strings";
+import type { User } from "@/lib/types";
 
 /**
  * Сотрудники агентства. Карточка каждого — отдельная страница: там личные
  * данные, подразделение, рабочие дни и нагрузка. Матрица прав живёт
  * в «Администрировании», потому что там её можно менять, а не только смотреть.
  */
-export default async function TeamPage() {
+export default async function TeamPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await getSession();
+  const params = await searchParams;
   const t = translator(session.locale);
   const f = formatters(session.locale);
   const gate = moduleGate(session, "team", t(S.nav.team));
   if (gate) return gate;
 
-  const team = scopedTeam(session);
+  const fields = teamFields(session, t);
+  const values = readFilter(params);
+  const query = readQuery(params);
+
+  const all = scopedTeam(session);
+  const team = all.filter((u) => matchesFilter(teamRow(u), fields, values, query));
   const contacts = scopedContacts(session);
   const deals = scopedDeals(session);
   const tasks = scopedTasks(session);
@@ -38,7 +52,7 @@ export default async function TeamPage() {
         meta={
           <>
             <span>
-              {team.length} {t(S.team.people)} · {session.tenant.seatsUsed} {t(S.team.of)}{" "}
+              {all.length} {t(S.team.people)} · {session.tenant.seatsUsed} {t(S.team.of)}{" "}
               {session.tenant.seatsLimit} {t(S.team.seats)}
             </span>
             <span className="text-ink-faint">·</span>
@@ -55,6 +69,18 @@ export default async function TeamPage() {
           ) : null
         }
       />
+
+      <SectionFilter
+        scope="team"
+        fields={fields}
+        presets={simplePresets()}
+        locale={session.locale}
+        userId={session.user.id}
+        total={all.length}
+        shown={team.length}
+      />
+
+      {!team.length ? <EmptyState title={t(FILTER_TEXT.nothing)} /> : null}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {team.map((u) => {
@@ -145,6 +171,18 @@ export default async function TeamPage() {
       </div>
     </>
   );
+}
+
+/** Плоское представление сотрудника для фильтра. */
+function teamRow(u: User): FilterRow {
+  return {
+    search: `${u.name} ${u.title} ${u.email} ${u.phone}`,
+    role: u.role,
+    branchId: u.branchId,
+    status: u.status,
+    departmentId: departmentOf(u.id) ?? "",
+    joinedAt: u.joinedAt,
+  };
 }
 
 function Stat({ label, value }: { label: string; value: number }) {

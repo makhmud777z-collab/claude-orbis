@@ -38,7 +38,8 @@ export function Sidebar({
   const groups: NavEntry["group"][] = ["work", "base", "admin"];
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[244px] flex-none flex-col border-r border-hairline-soft bg-canvas px-4 py-5 lg:flex">
+    <aside className="sticky top-0 hidden h-screen w-[244px] flex-none flex-col border-r border-hairline px-4 py-5 lg:flex"
+      style={{ background: "var(--color-rail)" }}>
       <Link href={home} className="mb-7 flex items-center gap-3 px-2">
         <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-ink text-canvas">
           <IconLogo size={18} />
@@ -70,7 +71,7 @@ export function Sidebar({
 
       <div className="mt-6 rounded-[10px] border border-hairline-soft bg-surface-1 px-3 py-3">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-7 w-7 flex-none items-center justify-center rounded-md bg-ink text-[13px] font-semibold text-black">
+          <span className="flex h-7 w-7 flex-none items-center justify-center rounded-md bg-accent text-[13px] font-semibold text-white">
             {tenantMark}
           </span>
           <span className="min-w-0">

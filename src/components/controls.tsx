@@ -423,7 +423,7 @@ export function DatePicker({
                       className="t-caption t-num h-8 rounded-[7px] transition-colors hover:bg-surface-1"
                       style={{
                         background: on ? "var(--color-ink)" : "transparent",
-                        color: on ? "#000" : "var(--color-ink-muted)",
+                        color: on ? "var(--color-canvas)" : "var(--color-ink-muted)",
                         fontWeight: on ? 600 : 400,
                       }}
                     >

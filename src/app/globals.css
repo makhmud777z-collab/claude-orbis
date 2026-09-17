@@ -2,36 +2,47 @@
 
 /* ──────────────────────────────────────────────────────────────
    Orbis System — design tokens
-   Base: DESIGN-framer.md (dark canvas, poster typography, pills)
-   Layout: CRM reference (rail + topbar + board), re-cut for dark
+   Base: DESIGN-framer.md (poster typography, pills, one accent)
+   Layout: CRM reference (rail + topbar + board)
+
+   Тем две, и обе настоящие: сотрудник переключает их в меню профиля.
+   Значения ниже — светлая тема (по умолчанию), тёмная переопределяет
+   те же переменные в блоке :root[data-theme="dark"].
    ────────────────────────────────────────────────────────────── */
 
 @theme {
   /* surfaces */
-  --color-canvas: #090909;
-  --color-surface-1: #141414;
-  --color-surface-2: #1c1c1c;
-  --color-surface-3: #232323;
-  --color-hairline: #262626;
-  --color-hairline-soft: #1a1a1a;
+  --color-canvas: #eef1f6;
+  --color-surface-1: #ffffff;
+  --color-surface-2: #f5f7fa;
+  --color-surface-3: #e9edf3;
+  --color-hairline: #d7dee8;
+  --color-hairline-soft: #e6eaf1;
 
   /* ink */
-  --color-ink: #ffffff;
-  --color-ink-muted: #999999;
-  --color-ink-faint: #6b6b6b;
+  --color-ink: #16202b;
+  --color-ink-muted: #5b6b7c;
+  --color-ink-faint: #8a98a8;
 
   /* single chromatic accent — links, focus, selection only */
-  --color-accent: #0099ff;
+  --color-accent: #0a6ed1;
 
   /* status hues — carried by 6px dots and 1px rings, never by fills */
-  --color-status-new: #ff7a3d;
-  --color-status-open: #0099ff;
-  --color-status-progress: #e0b341;
-  --color-status-deal: #22c55e;
-  --color-status-hold: #8a8a8a;
-  --color-status-risk: #ff5577;
-  --color-status-violet: #6a4cf5;
-  --color-status-magenta: #d44df0;
+  --color-status-new: #ea6a1e;
+  --color-status-open: #0a6ed1;
+  --color-status-progress: #c08a12;
+  --color-status-deal: #159556;
+  --color-status-hold: #78879a;
+  --color-status-risk: #d92f52;
+  --color-status-violet: #5a3fdc;
+  --color-status-magenta: #b62fcb;
+
+  /* глубина: тень карточки и подсветка её верхней грани */
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.05), 0 1px 3px rgb(16 24 40 / 0.04);
+  --shadow-raised: 0 8px 24px rgb(16 24 40 / 0.1), 0 2px 6px rgb(16 24 40 / 0.05);
+  --edge-top: inset 0 1px 0 0 rgb(255 255 255 / 0.6);
+  --color-rail: #ffffff;
+  --grain-opacity: 0;
 
   /* atmosphere (spotlight cards only — scarce by design) */
   --color-gradient-violet: #6a4cf5;
@@ -56,13 +67,50 @@
 }
 
 @layer base {
+  /*
+   * Тёмная тема. Не инверсия светлой: на тёмном иерархия строится подъёмом
+   * поверхности, а не тенью, поэтому тени здесь глубже и почти не видны,
+   * зато появляется светлая грань сверху и зерно поверх холста.
+   */
+  :root[data-theme="dark"] {
+    --color-canvas: #0b0b0d;
+    --color-surface-1: #16171a;
+    --color-surface-2: #1e2024;
+    --color-surface-3: #26292e;
+    --color-hairline: #2e3138;
+    --color-hairline-soft: #212429;
+
+    --color-ink: #f2f4f7;
+    --color-ink-muted: #9aa4b2;
+    --color-ink-faint: #6b7580;
+
+    --color-accent: #3b9dff;
+
+    --color-status-new: #ff7a3d;
+    --color-status-open: #3b9dff;
+    --color-status-progress: #e0b341;
+    --color-status-deal: #2bc46c;
+    --color-status-hold: #8a8a8a;
+    --color-status-risk: #ff5577;
+    --color-status-violet: #7c60ff;
+    --color-status-magenta: #d44df0;
+
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-raised: 0 12px 34px rgb(0 0 0 / 0.45);
+    --edge-top: inset 0 1px 0 0 rgb(255 255 255 / 0.05);
+    --color-rail: #111214;
+    --grain-opacity: 0.02;
+
+    color-scheme: dark;
+  }
+
   * {
     border-color: var(--color-hairline);
   }
 
   html {
     background-color: var(--color-canvas);
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   body {
@@ -77,7 +125,7 @@
   }
 
   ::selection {
-    background: rgb(0 153 255 / 0.28);
+    background: color-mix(in srgb, var(--color-accent) 26%, transparent);
   }
 
   a {
@@ -93,12 +141,12 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #202020;
+    background: var(--color-hairline);
     border: 3px solid var(--color-canvas);
     border-radius: 100px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #2e2e2e;
+    background: var(--color-ink-faint);
   }
 
   input,
@@ -116,7 +164,9 @@
 
   :focus-visible {
     outline: none;
-    box-shadow: 0 0 0 1px rgb(0 153 255 / 0.55), 0 0 0 4px rgb(0 153 255 / 0.15);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--color-accent) 55%, transparent),
+      0 0 0 4px color-mix(in srgb, var(--color-accent) 16%, transparent);
     border-radius: inherit;
   }
 }
@@ -175,28 +225,44 @@
   }
 
   /* ── surfaces ─────────────────────────────────────────────── */
+  /*
+   * Карточка обязана читаться как отдельный блок, иначе экран сливается
+   * в сплошное полотно и от него устают глаза. Поэтому у неё три признака
+   * сразу: своя поверхность, видимая граница и мягкая тень.
+   */
   .card {
     background: var(--color-surface-1);
-    border: 1px solid var(--color-hairline-soft);
-    border-radius: var(--radius-lg);
-  }
-  .card-raised {
-    background: var(--color-surface-2);
     border: 1px solid var(--color-hairline);
     border-radius: var(--radius-lg);
-    box-shadow:
-      inset 0 0.5px 0 0 rgb(255 255 255 / 0.08),
-      0 10px 30px rgb(0 0 0 / 0.25);
+    box-shadow: var(--shadow-card), var(--edge-top);
+  }
+  .card-raised {
+    background: var(--color-surface-1);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-raised), var(--edge-top);
   }
   .card-hover {
     transition:
       background-color 140ms ease,
       border-color 140ms ease,
+      box-shadow 140ms ease,
       transform 140ms ease;
   }
   .card-hover:hover {
+    border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-hairline));
+    box-shadow: var(--shadow-raised), var(--edge-top);
+  }
+  /* Шапка блока: отделяет заголовок от содержимого без лишней рамки. */
+  .card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--color-hairline-soft);
     background: var(--color-surface-2);
-    border-color: var(--color-hairline);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
 
   /* ── buttons ──────────────────────────────────────────────── */
@@ -222,19 +288,22 @@
     transform: scale(0.975);
   }
   .btn-primary {
-    background: var(--color-ink);
-    color: #000;
+    background: var(--color-accent);
+    color: #fff;
+    box-shadow: 0 1px 2px rgb(16 24 40 / 0.12);
   }
   .btn-primary:hover {
-    background: #e9e9e9;
+    background: color-mix(in srgb, var(--color-accent) 86%, #000);
   }
   .btn-secondary {
     background: var(--color-surface-1);
     color: var(--color-ink);
     border: 1px solid var(--color-hairline);
+    box-shadow: var(--shadow-card);
   }
   .btn-secondary:hover {
     background: var(--color-surface-2);
+    border-color: var(--color-ink-faint);
   }
   .btn-ghost {
     background: transparent;
@@ -281,9 +350,9 @@
     white-space: nowrap;
   }
   .chip-active {
-    background: var(--color-surface-2);
-    border-color: var(--color-hairline);
-    color: var(--color-ink);
+    background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface-1));
+    border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+    color: var(--color-accent);
   }
   .dot {
     width: 6px;
@@ -293,15 +362,16 @@
   }
   .field {
     background: var(--color-surface-1);
-    border: 1px solid var(--color-hairline-soft);
+    border: 1px solid var(--color-hairline);
     border-radius: var(--radius-md);
     padding: 9px 12px;
     color: var(--color-ink);
     font-size: 14px;
     width: 100%;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
   }
   .field:hover {
-    border-color: var(--color-hairline);
+    border-color: var(--color-ink-faint);
   }
 
   /* ── rail navigation ──────────────────────────────────────── */
@@ -324,8 +394,9 @@
     color: var(--color-ink);
   }
   .nav-item-active {
-    background: var(--color-surface-2);
-    color: var(--color-ink);
+    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+    color: var(--color-accent);
+    font-weight: 600;
   }
 
   /* ── atmosphere (scarce: max one per view) ────────────────── */
@@ -338,6 +409,61 @@
     background:
       radial-gradient(120% 120% at 100% 0%, #ffb36b 0%, transparent 55%),
       linear-gradient(135deg, #ff7a3d 0%, #ff5577 100%);
+  }
+
+  /* ── дерево структуры компании ───────────────────────────── */
+  /*
+   * Линии рисуются рамками самих ячеек, а не SVG: раскладка тогда остаётся
+   * обычным флексом и центрируется сама, без пересчёта координат на каждый
+   * зум и раскрытие ветки.
+   */
+  .tree-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .tree-stem {
+    width: 1px;
+    height: 24px;
+    background: var(--color-hairline);
+  }
+  .tree-children {
+    display: flex;
+    align-items: flex-start;
+  }
+  .tree-child {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 10px 0;
+  }
+  .tree-child::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--color-hairline);
+  }
+  .tree-child::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 1px;
+    height: 24px;
+    background: var(--color-hairline);
+  }
+  .tree-child:first-child::before {
+    left: 50%;
+  }
+  .tree-child:last-child::before {
+    right: 50%;
+  }
+  .tree-child:only-child::before {
+    display: none;
   }
 
   .scroll-x {
@@ -356,7 +482,7 @@
     inset: 0;
     pointer-events: none;
     z-index: 0;
-    opacity: 0.025;
+    opacity: var(--grain-opacity);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 }

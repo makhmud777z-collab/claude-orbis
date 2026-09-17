@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { IconDocuments, IconSearch } from "./icons";
+import { useState } from "react";
+import { IconDocuments } from "./icons";
 import { Avatar, Chip, Progress, StatusDot } from "./ui";
 import { DOCUMENT_STATUS } from "@/lib/labels";
 import { formatters } from "@/lib/format";
@@ -31,12 +31,10 @@ export interface DossierFolder {
   }[];
 }
 
-const TABS: { key: "all" | "problem" | "expiring"; label: Loc }[] = [
-  { key: "all", label: S.documents.allFolders },
-  { key: "problem", label: S.documents.tabProblem },
-  { key: "expiring", label: S.documents.tabExpiring },
-];
-
+/**
+ * Досье документов. Отбор папок делает умный фильтр раздела,
+ * здесь осталось только состояние «какая папка открыта».
+ */
 export function DocumentsExplorer({
   folders,
   locale,
@@ -46,46 +44,12 @@ export function DocumentsExplorer({
 }) {
   const t = translator(locale);
   const f = formatters(locale);
-  const [tab, setTab] = useState<"all" | "problem" | "expiring">("all");
-  const [query, setQuery] = useState("");
   const [openId, setOpenId] = useState<string | null>(folders[0]?.studentId ?? null);
-
-  const visible = useMemo(
-    () =>
-      folders.filter((folder) => {
-        if (query && !folder.studentName.toLowerCase().includes(query.toLowerCase()))
-          return false;
-        if (tab === "problem") return folder.problems > 0;
-        if (tab === "expiring")
-          return folder.items.some((i) => i.status === "expiring" || i.expiresAt);
-        return true;
-      }),
-    [folders, tab, query],
-  );
-
+  const visible = folders;
   const open = visible.find((folder) => folder.studentId === openId) ?? visible[0];
 
   return (
     <>
-      <div className="mb-5 flex flex-wrap items-center gap-2">
-        {TABS.map((tab_) => (
-          <button key={tab_.key} onClick={() => setTab(tab_.key)}>
-            <Chip active={tab === tab_.key}>{t(tab_.label)}</Chip>
-          </button>
-        ))}
-        <label className="relative ml-auto flex items-center">
-          <span className="pointer-events-none absolute left-3 text-ink-faint">
-            <IconSearch size={13} />
-          </span>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t(S.documents.searchStudent)}
-            className="field h-[30px] w-[200px] rounded-full py-0 pl-8 text-[12px]"
-          />
-        </label>
-      </div>
-
       <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-[320px_1fr]">
         <div className="min-w-0 space-y-2.5 lg:max-h-[72vh] lg:overflow-y-auto lg:pr-1">
           {visible.map((folder) => (

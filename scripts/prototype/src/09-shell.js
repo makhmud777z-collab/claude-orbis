@@ -26,7 +26,7 @@ function renderRail() {
   const groups = [["work", loc("Операционка", "Kundalik ish")], ["base", loc("База знаний", "Bilimlar bazasi")], ["admin", loc("Агентство", "Agentlik")]];
   return `
     <a href="#" data-go="${esc(items[0]?.href ?? "universities")}" style="display:flex;gap:12px;align-items:center;padding:0 8px;margin-bottom:26px">
-      <span style="width:32px;height:32px;border-radius:999px;background:var(--ink);color:var(--canvas);display:flex;align-items:center;justify-content:center;flex:none">
+      <span style="width:32px;height:32px;border-radius:999px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;flex:none">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3.4" fill="currentColor"/>
           <circle cx="19.6" cy="6.4" r="2.1" fill="currentColor"/>
@@ -70,7 +70,7 @@ function renderRail() {
 
     <div class="card" style="padding:12px;margin-top:20px">
       <div style="display:flex;gap:10px;align-items:center">
-        <span style="width:28px;height:28px;border-radius:7px;background:var(--ink);color:#000;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex:none">${esc(tenant().mark)}</span>
+        <span style="width:28px;height:28px;border-radius:7px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex:none">${esc(tenant().mark)}</span>
         <span style="min-width:0">
           <span class="t-caption truncate" style="display:block">${esc(tenant().name)}</span>
           <span class="t-micro faint truncate" style="display:block">${esc(t(roleDef(user().role).label))}</span>
@@ -99,6 +99,13 @@ function renderTopbar() {
         background:${S.locale === key ? "var(--surface-2)" : "transparent"};color:${S.locale === key ? "var(--ink)" : "var(--ink-faint)"}">${short}</button>`).join("")}
     </span>
 
+    ${w ? `<span class="workday live" data-pop="profile">
+        <span class="live-dot"></span>
+        <span class="clock" data-clock>${esc(clockText(sessionSeconds(w)))}</span>
+        ${w.onBreak ? `<span class="t-micro faint">${t(loc("перерыв", "tanaffus"))}</span>` : ""}
+      </span>`
+      : `<button class="workday" data-act="work" data-value="start">${icon("play", 13)} ${t(loc("Начать рабочий день", "Ish kunini boshlash"))}</button>`}
+
     <button class="icon-btn">${icon("mail", 17)}</button>
     <button class="icon-btn" style="position:relative">${icon("bell", 17)}
       <span style="position:absolute;right:8px;top:8px;width:6px;height:6px;border-radius:999px;background:var(--new)"></span>
@@ -109,7 +116,7 @@ function renderTopbar() {
     <span style="position:relative">
       <button data-pop="profile" style="display:flex;gap:10px;align-items:center;background:none;border:0;cursor:pointer;color:inherit;padding:4px 8px 4px 4px;border-radius:100px">
         <span style="position:relative">${avatar(user().name, 28)}
-          <span style="position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:999px;border:2px solid var(--canvas);background:${color}"></span>
+          <span style="position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:999px;border:2px solid var(--rail-bg);background:${color}"></span>
         </span>
         <span style="text-align:left" class="nowrap">
           <span class="t-caption" style="display:block">${esc(user().name)}</span>
@@ -118,16 +125,24 @@ function renderTopbar() {
         ${icon("chevron", 14)}
       </button>
       ${open ? `<span class="pop" style="top:46px;right:0;left:auto;width:320px;padding:16px">
-        <span style="display:block;border:1px solid var(--hairline-soft);background:var(--surface-1);border-radius:10px;padding:12px;margin-bottom:16px">
-          <span class="t-caption" style="display:flex;gap:8px;align-items:center">${dot(color)}
+        <span style="display:block;border:1px solid var(--hairline);background:var(--surface-1);border-radius:10px;padding:14px;margin-bottom:16px;box-shadow:var(--shadow-card)">
+          <span class="t-micro faint" style="display:flex;gap:8px;align-items:center;text-transform:uppercase;letter-spacing:.07em">
+            ${w ? `<span class="live-dot" style="background:${color}"></span>` : dot(color)}
             ${w ? (w.onBreak ? t(loc("Перерыв", "Tanaffus")) : t(loc("Рабочий день идёт", "Ish kuni davom etmoqda"))) : t(loc("Рабочий день не начат", "Ish kuni boshlanmagan"))}
           </span>
-          ${w ? `<span class="t-micro faint" style="display:block;margin-top:6px">${t(loc("Сегодня отработано", "Bugun ishlangan"))}: <span class="num">${esc(hhmm(sessionMinutes(w)))}</span></span>` : ""}
+          <span class="clock" data-clock style="display:block;font-size:34px;letter-spacing:-1.2px;margin-top:8px">${esc(clockText(sessionSeconds(w)))}</span>
+          ${w && (w.breakSeconds || w.breakMinutes) ? `<span class="t-micro faint" style="display:block;margin-top:4px">${t(loc("перерыв", "tanaffus"))}: ${esc(hhmm(Math.round((w.breakSeconds ?? w.breakMinutes * 60) / 60)))}</span>` : ""}
           <span style="display:flex;gap:6px;margin-top:12px">
-            ${w ? `<button class="btn btn-secondary" style="flex:1" data-act="work" data-value="break">${w.onBreak ? t(loc("Вернуться к работе", "Ishga qaytish")) : t(loc("Перерыв", "Tanaffus"))}</button>
-                   <button class="btn btn-primary" style="flex:1" data-act="work" data-value="end">${t(loc("Завершить", "Yakunlash"))}</button>`
-                 : `<button class="btn btn-primary" style="width:100%" data-act="work" data-value="start">${t(loc("Начать рабочий день", "Ish kunini boshlash"))}</button>`}
+            ${w ? `<button class="btn btn-secondary" style="flex:1" data-act="work" data-value="break">${icon(w.onBreak ? "play" : "pause", 13)} ${w.onBreak ? t(loc("Вернуться", "Qaytish")) : t(loc("Перерыв", "Tanaffus"))}</button>
+                   <button class="btn btn-primary" style="flex:1" data-act="work" data-value="end">${icon("stop", 13)} ${t(loc("Завершить", "Yakunlash"))}</button>`
+                 : `<button class="btn btn-primary" style="width:100%" data-act="work" data-value="start">${icon("play", 13)} ${t(loc("Начать рабочий день", "Ish kunini boshlash"))}</button>`}
           </span>
+        </span>
+
+        <span class="t-micro faint" style="display:block;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">${t(loc("Тема портала", "Portal mavzusi"))}</span>
+        <span style="display:flex;gap:6px;margin-bottom:16px">
+          ${[["light", "sun", loc("Светлая", "Yorug‘")], ["dark", "moon", loc("Тёмная", "Qorong‘i")]].map(([key, ic, label]) =>
+            `<button class="btn ${S.theme === key ? "btn-primary" : "btn-secondary"}" style="flex:1" data-act="theme" data-value="${key}">${icon(ic, 14)} ${esc(t(label))}</button>`).join("")}
         </span>
 
         <span class="t-micro faint" style="display:block;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">${t(loc("Агентство", "Agentlik"))}</span>
@@ -135,7 +150,7 @@ function renderTopbar() {
           ${D.tenants.map((x) => `<button data-act="tenant" data-value="${esc(x.id)}"
             style="display:flex;gap:10px;align-items:center;padding:7px 8px;border-radius:8px;border:0;cursor:pointer;text-align:left;color:inherit;
             background:${x.id === S.tenant ? "var(--surface-1)" : "transparent"}">
-            <span style="width:22px;height:22px;border-radius:6px;background:var(--ink);color:#000;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex:none">${esc(x.mark)}</span>
+            <span style="width:22px;height:22px;border-radius:6px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex:none">${esc(x.mark)}</span>
             <span style="min-width:0"><span class="t-caption truncate" style="display:block">${esc(x.name)}</span>
             <span class="t-micro faint truncate" style="display:block">${esc(x.slug)} · ${esc(x.edition === "mvp" ? "01 / MVP" : "02 / CRM")}</span></span>
           </button>`).join("")}
@@ -159,6 +174,47 @@ function renderTopbar() {
 function renderModal() {
   if (!S.modal) return "";
   const m = S.modal;
+  if (m.kind === "savefilter") {
+    return modal(t(loc("Сохранить фильтр", "Filtrni saqlash")), `
+      <p class="t-caption muted" style="margin:0 0 14px">${t(loc(
+        "Набор условий сохранится под именем и появится в левой колонке фильтра — у вас и только у вас.",
+        "Shartlar to‘plami nom bilan saqlanadi va faqat sizda ko‘rinadi."))}</p>
+      <input class="field" id="filter-name" placeholder="${t(loc("Например: мои горящие сделки", "Masalan: mening shoshilinch bitimlarim"))}">`,
+      `<button class="btn btn-primary" data-act="filter.save">${t(loc("Сохранить", "Saqlash"))}</button>`);
+  }
+  if (m.kind === "event") {
+    const times = [];
+    for (let h = 7; h <= 21; h++) { times.push(`${String(h).padStart(2, "0")}:00`); times.push(`${String(h).padStart(2, "0")}:30`); }
+    return modal(t(loc("Новое дело", "Yangi ish")), `
+      <p class="t-caption muted" style="margin:0 0 14px">${esc(fmtDate(S.cal.date))}</p>
+      <input class="field" id="ev-title" placeholder="${t(loc("Что за дело", "Qanday ish"))}" style="margin-bottom:14px">
+      <span class="t-micro faint" style="display:block;margin-bottom:8px">${t(loc("Тип", "Turi"))}</span>
+      <span style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+        ${Object.entries(EVENT_KIND).map(([key, k]) => `<button class="chip${m.kindValue === key ? " on" : ""}" data-act="cal.kind" data-value="${key}">${dot(k.color)}${esc(t(k.label))}</button>`).join("")}
+      </span>
+      <span style="display:flex;gap:10px;align-items:center">
+        ${select("cal.start", m.start, times.map((x) => ({ value: x, label: x })), 120)}
+        <span class="faint">—</span>
+        ${select("cal.end", m.end, times.map((x) => ({ value: x, label: x })), 120)}
+      </span>`,
+      `<button class="btn btn-primary" data-act="cal.save">${t(loc("Добавить", "Qo‘shish"))}</button>`);
+  }
+  if (m.kind === "department") {
+    const parents = allDepartments();
+    return modal(t(loc("Новое подразделение", "Yangi bo‘lim")), `
+      <input class="field" id="dep-name" placeholder="${t(loc("Название отдела", "Bo‘lim nomi"))}" style="margin-bottom:14px">
+      <span class="t-micro faint" style="display:block;margin-bottom:8px">${t(loc("Входит в", "Tarkibida"))}</span>
+      ${select("org.parent", m.parent ?? "", [{ value: "", label: t(loc("— верхний уровень —", "— yuqori daraja —")) },
+        ...parents.map((d) => ({ value: d.id, label: t(d.name) }))], 260)}`,
+      `<button class="btn btn-primary" data-act="org.save">${t(loc("Создать", "Yaratish"))}</button>`);
+  }
+  if (m.kind === "employee") {
+    return modal(t(loc("Изменить карточку сотрудника", "Xodim kartasini o‘zgartirish")), `
+      <p class="t-caption muted" style="margin:0 0 14px">${t(loc(
+        "В продукте админ правит имя, должность, телефоны, почту, день рождения и дату приёма прямо в карточке. В прототипе правки не сохраняются.",
+        "Mahsulotda admin kartani to‘g‘ridan-to‘g‘ri tahrirlaydi. Prototipda o‘zgarishlar saqlanmaydi."))}</p>`,
+      `<button class="btn btn-primary" data-act="closemodal">${t(loc("Понятно", "Tushunarli"))}</button>`);
+  }
   if (m.kind === "cardfields") {
     return modal(t(loc("Карточка просмотра", "Ko‘rish kartasi")), `
       <p class="t-caption muted" style="margin:0 0 14px">${t(loc(
@@ -264,14 +320,15 @@ function renderScreen() {
     case "deal": return screenDeal(S.param);
     case "contacts": return screenContacts();
     case "contact": return screenContact(S.param);
+    case "crmsettings": return screenCrmSettings();
     case "pipelines": return screenPipelines();
     case "channels": return screenChannels();
     case "tasks": return screenTasks();
     case "projects": return screenProjects();
     case "taskreports": return screenTaskReports();
-    case "templates": return screenTemplates();
     case "documents": return screenDocuments();
     case "deadlines": return screenDeadlines();
+    case "calendar": return screenCalendar();
     case "universities": return screenUniversities();
     case "compare": return screenCompare();
     case "finance": return screenFinance();
@@ -293,7 +350,29 @@ function render() {
   document.getElementById("rail").classList.toggle("open", S.menu);
   document.getElementById("scrim").hidden = !S.menu;
   document.documentElement.lang = S.locale;
+  document.documentElement.dataset.theme = S.theme;
+  afterRender();
 }
+
+/**
+ * Две прокрутки, которые нельзя выразить разметкой: день открывается на
+ * текущем часе, а дерево компании — по центру, а не прижатым влево.
+ */
+function afterRender() {
+  const day = document.querySelector('[data-scroll="day"]');
+  const now = day?.querySelector("[data-now]");
+  if (day && now) day.scrollTop = Math.max(0, now.offsetTop - day.clientHeight / 2);
+  const tree = document.querySelector('[data-scroll="tree"]');
+  if (tree) tree.scrollLeft = Math.max(0, (tree.scrollWidth - tree.clientWidth) / 2);
+}
+
+/** Счётчик рабочего дня тикает сам, без перерисовки всей страницы. */
+setInterval(() => {
+  const w = workOf(S.userId);
+  if (!w) return;
+  const sec = sessionSeconds(w);
+  document.querySelectorAll("[data-clock]").forEach((el) => { el.textContent = clockText(sec); });
+}, 1000);
 
 function go(href, extra = {}) {
   const [route, param] = href.split("/");
@@ -317,21 +396,30 @@ function ensureRoute() {
   }
 }
 
-const EMPTY_CATALOG = { q: "", cities: [], ownership: [], fields: [], degree: "all", topik: "all", budget: "all", intake: "all", dorm: false, grant: false, english: false };
+/**
+ * Профиль студента заполняет тот же фильтр каталога, которым пользуется
+ * человек руками, — второй механики подбора в системе нет.
+ */
 function applyStudentProfile() {
+  const st = filterState("universities");
+  st.values = {};
+  st.q = "";
+  st.draft = { q: "", values: {} };
   const s = studentById(S.catalog.student);
-  Object.assign(S.catalog, EMPTY_CATALOG);
   if (!s) { S.catalog.strict = false; return; }
+  st.values.degree = s.profile.degreeLevel;
   if (S.catalog.strict) {
-    Object.assign(S.catalog, {
-      cities: [...s.profile.preferredCities], ownership: [...s.profile.preferredOwnership],
-      fields: [...s.profile.preferredMajors], degree: s.profile.degreeLevel,
-      topik: String(s.profile.topik), budget: String(s.profile.budgetPerYear),
-      intake: s.profile.intake, dorm: s.profile.needsDorm, grant: s.profile.needsScholarship,
+    Object.assign(st.values, {
+      city: s.profile.preferredCities[0] ?? "",
+      ownership: s.profile.preferredOwnership[0] ?? "",
+      field: s.profile.preferredMajors[0] ?? "",
+      intake: s.profile.intake,
+      topikFrom: String(s.profile.topik),
+      tuitionTo: String(Math.round(s.profile.budgetPerYear * 1.15)),
+      ...(s.profile.needsDorm ? { dorm: "yes" } : {}),
     });
-  } else {
-    S.catalog.degree = s.profile.degreeLevel;
   }
+  st.draft = { q: "", values: { ...st.values } };
 }
 
 const toggleIn = (list, value) => (list.includes(value) ? list.filter((x) => x !== value) : [...list, value]);
@@ -367,14 +455,71 @@ const ACTIONS = {
   },
   user: (v) => { S.userId = v; S.catalog.student = "none"; S.popover = null; applyStudentProfile(); ensureRoute(); },
   work: (v) => {
-    const now = "2026-09-16T09:30:00";
     const w = workOf(S.userId);
-    if (v === "start") S.work[S.userId] = { startedAt: now, endedAt: null, breakMinutes: 0, onBreak: false };
+    if (v === "start") {
+      S.work[S.userId] = { startedAt: new Date().toISOString().slice(0, 19), startedMs: Date.now(),
+        endedAt: null, breakMinutes: 0, breakSeconds: 0, onBreak: false, breakSince: null };
+    }
     if (v === "end" && w) S.work[S.userId] = null;
-    if (v === "break" && w) S.work[S.userId] = { ...w, onBreak: !w.onBreak, breakMinutes: w.breakMinutes + (w.onBreak ? 0 : 15) };
-    S.popover = null;
+    if (v === "break" && w) {
+      // перерыв обязан останавливать счёт: прибор, который врёт, бесполезен
+      const back = w.onBreak;
+      S.work[S.userId] = {
+        ...w,
+        onBreak: !back,
+        breakSince: back ? null : Date.now(),
+        breakSeconds: (w.breakSeconds ?? 0) + (back && w.breakSince ? Math.round((Date.now() - w.breakSince) / 1000) : 0),
+      };
+    }
   },
+  theme: (v) => { S.theme = v; try { localStorage.setItem("orbis-theme", v); } catch { /* приватное окно */ } },
   move: (v) => { const [entity, id, stage] = v.split(":"); moveCard(entity, id, stage); },
+  pipeline: () => { S.popover = null; },
+  "cal.view": (v) => { S.cal.view = v; },
+  "cal.day": (v) => { S.cal.date = v; S.cal.view = "day"; },
+  "cal.today": () => { S.cal.date = TODAY_ISO; },
+  "cal.shift": (v) => { S.cal.date = shiftDay(S.cal.date, Number(v)); },
+  "cal.new": () => { S.modal = { kind: "event", kindValue: "meeting", start: "10:00", end: "11:00" }; },
+  "cal.kind": (v) => { S.modal = { ...S.modal, kindValue: v }; S.popover = null; },
+  "cal.start": (v) => { S.modal = { ...S.modal, start: v }; S.popover = null; },
+  "cal.end": (v) => { S.modal = { ...S.modal, end: v }; S.popover = null; },
+  "cal.save": () => {
+    const title = document.getElementById("ev-title")?.value.trim();
+    if (!title) return;
+    S.events.push({
+      id: "ev_" + Math.random().toString(36).slice(2, 7), date: S.cal.date,
+      startTime: S.modal.start, endTime: S.modal.end, kind: S.modal.kindValue,
+      title, ownerId: S.userId, relation: "",
+    });
+    S.cal.view = "day";
+    S.modal = null;
+  },
+  "org.pick": (v) => { S.org.selected = v; },
+  "org.zoom": (v) => { S.org.zoom = Math.min(140, Math.max(50, S.org.zoom + Number(v))); },
+  "org.q": (v) => { S.org.q = v; },
+  "org.me": () => { S.org.selected = departmentOf(S.userId); S.org.q = user().name; },
+  "org.head": (v) => { if (S.org.selected) S.heads[S.org.selected] = v || null; S.popover = null; },
+  "org.new": () => { S.modal = { kind: "department", parent: S.org.selected ?? allDepartments()[0]?.id ?? null }; },
+  "org.parent": (v) => { S.modal = { ...S.modal, parent: v }; S.popover = null; },
+  "org.save": () => {
+    const name = document.getElementById("dep-name")?.value.trim();
+    if (!name) return;
+    const id = "dep_" + Math.random().toString(36).slice(2, 7);
+    S.depts.push({ id, tenantId: S.tenant, name: { ru: name, uz: name }, parentId: S.modal.parent, headId: null });
+    S.org.selected = id;
+    S.modal = null;
+  },
+  "filter.save": () => {
+    const name = document.getElementById("filter-name")?.value.trim();
+    if (!name) return;
+    const scopeKey = S.modal.scope;
+    const st = filterState(scopeKey);
+    const key = savedKey(scopeKey);
+    S.saved[key] = [...(S.saved[key] ?? []).filter((f) => f.name !== name),
+      { name, q: st.q, values: { ...st.values } }];
+    S.modal = null;
+  },
+  "employee.edit": () => { S.modal = { kind: "employee" }; },
   cardfields: () => { S.modal = { kind: "cardfields" }; },
   togglefield: (v) => { S.cardFields = toggleIn(S.cardFields, v); },
   stage: (v) => { const [pipelineId, stageKey] = v.split(":"); S.modal = { kind: "stage", pipelineId, stageKey }; },
@@ -473,24 +618,8 @@ const ACTIONS = {
   },
   edit: () => { S.modal = null; },
   closemodal: () => { S.modal = null; },
-  "contacts.status": (v) => { S.contacts.status = v; },
-  "contacts.owner": (v) => { S.contacts.owner = v; S.popover = null; },
-  "contacts.topik": (v) => { S.contacts.topik = v; S.popover = null; },
-  "contacts.q": (v) => { S.contacts.q = v; },
   "catalog.student": (v) => { S.catalog.student = v; S.catalog.strict = false; S.popover = null; applyStudentProfile(); },
   "catalog.strict": () => { S.catalog.strict = !S.catalog.strict; applyStudentProfile(); },
-  "catalog.q": (v) => { S.catalog.q = v; },
-  "catalog.city": (v) => { S.catalog.cities = toggleIn(S.catalog.cities, v); },
-  "catalog.ownership": (v) => { S.catalog.ownership = toggleIn(S.catalog.ownership, v); },
-  "catalog.field": (v) => { S.catalog.fields = toggleIn(S.catalog.fields, v); },
-  "catalog.degree": (v) => { S.catalog.degree = v; S.popover = null; },
-  "catalog.topik": (v) => { S.catalog.topik = v; S.popover = null; },
-  "catalog.budget": (v) => { S.catalog.budget = v; S.popover = null; },
-  "catalog.intake": (v) => { S.catalog.intake = v; S.popover = null; },
-  "catalog.dorm": () => { S.catalog.dorm = !S.catalog.dorm; },
-  "catalog.grant": () => { S.catalog.grant = !S.catalog.grant; },
-  "catalog.english": () => { S.catalog.english = !S.catalog.english; },
-  "catalog.reset": () => { Object.assign(S.catalog, EMPTY_CATALOG); S.catalog.student = "none"; S.catalog.strict = false; },
   shortlist: (v) => {
     const key = S.catalog.student !== "none" ? S.catalog.student : "_";
     const list = S.shortlist[key] ?? [];
@@ -503,13 +632,91 @@ const ACTIONS = {
     delete S.shortlist[key];
     saveShortlist();
   },
-  "docs.tab": (v) => { S.docs.tab = v; S.docs.open = null; },
   "docs.open": (v) => { S.docs.open = v; },
-  "tasks.mine": () => { S.tasks.mine = !S.tasks.mine; },
-  "tasks.assignee": (v) => { S.tasks.assignee = v; S.popover = null; },
 };
 
+/**
+ * Действия фильтра, календаря и структуры несут аргументы в самом имени
+ * (f.set:contacts:status), поэтому разбираются до таблицы ACTIONS.
+ */
+function handlePrefixed(act, value) {
+  const [name, scopeKey, key] = act.split(":");
+  if (name.startsWith("f.")) {
+    const st = filterState(scopeKey);
+    st.draft ??= { q: st.q, values: { ...st.values } };
+    switch (name) {
+      case "f.open": S.filterOpen = S.filterOpen === scopeKey ? null : scopeKey; break;
+      case "f.q": st.draft.q = value; break;
+      case "f.set": st.draft.values[key] = value; S.popover = null; break;
+      case "f.apply":
+        st.q = st.draft.q;
+        st.values = { ...st.draft.values };
+        st.preset = null;
+        S.filterOpen = null;
+        break;
+      case "f.clear":
+        st.q = ""; st.values = {}; st.preset = null;
+        st.draft = { q: "", values: {} };
+        break;
+      case "f.drop": {
+        delete st.values[key];
+        delete st.draft.values[key];
+        break;
+      }
+      case "f.field": {
+        const fieldsNow = st.fields ?? defaultFieldKeys(scopeKey);
+        st.fields = fieldsNow.includes(key) ? fieldsNow.filter((x) => x !== key) : [...fieldsNow, key];
+        S.popover = null;
+        break;
+      }
+      case "f.default": st.fields = null; break;
+      case "f.preset": {
+        const preset = presetsFor(scopeKey).find((x) => x.key === key);
+        if (preset) {
+          st.values = { ...preset.values };
+          st.q = "";
+          st.preset = preset.key;
+          st.draft = { q: "", values: { ...preset.values } };
+        }
+        break;
+      }
+      case "f.save": S.modal = { kind: "savefilter", scope: scopeKey }; break;
+      case "f.saved": {
+        const item = savedFilters(scopeKey)[Number(key)];
+        if (item) {
+          st.values = { ...item.values };
+          st.q = item.q ?? "";
+          st.preset = null;
+          st.draft = { q: st.q, values: { ...st.values } };
+        }
+        break;
+      }
+      default: return false;
+    }
+    render();
+    return true;
+  }
+  return false;
+}
+
+/** Поля и пресеты раздела нужны обработчику так же, как экрану. */
+const SECTION_FILTERS = {
+  contacts: () => ({ fields: contactFields(), presets: contactPresets() }),
+  leads: () => ({ fields: leadFields(), presets: leadPresets() }),
+  deals: () => ({ fields: dealFields(), presets: dealPresets() }),
+  finance: () => ({ fields: dealFields(), presets: simplePresets() }),
+  tasks: () => ({ fields: taskFields(), presets: taskPresets() }),
+  deadlines: () => ({ fields: deadlineFields(), presets: simplePresets() }),
+  documents: () => ({ fields: documentFields(), presets: simplePresets() }),
+  team: () => ({ fields: teamFields(), presets: simplePresets() }),
+  universities: () => ({ fields: universityFields(), presets: simplePresets() }),
+};
+const presetsFor = (scopeKey) => SECTION_FILTERS[scopeKey]?.().presets ?? [];
+const defaultFieldKeys = (scopeKey) =>
+  (SECTION_FILTERS[scopeKey]?.().fields ?? []).filter((f) => f.def).map((f) => f.key);
+
 function handle(act, value) {
+  if (handlePrefixed(act, value)) return;
   // смена роли сотрудника в «Пользователях»: ключ несёт id в самом имени
   if (act.startsWith("role:")) {
     const u = userById(act.slice(5));
@@ -560,8 +767,15 @@ document.addEventListener("input", (e) => {
   if (next) { next.focus(); try { next.setSelectionRange(pos, pos); } catch { /* не текстовое поле */ } }
 });
 
-/* перетаскивание карточек по доске */
+/* перетаскивание карточек по доске и сотрудников по отделам */
 document.addEventListener("dragstart", (e) => {
+  const person = e.target.closest("[data-drag-user]");
+  if (person) {
+    S.dragUser = person.dataset.dragUser;
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", S.dragUser);
+    return;
+  }
   const card = e.target.closest("[data-drag]");
   if (!card) return;
   S.drag = { id: card.dataset.drag, entity: card.dataset.entity };
@@ -569,6 +783,11 @@ document.addEventListener("dragstart", (e) => {
   e.dataTransfer.setData("text/plain", card.dataset.drag);
 });
 document.addEventListener("dragover", (e) => {
+  if (S.dragUser) {
+    const dept = e.target.closest("[data-drop-dept]");
+    if (dept) e.preventDefault();
+    return;
+  }
   const col = e.target.closest("[data-drop]");
   if (!col || !S.drag) return;
   e.preventDefault();
@@ -581,6 +800,17 @@ document.addEventListener("dragover", (e) => {
   }
 });
 document.addEventListener("drop", (e) => {
+  if (S.dragUser) {
+    const dept = e.target.closest("[data-drop-dept]");
+    if (dept) {
+      e.preventDefault();
+      S.moves[S.dragUser] = dept.dataset.dropDept;
+      S.org.selected = dept.dataset.dropDept;
+    }
+    S.dragUser = null;
+    render();
+    return;
+  }
   const col = e.target.closest("[data-drop]");
   if (!col || !S.drag) return;
   e.preventDefault();
@@ -589,9 +819,14 @@ document.addEventListener("drop", (e) => {
   S.over = null;
   render();
 });
-document.addEventListener("dragend", () => { S.drag = null; S.over = null; render(); });
+document.addEventListener("dragend", () => { S.drag = null; S.dragUser = null; S.over = null; render(); });
 
 document.addEventListener("keydown", (e) => {
+  // Enter в строке фильтра = «Найти»: набрал и нажал, как в Битриксе
+  if (e.key === "Enter") {
+    const el = e.target.closest("input[data-enter]");
+    if (el) { e.preventDefault(); handle(el.dataset.enter, ""); return; }
+  }
   if (e.key !== "Escape") return;
   if (S.modal) { S.modal = null; render(); return; }
   if (S.popover) { S.popover = null; render(); }
@@ -602,6 +837,8 @@ document.getElementById("scrim").addEventListener("click", () => { S.menu = fals
 // Наружу отдаём ровно два входа: их использует прогон прототипа браузером.
 window.go = go;
 window.handle = handle;
+window.S = S;
+window.workOf = workOf;
 
 ensureRoute();
 render();

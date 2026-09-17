@@ -84,7 +84,7 @@ const MODULES_BY_EDITION = {
   mvp: ["universities", "contacts", "settings"],
   crm: [
     "dashboard", "leads", "deals", "crmSettings", "documents",
-    "tasks", "projects", "deadlines", "team", "structure",
+    "tasks", "projects", "deadlines", "calendar", "team", "structure",
     "staffReports", "finance", "admin",
   ],
   advanced: [],
@@ -116,8 +116,8 @@ const NAV = [
       { m: "leads", href: "leads", label: loc("Лиды", "Lidlar") },
       { m: "deals", href: "deals", label: loc("Сделки", "Bitimlar") },
       { m: "contacts", href: "contacts", label: loc("Контакты", "Kontaktlar") },
-      { m: "crmSettings", href: "pipelines", label: loc("Воронки", "Voronkalar") },
       { m: "crmSettings", href: "channels", label: loc("Каналы продаж", "Sotuv kanallari") },
+      { m: "crmSettings", href: "crmsettings", label: loc("Настройки CRM", "CRM sozlamalari") },
     ],
   },
   {
@@ -126,11 +126,11 @@ const NAV = [
       { m: "tasks", href: "tasks", label: loc("Задачи", "Vazifalar") },
       { m: "projects", href: "projects", label: loc("Проекты", "Loyihalar") },
       { m: "tasks", href: "taskreports", label: loc("Отчёты", "Hisobotlar") },
-      { m: "tasks", href: "templates", label: loc("Шаблоны", "Shablonlar") },
     ],
   },
   { key: "documents", m: "documents", href: "documents", label: loc("Документы", "Hujjatlar"), group: "work", icon: "doc" },
   { key: "deadlines", m: "deadlines", href: "deadlines", label: loc("Дедлайны", "Muddatlar"), group: "work", icon: "clock" },
+  { key: "calendar", m: "calendar", href: "calendar", label: loc("Календарь", "Kalendar"), group: "work", icon: "calendar" },
   {
     key: "universities", href: "universities", label: loc("Каталог вузов", "Universitetlar katalogi"), group: "base", icon: "bank",
     children: [
@@ -164,9 +164,9 @@ const ROUTE_MODULE = {
   leads: "leads", lead: "leads",
   deals: "deals", deal: "deals",
   contacts: "contacts", contact: "contacts",
-  pipelines: "crmSettings", channels: "crmSettings",
-  tasks: "tasks", taskreports: "tasks", templates: "tasks", projects: "projects",
-  documents: "documents", deadlines: "deadlines",
+  pipelines: "crmSettings", channels: "crmSettings", crmsettings: "crmSettings",
+  tasks: "tasks", taskreports: "tasks", projects: "projects",
+  documents: "documents", deadlines: "deadlines", calendar: "calendar",
   universities: "universities", compare: "universities",
   finance: "finance",
   team: "team", employee: "team", structure: "structure", staffreports: "staffReports",
@@ -204,6 +204,16 @@ const ICONS = {
   calendar: '<rect x="3" y="5" width="18" height="16" rx="2.4"/><path d="M3 10h18"/><path d="M8 3v4"/><path d="M16 3v4"/>',
   mail: '<rect x="2.5" y="5" width="19" height="14" rx="2.4"/><path d="m3.5 7 8.5 6 8.5-6"/>',
   bell: '<path d="M18 8.5a6 6 0 1 0-12 0c0 5-2 6.5-2 6.5h16s-2-1.5-2-6.5Z"/><path d="M10.3 19a2 2 0 0 0 3.4 0"/>',
+  /* настоящие иконки каналов: глобус на месте Instagram выглядел заглушкой */
+  instagram: '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none"/>',
+  telegram: '<path d="M21 4.5 2.8 11.3c-.7.3-.7 1 0 1.2l4.6 1.4 1.7 5.2c.2.6.9.7 1.3.3l2.5-2.4 4.6 3.4c.5.4 1.2.1 1.4-.5L21.9 5.6c.2-.8-.4-1.4-.9-1.1Z"/><path d="m7.4 13.9 10-6.6-7.6 7.4"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5V5"/><path d="M12 19v2.5"/><path d="M2.5 12H5"/><path d="M19 12h2.5"/><path d="m5.3 5.3 1.8 1.8"/><path d="m16.9 16.9 1.8 1.8"/><path d="m18.7 5.3-1.8 1.8"/><path d="m7.1 16.9-1.8 1.8"/>',
+  moon: '<path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7Z"/>',
+  play: '<path d="M7 4.5 19 12 7 19.5V4.5Z"/>',
+  pause: '<rect x="6.5" y="4.5" width="4" height="15" rx="1.2"/><rect x="13.5" y="4.5" width="4" height="15" rx="1.2"/>',
+  stop: '<rect x="5.5" y="5.5" width="13" height="13" rx="2.4"/>',
+  filter: '<path d="M3 5.5h18"/><path d="M6.5 12h11"/><path d="M10 18.5h4"/>',
+  close: '<path d="m6 6 12 12"/><path d="m18 6-12 12"/>',
 };
 const icon = (name, size = 17) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] ?? ""}</svg>`;

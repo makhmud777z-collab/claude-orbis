@@ -192,7 +192,7 @@ function CellDialog({
                 style={{
                   borderColor: on ? "var(--color-ink)" : "var(--color-hairline)",
                   background: on ? "var(--color-ink)" : "transparent",
-                  color: "#000",
+                  color: "var(--color-canvas)",
                 }}
               >
                 {on ? <IconCheck size={11} strokeWidth={3.2} /> : null}

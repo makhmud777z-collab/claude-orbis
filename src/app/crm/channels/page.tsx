@@ -1,5 +1,5 @@
 import { moduleGate } from "@/components/guard";
-import { IconGlobe, IconMail, IconPhone } from "@/components/icons";
+import { IconInstagram, IconMail, IconPhone, IconTelegram } from "@/components/icons";
 import { Banner, Chip, PageHeader, StatusDot } from "@/components/ui";
 import { formatters } from "@/lib/format";
 import { translator, type Loc } from "@/lib/i18n";
@@ -14,6 +14,22 @@ const KIND_LABEL: Record<Channel["kind"], Loc> = {
   telegram: S.channels.telegram,
   email: S.channels.email,
   phone: S.channels.phone,
+};
+
+/** Канал узнают по значку: глобус на месте Instagram выглядит заглушкой. */
+const CHANNEL_ICON = {
+  instagram: IconInstagram,
+  telegram: IconTelegram,
+  email: IconMail,
+  phone: IconPhone,
+} as const;
+
+/** Фирменный оттенок канала — единственное место, где цвет не статусный. */
+const CHANNEL_TINT: Record<Channel["kind"], string> = {
+  instagram: "#d6249f",
+  telegram: "#29a9eb",
+  email: "var(--color-status-violet)",
+  phone: "var(--color-status-deal)",
 };
 
 const STATUS: Record<Channel["status"], { label: Loc; dot: string }> = {
@@ -58,13 +74,20 @@ export default async function ChannelsPage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {channels.map((channel) => {
           const status = STATUS[channel.status];
-          const Icon =
-            channel.kind === "email" ? IconMail : channel.kind === "phone" ? IconPhone : IconGlobe;
+          const Icon = CHANNEL_ICON[channel.kind];
+          const tint = CHANNEL_TINT[channel.kind];
           return (
             <article key={channel.id} className="card p-5">
               <div className="flex items-start gap-3">
-                <span className="flex h-9 w-9 flex-none items-center justify-center rounded-[10px] border border-hairline-soft bg-surface-2 text-ink-muted">
-                  <Icon size={17} />
+                <span
+                  className="flex h-10 w-10 flex-none items-center justify-center rounded-[11px] border"
+                  style={{
+                    borderColor: `color-mix(in srgb, ${tint} 30%, transparent)`,
+                    background: `color-mix(in srgb, ${tint} 12%, transparent)`,
+                    color: tint,
+                  }}
+                >
+                  <Icon size={19} />
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="t-body-sm truncate">{channel.title}</div>

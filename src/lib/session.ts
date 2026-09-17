@@ -1,6 +1,7 @@
 import { cookies, headers } from "next/headers";
 import { USERS, usersOfTenant } from "./data/users";
 import { isLocale, type Locale } from "./i18n";
+import { isTheme, type Theme } from "./theme";
 import { roleDef, type Scope } from "./rbac";
 import { tenantBySlug } from "./tenants";
 import type { Role, Tenant, User } from "./types";
@@ -14,6 +15,8 @@ export interface Session {
   host: string;
   /** язык интерфейса: выбор сотрудника поверх языка агентства */
   locale: Locale;
+  /** тема оформления: каждый сотрудник настраивает портал под себя */
+  theme: Theme;
 }
 
 /**
@@ -35,6 +38,7 @@ export async function getSession(): Promise<Session> {
     USERS[0];
 
   const requestedLocale = c.get("orbis_locale")?.value;
+  const requestedTheme = c.get("orbis_theme")?.value;
 
   return {
     tenant,
@@ -43,5 +47,6 @@ export async function getSession(): Promise<Session> {
     scope: roleDef(user.role).scope,
     host: h.get("x-orbis-host") ?? "",
     locale: isLocale(requestedLocale) ? requestedLocale : tenant.locale,
+    theme: isTheme(requestedTheme) ? requestedTheme : "light",
   };
 }

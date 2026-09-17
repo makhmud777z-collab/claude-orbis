@@ -1,7 +1,8 @@
 import { CHANNELS } from "./data/channels";
 import { DEALS } from "./data/deals";
 import { LEADS, digits, isActiveLead } from "./data/leads";
-import { DEPARTMENT_OF, PROJECTS, WORK_SESSIONS } from "./data/org";
+import { EVENTS } from "./data/events";
+import { DEPARTMENTS, DEPARTMENT_OF, PROJECTS, WORK_SESSIONS } from "./data/org";
 import { PIPELINES } from "./data/pipelines";
 import { STUDENTS } from "./data/students";
 import { TASKS } from "./data/tasks";
@@ -10,8 +11,8 @@ import { USERS } from "./data/users";
 import { loc, type Loc } from "./i18n";
 import type { Action, Module } from "./rbac";
 import type {
-  Deal, Department, Lead, Pipeline, Project, Role, Stage, Student, Task,
-  TimelineEvent, User, WorkSession,
+  CalendarEvent, Deal, Department, EventKind, Lead, Pipeline, Project, Role, Stage,
+  Student, Task, TimelineEvent, User, WorkSession,
 } from "./types";
 
 /**
@@ -33,12 +34,26 @@ interface State {
   timeline: TimelineEvent[];
   sessions: WorkSession[];
   projects: Project[];
+  events: CalendarEvent[];
+  departments: Department[];
+  /** в каком подразделении числится сотрудник: userId → departmentId */
+  departmentOf: Record<string, string>;
   /** переопределения прав по арендаторам: tenantId → роль → модуль → действия */
   permissions: Record<string, Partial<Record<Role, Partial<Record<Module, Action[]>>>>>;
   /** какие поля показывать на карточке канбана: userId → список полей */
   cardFields: Record<string, string[]>;
+  /** сохранённые фильтры: «userId:раздел» → срезы сотрудника */
+  filters: Record<string, SavedFilter[]>;
   seq: number;
+  version: number;
 }
+
+/**
+ * Версия формы состояния. При hot reload прежний объект переживает правку
+ * кода, и новое поле оказалось бы undefined — поэтому состояние с чужой
+ * версией пересоздаётся целиком.
+ */
+const STATE_VERSION = 3;
 
 const globalStore = globalThis as unknown as { __orbisStore?: State };
 
@@ -52,17 +67,29 @@ function createState(): State {
     timeline: TIMELINE.map((x) => ({ ...x })),
     sessions: WORK_SESSIONS.map((x) => ({ ...x })),
     projects: PROJECTS.map((x) => ({ ...x })),
+    events: EVENTS.map((x) => ({ ...x })),
+    departments: DEPARTMENTS.map((x) => ({ ...x })),
+    departmentOf: { ...DEPARTMENT_OF },
     permissions: {},
     cardFields: {},
+    filters: {},
     seq: 1000,
+    version: STATE_VERSION,
   };
 }
 
-const state: State = (globalStore.__orbisStore ??= createState());
+if (globalStore.__orbisStore?.version !== STATE_VERSION) globalStore.__orbisStore = createState();
+const state: State = globalStore.__orbisStore;
 
 const nextId = (prefix: string) => `${prefix}_${++state.seq}`;
 const now = () => "2026-09-16T09:30:00";
 const today = () => "2026-09-16";
+
+/** Локальное время без часового пояса — в том же формате, что и демо-данные. */
+function stamp(d = new Date()) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
 
 /* ── чтение ──────────────────────────────────────────────────── */
 export const allLeads = (tenantId: string) => state.leads.filter((l) => l.tenantId === tenantId);
@@ -96,7 +123,74 @@ export const sessionsOf = (tenantId: string) => state.sessions.filter((s) => s.t
 export const openSession = (userId: string) =>
   state.sessions.find((s) => s.userId === userId && !s.endedAt);
 
-export const departmentOf = (userId: string) => DEPARTMENT_OF[userId] ?? null;
+export const departmentOf = (userId: string) => state.departmentOf[userId] ?? null;
+export const departmentsOf = (tenantId: string) =>
+  state.departments.filter((d) => d.tenantId === tenantId);
+export const departmentById = (id: string) => state.departments.find((d) => d.id === id);
+
+/* ── структура компании ──────────────────────────────────────── */
+
+/** Новое подразделение внутри выбранного: дерево растёт из интерфейса. */
+export function addDepartment(tenantId: string, name: Loc, parentId: string | null, headId: string | null) {
+  const department: Department = { id: nextId("dep"), tenantId, name, parentId, headId };
+  state.departments.push(department);
+  return department;
+}
+
+export function setDepartmentHead(departmentId: string, headId: string | null) {
+  const department = departmentById(departmentId);
+  if (department) department.headId = headId;
+}
+
+export function renameDepartment(departmentId: string, name: Loc) {
+  const department = departmentById(departmentId);
+  if (department) department.name = name;
+}
+
+/**
+ * Перенос сотрудника в другое подразделение. Пишем в историю: перевод —
+ * кадровое событие, и потом всегда спрашивают, когда и кто его сделал.
+ */
+export function moveEmployee(userId: string, departmentId: string, actorId: string) {
+  const user = USERS.find((u) => u.id === userId);
+  const to = departmentById(departmentId);
+  if (!user || !to || state.departmentOf[userId] === departmentId) return;
+
+  const from = departmentById(state.departmentOf[userId] ?? "");
+  state.departmentOf[userId] = departmentId;
+  addTimeline({
+    tenantId: user.tenantId, entity: "employee", entityId: userId, kind: "system",
+    title: loc(
+      `Переведён: ${from ? from.name.ru : "—"} → ${to.name.ru}`,
+      `Ko‘chirildi: ${from ? from.name.uz : "—"} → ${to.name.uz}`,
+    ),
+    body: null, authorId: actorId, source: null, dueAt: null, done: null,
+  });
+}
+export const allEvents = (tenantId: string) => state.events.filter((e) => e.tenantId === tenantId);
+
+/** Своё событие в календаре: встреча, звонок или интервью. */
+export function addEvent(input: Omit<CalendarEvent, "id">) {
+  const event: CalendarEvent = { ...input, id: nextId("ev") };
+  state.events.push(event);
+  addTimeline({
+    tenantId: event.tenantId,
+    entity: "employee",
+    entityId: event.ownerId,
+    kind: "activity",
+    title: loc(`Событие в календаре: ${event.title}`, `Kalendarda hodisa: ${event.title}`),
+    body: event.note || null,
+    authorId: event.ownerId,
+    source: null,
+    dueAt: event.date,
+    done: false,
+  });
+  return event;
+}
+export function removeEvent(id: string) {
+  state.events = state.events.filter((e) => e.id !== id);
+}
+export type { EventKind };
 export const channelsOf = (tenantId: string) => CHANNELS.filter((c) => c.tenantId === tenantId);
 
 /* ── права ───────────────────────────────────────────────────── */
@@ -286,44 +380,74 @@ export function convertLead(leadId: string, actorId: string) {
 }
 
 /* ── рабочий день ────────────────────────────────────────────── */
+
+/**
+ * Отметка рабочего дня ставится настоящим временем, а не демо-датой:
+ * это единственное место продукта, где секунды идут по-настоящему —
+ * сотрудник видит, сколько он отработал прямо сейчас.
+ */
 export function startWorkDay(tenantId: string, userId: string) {
   if (openSession(userId)) return;
+  const at = stamp();
   state.sessions.push({
-    id: nextId("ws"), tenantId, userId, date: today(),
-    startedAt: now(), endedAt: null, breakMinutes: 0, onBreakSince: null,
+    id: nextId("ws"), tenantId, userId, date: at.slice(0, 10),
+    startedAt: at, endedAt: null, breakMinutes: 0, onBreakSince: null,
   });
 }
 export function endWorkDay(userId: string) {
   const session = openSession(userId);
   if (!session) return;
-  if (session.onBreakSince) session.onBreakSince = null;
-  session.endedAt = now();
+  if (session.onBreakSince) {
+    session.breakSeconds = (session.breakSeconds ?? 0) + elapsedSince(session.onBreakSince);
+    session.onBreakSince = null;
+  }
+  session.endedAt = liveDay(session) ? stamp() : now();
 }
 export function toggleBreak(userId: string) {
   const session = openSession(userId);
   if (!session) return;
   if (session.onBreakSince) {
-    session.breakMinutes += 15;
+    session.breakSeconds = (session.breakSeconds ?? 0) + elapsedSince(session.onBreakSince);
     session.onBreakSince = null;
   } else {
-    session.onBreakSince = now();
+    session.onBreakSince = liveDay(session) ? stamp() : now();
   }
 }
 
-/** Отработанные минуты за сессию: конец (или «сейчас») минус начало и перерывы. */
-export function sessionMinutes(s: WorkSession): number {
-  const end = s.endedAt ? new Date(s.endedAt) : new Date(now());
-  const raw = Math.max(0, Math.round((end.getTime() - new Date(s.startedAt).getTime()) / 60000));
-  return Math.max(0, raw - s.breakMinutes);
+/** Отметка сделана сегодня по-настоящему, а не пришла из демо-данных. */
+const liveDay = (s: WorkSession) => s.date === stamp().slice(0, 10);
+
+const parse = (v: string) => new Date(v.length <= 10 ? `${v}T00:00:00` : v);
+const elapsedSince = (from: string) =>
+  Math.max(0, Math.round((Date.now() - parse(from).getTime()) / 1000));
+
+/** Суммарный перерыв в секундах, включая идущий прямо сейчас. */
+export function breakSeconds(s: WorkSession): number {
+  const stored = s.breakSeconds ?? s.breakMinutes * 60;
+  return stored + (s.onBreakSince ? elapsedSince(s.onBreakSince) : 0);
 }
+
+/**
+ * Отработанные секунды: конец (или «сейчас») минус начало и перерывы.
+ * «Сейчас» у сегодняшней отметки настоящее, у демо-данных — демо-дата,
+ * иначе прошлогодние сиды показали бы тысячи часов.
+ */
+export function sessionSeconds(s: WorkSession): number {
+  const end = s.endedAt ? parse(s.endedAt) : liveDay(s) ? new Date() : parse(now());
+  const raw = Math.max(0, Math.round((end.getTime() - parse(s.startedAt).getTime()) / 1000));
+  return Math.max(0, raw - breakSeconds(s));
+}
+
+export const sessionMinutes = (s: WorkSession): number => Math.round(sessionSeconds(s) / 60);
 
 /* ── редактирование полей карточки ───────────────────────────── */
 
 /** Какие поля карточки сотрудник правит прямо из карточки, кнопкой «Изменить». */
-export const EDITABLE: Record<"lead" | "deal" | "contact", string[]> = {
+export const EDITABLE: Record<"lead" | "deal" | "contact" | "employee", string[]> = {
   lead: ["name", "phone", "email", "comment"],
   deal: ["intake", "deadline", "contractValue", "paid", "priority", "note"],
   contact: ["fullName", "latinName", "phone", "email", "city", "passport", "birthDate"],
+  employee: ["name", "title", "email", "phone", "phone2", "birthDate", "joinedAt"],
 };
 
 const NUMERIC = new Set(["contractValue", "paid"]);
@@ -334,12 +458,16 @@ const NUMERIC = new Set(["contractValue", "paid"]);
  * иначе в базе появятся два человека с одним номером.
  */
 export function updateCard(
-  entity: "lead" | "deal" | "contact",
+  entity: "lead" | "deal" | "contact" | "employee",
   id: string,
   patch: Record<string, string>,
   actorId: string,
 ): { ok: true } | { ok: false; duplicate: DuplicateHit } {
-  const found = entity === "lead" ? leadById(id) : entity === "deal" ? dealById(id) : studentById(id);
+  const found =
+    entity === "lead" ? leadById(id)
+    : entity === "deal" ? dealById(id)
+    : entity === "employee" ? USERS.find((u) => u.id === id)
+    : studentById(id);
   if (!found) return { ok: true };
   // Точечная правка по именам полей: белый список EDITABLE уже ограничил набор.
   const record = found as unknown as Record<string, unknown>;
@@ -347,7 +475,8 @@ export function updateCard(
   const tenantId = String(record.tenantId);
   const allowed = EDITABLE[entity];
 
-  if (entity !== "deal" && (patch.phone || patch.email)) {
+  // Дубли ищем среди людей агентства; сотрудник в эту базу не входит.
+  if (entity !== "deal" && entity !== "employee" && (patch.phone || patch.email)) {
     const hit = findDuplicate(
       tenantId,
       { phone: patch.phone, email: patch.email ?? null, passport: patch.passport ?? null },
@@ -422,4 +551,32 @@ export function setUserStatus(userId: string, status: User["status"], actorId: s
       : loc("Доступ восстановлен", "Kirish tiklandi"),
     body: null, authorId: actorId, source: null, dueAt: null, done: null,
   });
+}
+
+/* ── сохранённые фильтры ─────────────────────────────────────── */
+
+export interface SavedFilter {
+  id: string;
+  name: string;
+  /** строка запроса без «?» — ровно то, что стоит в адресе раздела */
+  query: string;
+}
+
+/**
+ * Свои срезы сотрудника: он собирает набор условий и сохраняет его под именем,
+ * как в Битриксе. Хранится на сотрудника и раздел — чужие срезы не мешают.
+ */
+export function savedFilters(userId: string, scope: string): SavedFilter[] {
+  return state.filters[`${userId}:${scope}`] ?? [];
+}
+export function saveFilter(userId: string, scope: string, name: string, query: string) {
+  const key = `${userId}:${scope}`;
+  state.filters[key] ??= [];
+  const existing = state.filters[key].find((f) => f.name === name);
+  if (existing) existing.query = query;
+  else state.filters[key].push({ id: nextId("flt"), name, query });
+}
+export function deleteFilter(userId: string, scope: string, id: string) {
+  const key = `${userId}:${scope}`;
+  state.filters[key] = (state.filters[key] ?? []).filter((f) => f.id !== id);
 }

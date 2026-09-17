@@ -1,13 +1,15 @@
-import { moduleGate } from "@/components/guard";
 import Link from "next/link";
+import { SectionFilter } from "@/components/SectionFilter";
+import { moduleGate } from "@/components/guard";
 import { IconExport } from "@/components/icons";
-import { Avatar, PageHeader, SectionTitle, StatusDot } from "@/components/ui";
+import { Avatar, EmptyState, PageHeader, SectionTitle, StatusDot } from "@/components/ui";
 import { userById } from "@/lib/data/users";
+import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
 import { daysUntil, formatters } from "@/lib/format";
 import { translator, type Loc } from "@/lib/i18n";
 import { DEADLINE_KIND } from "@/lib/labels";
-import { can } from "@/lib/rbac";
-import { scopedDeadlines } from "@/lib/queries";
+import { scopedDeadlines, scopedTeam } from "@/lib/queries";
+import { deadlineFields, simplePresets } from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
 import { S } from "@/lib/strings";
 import type { Deadline } from "@/lib/types";
@@ -20,14 +22,24 @@ const GROUPS: { key: string; title: Loc; test: (d: number) => boolean }[] = [
   { key: "later", title: S.deadlines.groupLater, test: (d) => d > 30 },
 ];
 
-export default async function DeadlinesPage() {
+export default async function DeadlinesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await getSession();
+  const params = await searchParams;
   const t = translator(session.locale);
   const f = formatters(session.locale);
   const gate = moduleGate(session, "deadlines", t(S.nav.deadlines));
   if (gate) return gate;
 
-  const deadlines = scopedDeadlines(session);
+  const fields = deadlineFields(scopedTeam(session), t);
+  const values = readFilter(params);
+  const query = readQuery(params);
+
+  const all = scopedDeadlines(session);
+  const deadlines = all.filter((d) => matchesFilter(deadlineRow(d, t(d.title)), fields, values, query));
   const overdue = deadlines.filter((d) => daysUntil(d.date) < 0).length;
 
   const href = (d: Deadline) =>
@@ -44,7 +56,7 @@ export default async function DeadlinesPage() {
         meta={
           <>
             <span>
-              {deadlines.length} {t(S.deadlines.events)}
+              {all.length} {t(S.deadlines.events)}
             </span>
             <span className="text-ink-faint">·</span>
             <span>
@@ -55,11 +67,23 @@ export default async function DeadlinesPage() {
           </>
         }
         actions={
-          <button className="btn btn-secondary btn-sm">
+          <Link href="/calendar" className="btn btn-secondary btn-sm">
             <IconExport size={15} /> {t(S.deadlines.toCalendar)}
-          </button>
+          </Link>
         }
       />
+
+      <SectionFilter
+        scope="deadlines"
+        fields={fields}
+        presets={simplePresets()}
+        locale={session.locale}
+        userId={session.user.id}
+        total={all.length}
+        shown={deadlines.length}
+      />
+
+      {!deadlines.length ? <EmptyState title={t(FILTER_TEXT.nothing)} /> : null}
 
       <div className="space-y-8">
         {GROUPS.map((group) => {
@@ -118,4 +142,9 @@ export default async function DeadlinesPage() {
       </div>
     </>
   );
+}
+
+/** Плоское представление дедлайна для фильтра. */
+function deadlineRow(d: Deadline, title: string): FilterRow {
+  return { search: title, kind: d.kind, ownerId: d.ownerId, date: d.date };
 }

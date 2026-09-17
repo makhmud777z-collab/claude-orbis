@@ -2,8 +2,8 @@ import type { Loc } from "@/lib/i18n";
 import { loc } from "@/lib/i18n";
 import type { Module } from "@/lib/rbac";
 import {
-  IconApplications, IconDashboard, IconDeadline, IconDocuments, IconFinance,
-  IconSettings, IconStudents, IconTasks, IconTeam, IconUniversity,
+  IconApplications, IconCalendar, IconDashboard, IconDeadline, IconDocuments,
+  IconFinance, IconSettings, IconTasks, IconTeam, IconUniversity,
 } from "./icons";
 
 export interface NavChild {
@@ -36,7 +36,6 @@ export const NAV: NavEntry[] = [
       { href: "/crm/leads", label: loc("Лиды", "Lidlar"), module: "leads" },
       { href: "/crm/deals", label: loc("Сделки", "Bitimlar"), module: "deals" },
       { href: "/crm/contacts", label: loc("Контакты", "Kontaktlar"), module: "contacts" },
-      { href: "/crm/pipelines", label: loc("Воронки", "Voronkalar"), module: "crmSettings" },
       { href: "/crm/channels", label: loc("Каналы продаж", "Sotuv kanallari"), module: "crmSettings" },
       { href: "/crm/settings", label: loc("Настройки CRM", "CRM sozlamalari"), module: "crmSettings" },
     ],
@@ -48,12 +47,15 @@ export const NAV: NavEntry[] = [
       { href: "/tasks", label: loc("Задачи", "Vazifalar"), module: "tasks" },
       { href: "/tasks/projects", label: loc("Проекты", "Loyihalar"), module: "projects" },
       { href: "/tasks/reports", label: loc("Отчёты", "Hisobotlar"), module: "tasks" },
-      { href: "/tasks/templates", label: loc("Шаблоны", "Shablonlar"), module: "tasks" },
     ],
   },
   {
     key: "documents", href: "/documents", label: loc("Документы", "Hujjatlar"),
     icon: IconDocuments, group: "work", module: "documents",
+  },
+  {
+    key: "calendar", href: "/calendar", label: loc("Календарь", "Kalendar"),
+    icon: IconCalendar, group: "work", module: "calendar",
   },
   {
     key: "deadlines", href: "/deadlines", label: loc("Дедлайны", "Muddatlar"),

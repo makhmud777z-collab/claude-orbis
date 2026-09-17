@@ -60,7 +60,7 @@ function select(id, value, options, width) {
 }
 
 const checkbox = (on) =>
-  `<span class="check" style="border-color:${on ? "var(--ink)" : "var(--hairline)"};background:${on ? "var(--ink)" : "transparent"};color:#000">${on ? icon("tick", 11) : ""}</span>`;
+  `<span class="check" style="border-color:${on ? "var(--accent)" : "var(--hairline)"};background:${on ? "var(--accent)" : "transparent"};color:#fff">${on ? icon("tick", 11) : ""}</span>`;
 
 /** Палитра стадии: готовые цвета плюс ручной HEX, как в настройках воронки. */
 const PALETTE = ["#ff7a3d", "#ff5577", "#d44df0", "#6a4cf5", "#0099ff", "#22c55e",
@@ -248,3 +248,217 @@ const fieldsCard = (title, rows) => `
     </div>
     ${rows.map(([label, value]) => kv(label, value)).join("")}
   </div>`;
+
+/* ── умный фильтр: один на все разделы ───────────────────── */
+/**
+ * Повторяет фильтр Битрикса: свёрнутая строка с поиском и чипами условий,
+ * развёрнутая панель — пресеты слева, поля справа. Условия применяются
+ * кнопкой «Найти»: список, который пересобирается на каждое нажатие
+ * клавиши, работать мешает.
+ */
+function smartFilter(scopeKey, fields, presets, counts) {
+  const st = filterState(scopeKey);
+  st.draft ??= { q: st.q, values: { ...st.values } };
+  const shown = activeFields(scopeKey, fields);
+  const open = S.filterOpen === scopeKey;
+  const conditions = activeConditions(fields, st.values);
+  const saved = savedFilters(scopeKey);
+
+  const control = (f) => {
+    const d = st.draft.values;
+    if (f.range) {
+      return `<span style="display:flex;gap:8px">
+        <input class="field" style="border-radius:100px" placeholder="${t(loc("от", "dan"))}" value="${esc(d[f.key + "From"] ?? "")}" data-act="f.set:${scopeKey}:${f.key}From">
+        <input class="field" style="border-radius:100px" placeholder="${t(loc("до", "gacha"))}" value="${esc(d[f.key + "To"] ?? "")}" data-act="f.set:${scopeKey}:${f.key}To">
+      </span>`;
+    }
+    if (f.kind === "select") {
+      const options = [{ value: "", label: loc("Любое", "Har qanday") }, ...f.options];
+      return select(`f.set:${scopeKey}:${f.key}`, d[f.key] ?? "", options.map((o) => ({ value: String(o.value), label: t(o.label), color: o.color })), 210);
+    }
+    return `<input class="field" style="border-radius:100px" placeholder="${esc(t(f.label))}" value="${esc(d[f.key] ?? "")}" data-act="f.set:${scopeKey}:${f.key}">`;
+  };
+
+  const hidden = fields.filter((f) => !shown.includes(f.key));
+
+  return `<div class="filter">
+    <div class="filter-bar">
+      <span class="faint" style="display:flex">${icon("search", 15)}</span>
+      <input placeholder="${t(loc("Поиск и фильтр", "Qidiruv va filtr"))}" value="${esc(st.draft.q ?? "")}" data-act="f.q:${scopeKey}" data-enter="f.apply:${scopeKey}">
+      ${conditions.map((c) => `<span class="chip on">${esc(c.label)}: ${esc(c.value)}
+        <button class="chip-x" data-act="f.drop:${scopeKey}:${c.key}" aria-label="${t(loc("Убрать условие", "Shartni olib tashlash"))}">${icon("close", 11)}</button>
+      </span>`).join("")}
+      ${counts ? `<span class="t-micro faint nowrap">${counts.shown} ${t(loc("из", "dan"))} ${counts.total}</span>` : ""}
+      <button class="btn ${open ? "btn-primary" : "btn-secondary"}" data-act="f.open:${scopeKey}">${icon("filter", 14)} ${t(loc("Фильтр", "Filtr"))}</button>
+    </div>
+
+    ${open ? `<div class="filter-panel">
+      <div class="filter-presets">
+        <div class="t-micro faint" style="text-transform:uppercase;letter-spacing:.07em;padding:0 10px 8px">${t(loc("Фильтры", "Filtrlar"))}</div>
+        ${presets.map((p) => `<button class="filter-preset${st.preset === p.key ? " on" : ""}" data-act="f.preset:${scopeKey}:${p.key}">${esc(t(p.label))}</button>`).join("")}
+        ${saved.length ? `<div class="t-micro faint" style="text-transform:uppercase;letter-spacing:.07em;padding:12px 10px 8px">${t(loc("Мои фильтры", "Mening filtrlarim"))}</div>
+          ${saved.map((f, i) => `<button class="filter-preset" data-act="f.saved:${scopeKey}:${i}">${esc(f.name)}</button>`).join("")}` : ""}
+      </div>
+      <div class="filter-fields">
+        ${shown.map((key) => {
+          const f = fields.find((x) => x.key === key);
+          if (!f) return "";
+          return `<div class="filter-field">
+            <label>${esc(t(f.label))}</label>
+            ${control(f)}
+            <button class="chip-x" data-act="f.field:${scopeKey}:${f.key}" aria-label="${t(loc("Убрать поле", "Maydonni olib tashlash"))}">${icon("close", 13)}</button>
+          </div>`;
+        }).join("")}
+        <div style="position:relative">
+          <button class="btn btn-secondary" data-pop="ffields">${icon("plus", 14)} ${t(loc("Добавить поле", "Maydon qo‘shish"))}</button>
+          ${S.popover === "ffields" ? `<span class="pop" style="top:42px;left:0">
+            ${hidden.length ? hidden.map((f) => `<button data-act="f.field:${scopeKey}:${f.key}">${esc(t(f.label))}</button>`).join("")
+              : `<span class="t-micro faint" style="display:block;padding:10px 12px">${t(loc("Все поля уже добавлены", "Barcha maydonlar qo‘shilgan"))}</span>`}
+          </span>` : ""}
+        </div>
+      </div>
+      <div class="filter-foot">
+        <button class="btn btn-primary" data-act="f.apply:${scopeKey}">${t(loc("Найти", "Topish"))}</button>
+        <button class="btn btn-secondary" data-act="f.clear:${scopeKey}">${t(loc("Сбросить", "Tozalash"))}</button>
+        <span style="flex:1"></span>
+        <button class="btn btn-secondary" data-act="f.default:${scopeKey}">${t(loc("Вернуть поля по умолчанию", "Standart maydonlar"))}</button>
+        <button class="btn btn-secondary" data-act="f.save:${scopeKey}">${icon("plus", 13)} ${t(loc("Сохранить фильтр", "Filtrni saqlash"))}</button>
+      </div>
+    </div>` : ""}
+  </div>`;
+}
+
+/* ── поля и пресеты фильтра по разделам ──────────────────── */
+const opt = (value, label, color) => ({ value: String(value), label, color });
+const teamOptions = () => scopedTeam().map((u) => opt(u.id, loc(u.name, u.name)));
+const stageOptions = (entity) => pipelinesOf(entity).flatMap((p) => stagesOf(p).map((s) => opt(s.key, s.label, s.color)));
+
+function contactFields() {
+  return [
+    { key: "status", label: loc("Статус", "Holat"), kind: "select", def: true,
+      options: Object.entries(L.studentStatus).map(([k, v]) => opt(k, v.label, v.dot)) },
+    { key: "ownerId", label: loc("Куратор", "Kurator"), kind: "select", def: true, options: teamOptions() },
+    { key: "topik", label: "TOPIK", kind: "number", range: true, def: true },
+    { key: "city", label: loc("Город", "Shahar"), kind: "select",
+      options: [...new Set(scopedContacts().map((s) => s.city))].map((c) => opt(c, ref(L.city, c))) },
+    { key: "source", label: loc("Источник", "Manba"), kind: "select",
+      options: Object.entries(L.source).map(([k, v]) => opt(k, v)) },
+    { key: "budget", label: loc("Бюджет на год, $", "Yillik byudjet, $"), kind: "number", range: true },
+  ];
+}
+function leadFields() {
+  return [
+    { key: "stage", label: loc("Стадия", "Bosqich"), kind: "select", def: true, options: stageOptions("lead") },
+    { key: "ownerId", label: loc("Ответственный", "Mas’ul"), kind: "select", def: true, options: teamOptions() },
+    { key: "source", label: loc("Источник", "Manba"), kind: "select", def: true,
+      options: Object.entries(L.source).map(([k, v]) => opt(k, v)) },
+  ];
+}
+function dealFields() {
+  return [
+    { key: "stage", label: loc("Стадия", "Bosqich"), kind: "select", def: true, options: stageOptions("deal") },
+    { key: "ownerId", label: loc("Куратор", "Kurator"), kind: "select", def: true, options: teamOptions() },
+    { key: "universityId", label: loc("Вуз", "Universitet"), kind: "select",
+      options: D.universities.map((u) => opt(u.id, loc(u.name, u.name))) },
+    { key: "intake", label: loc("Набор", "Qabul"), kind: "select",
+      options: [...new Set(D.deals.map((d) => d.intake))].map((i) => opt(i, ref(L.intake, i))) },
+    { key: "degreeLevel", label: loc("Уровень", "Bosqich"), kind: "select",
+      options: Object.entries(L.degree).map(([k, v]) => opt(k, v)) },
+    { key: "priority", label: loc("Приоритет", "Ustuvorlik"), kind: "select", def: true,
+      options: Object.entries(L.priority).map(([k, v]) => opt(k, v.label ?? v, v.dot)) },
+    { key: "contractValue", label: loc("Сумма договора", "Shartnoma summasi"), kind: "number", range: true },
+  ];
+}
+function taskFields() {
+  return [
+    { key: "status", label: loc("Статус", "Holat"), kind: "select", def: true,
+      options: Object.entries(L.taskStatus).map(([k, v]) => opt(k, v.label ?? v, v.dot)) },
+    { key: "assigneeId", label: loc("Исполнитель", "Ijrochi"), kind: "select", def: true, options: teamOptions() },
+    { key: "priority", label: loc("Приоритет", "Ustuvorlik"), kind: "select", def: true,
+      options: Object.entries(L.priority).map(([k, v]) => opt(k, v.label ?? v, v.dot)) },
+    { key: "projectId", label: loc("Проект", "Loyiha"), kind: "select",
+      options: D.projects.filter((p) => p.tenantId === S.tenant).map((p) => opt(p.id, p.name)) },
+  ];
+}
+function deadlineFields() {
+  return [
+    { key: "kind", label: loc("Тип срока", "Muddat turi"), kind: "select", def: true,
+      options: Object.entries(L.deadlineKind).map(([k, v]) => opt(k, v.label ?? v, v.dot)) },
+    { key: "ownerId", label: loc("Ответственный", "Mas’ul"), kind: "select", def: true, options: teamOptions() },
+  ];
+}
+function documentFields() {
+  return [
+    { key: "status", label: loc("Статус", "Holat"), kind: "select", def: true,
+      options: Object.entries(L.documentStatus).map(([k, v]) => opt(k, v.label ?? v, v.dot)) },
+    { key: "apostille", label: loc("Апостиль", "Apostil"), kind: "select",
+      options: [opt("yes", loc("Нужен", "Kerak")), opt("no", loc("Не нужен", "Kerak emas"))] },
+  ];
+}
+function teamFields() {
+  return [
+    { key: "role", label: loc("Роль", "Rol"), kind: "select", def: true,
+      options: D.roles.map((r) => opt(r.key, r.label)) },
+    { key: "branchId", label: loc("Филиал", "Filial"), kind: "select", def: true,
+      options: tenant().branches.map((b) => opt(b.id, loc(b.name, b.name))) },
+    { key: "departmentId", label: loc("Подразделение", "Bo‘lim"), kind: "select",
+      options: allDepartments().map((d) => opt(d.id, d.name)) },
+  ];
+}
+function universityFields() {
+  return [
+    { key: "city", label: loc("Город", "Shahar"), kind: "select", def: true,
+      options: [...new Set(D.universities.map((u) => u.city))].sort().map((c) => opt(c, ref(L.city, c))) },
+    { key: "ownership", label: loc("Форма собственности", "Mulkchilik shakli"), kind: "select", def: true,
+      options: Object.entries(L.ownership).map(([k, v]) => opt(k, v)) },
+    { key: "field", label: loc("Направление", "Yo‘nalish"), kind: "select", def: true,
+      options: [...new Set(D.universities.flatMap((u) => u.fields))].sort().map((f) => opt(f, ref(L.field, f))) },
+    { key: "degree", label: loc("Уровень обучения", "Ta’lim bosqichi"), kind: "select",
+      options: Object.entries(L.degree).map(([k, v]) => opt(k, v)) },
+    { key: "topik", label: loc("TOPIK студента", "Talabaning TOPIK darajasi"), kind: "number", range: true },
+    { key: "tuition", label: loc("Стоимость года, $", "Yillik narx, $"), kind: "number", range: true },
+    { key: "intake", label: loc("Набор", "Qabul"), kind: "select",
+      options: [...new Set(D.universities.flatMap((u) => u.intakes))].sort().map((i) => opt(i, ref(L.intake, i))) },
+    { key: "dorm", label: loc("Общежитие", "Yotoqxona"), kind: "select",
+      options: [opt("yes", loc("Есть", "Bor"))] },
+    { key: "english", label: loc("Английский трек", "Ingliz tilida"), kind: "select",
+      options: [opt("yes", loc("Есть", "Bor"))] },
+  ];
+}
+
+/** Готовые срезы: то, что сотрудник открывает каждый день. */
+const simplePresets = () => [{ key: "all", label: loc("Все", "Barchasi"), values: {} }];
+const minePreset = (key) => ({ key: "mine", label: loc("Мои", "Meniki"), values: { [key]: S.userId } });
+const contactPresets = () => [
+  { key: "all", label: loc("Все контакты", "Barcha kontaktlar"), values: {} },
+  minePreset("ownerId"),
+  { key: "active", label: loc("В работе", "Ishda"), values: { status: "active" } },
+  { key: "enrolled", label: loc("Зачислены", "Qabul qilingan"), values: { status: "enrolled" } },
+];
+const dealPresets = () => [
+  { key: "all", label: loc("Все сделки", "Barcha bitimlar"), values: {} },
+  minePreset("ownerId"),
+  { key: "hot", label: loc("Высокий приоритет", "Yuqori ustuvorlik"), values: { priority: "high" } },
+];
+const leadPresets = () => [
+  { key: "all", label: loc("Все лиды", "Barcha lidlar"), values: {} },
+  minePreset("ownerId"),
+  { key: "new", label: loc("Новые", "Yangi"), values: { stage: "new" } },
+];
+const taskPresets = () => [
+  { key: "all", label: loc("Все задачи", "Barcha vazifalar"), values: {} },
+  minePreset("assigneeId"),
+  { key: "open", label: loc("В работе", "Ishda"), values: { status: "in_progress" } },
+];
+
+/**
+ * Воронка переключается прямо в шапке «Лидов» и «Сделок», как в Битриксе,
+ * а настраивается по шестерёнке рядом — отдельного пункта меню больше нет.
+ */
+function pipelinePicker(pipeline) {
+  const list = pipelinesOf(pipeline.entity);
+  return `<span style="display:inline-flex;align-items:center;gap:6px">
+    ${select("pipeline", pipeline.id, list.map((p) => ({ value: p.id, label: t(p.name) })), 200)}
+    <button class="icon-btn" data-go="pipelines" title="${t(loc("Настроить воронку", "Voronkani sozlash"))}">${icon("gear", 16)}</button>
+  </span>`;
+}

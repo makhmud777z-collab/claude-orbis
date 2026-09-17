@@ -37,29 +37,51 @@ await page.goto(`${BASE}/universities/compare?student=s_002`, { waitUntil: "netw
 const cmp = await page.locator("body").innerText();
 check(cmp.includes(uniName?.trim() ?? "###"), `в сравнении нет добавленного вуза «${uniName?.trim()}»`);
 
-/* 3. Фильтры каталога сокращают выдачу */
+/* 3. Умный фильтр каталога сокращает выдачу */
 await page.goto(`${BASE}/universities`, { waitUntil: "networkidle" });
 const before = Number((await page.locator("text=/Найдено \\d+/").first().textContent())?.match(/\d+/)?.[0]);
-await page.getByRole("button", { name: "Медицина", exact: true }).click();
+await page.getByText("Фильтр + поиск").click();
 await page.waitForTimeout(300);
+await page.getByRole("button", { name: "Медицина", exact: true }).click();
+await page.getByRole("button", { name: "Найти", exact: true }).click();
+await page.waitForURL(/f_fields=/, { timeout: 8000 });
+await page.waitForTimeout(400);
 const after = Number((await page.locator("text=/Найдено \\d+/").first().textContent())?.match(/\d+/)?.[0]);
 check(after < before && after > 0, `фильтр «Медицина»: было ${before}, стало ${after}`);
 
-/* 4. Поиск по контактам */
+/* 4. Умный фильтр: поиск сужает выдачу и живёт в адресе страницы */
 await page.goto(`${BASE}/crm/contacts`, { waitUntil: "networkidle" });
 const rowsBefore = await page.locator("tbody tr").count();
-await page.getByPlaceholder("Поиск по базе").fill("Малика");
+await page.getByText("Фильтр + поиск").click();
 await page.waitForTimeout(300);
+await page.locator('[role="dialog"], .card-raised').first().locator("input").first().fill("Малика");
+await page.getByRole("button", { name: "Найти", exact: true }).click();
+await page.waitForURL(/q=/, { timeout: 8000 });
+await page.waitForTimeout(400);
 const rowsAfter = await page.locator("tbody tr").count();
 check(rowsAfter === 1 && rowsBefore > 1, `поиск контактов: было ${rowsBefore}, стало ${rowsAfter}`);
 
-/* 5. Срез контактов из адреса */
+/* 5. Готовый срез из левой колонки фильтра */
 await page.goto(`${BASE}/crm/contacts`, { waitUntil: "networkidle" });
 const allRows = await page.locator("tbody tr").count();
-await page.goto(`${BASE}/crm/contacts?status=lead`, { waitUntil: "networkidle" });
+await page.getByText("Фильтр + поиск").click();
 await page.waitForTimeout(300);
-const leadRows = await page.locator("tbody tr").count();
-check(leadRows > 0 && leadRows < allRows, `срез «Лиды»: всего ${allRows}, в срезе ${leadRows}`);
+await page.getByRole("button", { name: "Зачислены", exact: true }).click();
+await page.waitForURL(/f_status=enrolled/, { timeout: 8000 });
+await page.waitForTimeout(400);
+const enrolledRows = await page.locator("tbody tr").count();
+check(
+  enrolledRows > 0 && enrolledRows < allRows,
+  `срез «Зачислены»: всего ${allRows}, в срезе ${enrolledRows}`,
+);
+
+/* 5b. Условие снимается чипом под строкой поиска */
+await page.locator("button.chip-active").first().click();
+await page.waitForTimeout(600);
+check(
+  !page.url().includes("f_status=enrolled"),
+  `условие не снялось: ${page.url()}`,
+);
 
 /*
  * 6. Канбан: карточка переносится на другую стадию и это попадает в историю.
@@ -170,7 +192,7 @@ check(
 );
 await page.keyboard.press("Escape");
 
-/* 10. Рабочий день начинается и завершается из меню профиля */
+/* 10. Рабочий день: таймер идёт по-настоящему, пауза его останавливает */
 const work = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
 await work.addCookies([
   { name: "orbis_tenant", value: "seoulway", domain: "localhost", path: "/" },
@@ -178,23 +200,92 @@ await work.addCookies([
 ]);
 const workPage = await work.newPage();
 await workPage.goto(`${BASE}/`, { waitUntil: "networkidle" });
-await workPage.locator("header button[aria-expanded]").last().click();
-await workPage.waitForTimeout(200);
+
+const profile = () => workPage.locator("header button[aria-expanded]").last();
+await profile().click();
+await workPage.waitForTimeout(250);
+
+// Прогон мог оставить день начатым: состояние живёт в памяти сервера.
+if (await workPage.locator('.card-raised button[name="what"][value="end"]').count()) {
+  await workPage.locator('.card-raised button[name="what"][value="end"]').click();
+  await workPage.waitForTimeout(1200);
+  await profile().click();
+  await workPage.waitForTimeout(250);
+}
+// Статус набран капителью через CSS, поэтому сравниваем без учёта регистра.
 check(
-  (await workPage.locator("body").innerText()).includes("Рабочий день не начат"),
+  /рабочий день не начат/i.test(await workPage.locator("body").innerText()),
   "у сотрудника без отметки не показан статус «Рабочий день не начат»",
 );
-await workPage.getByRole("button", { name: "Начать рабочий день", exact: true }).click();
+
+// кнопка в самой панели профиля, а не компактная в шапке
+await workPage.locator('.card-raised button[name="what"][value="start"]').click();
 await workPage.waitForTimeout(1500);
-await workPage.locator("header button[aria-expanded]").last().click();
-await workPage.waitForTimeout(200);
-check(
-  (await workPage.locator("body").innerText()).includes("Рабочий день идёт"),
-  "рабочий день не начался после нажатия",
-);
-await workPage.getByRole("button", { name: "Завершить рабочий день", exact: true }).click();
-await workPage.waitForTimeout(1500);
+await profile().click();
+await workPage.waitForTimeout(250);
+const panel = () => workPage.locator(".card-raised").first().innerText();
+check(/рабочий день идёт/i.test(await panel()), "рабочий день не начался после нажатия");
+
+const clockOf = (text) => text.match(/\d{2}:\d{2}:\d{2}/)?.[0] ?? "";
+const first = clockOf(await panel());
+check(Boolean(first), "в панели нет часов рабочего дня");
+await workPage.waitForTimeout(2200);
+const second = clockOf(await panel());
+check(second !== first, `таймер не идёт: ${first} → ${second}`);
+
+// на перерыве счёт останавливается — иначе отчётность по часам завышена
+await workPage.locator('.card-raised button[name="what"][value="break"]').click();
+await workPage.waitForTimeout(1200);
+await profile().click();
+await workPage.waitForTimeout(250);
+const paused = clockOf(await panel());
+await workPage.waitForTimeout(2200);
+check(clockOf(await panel()) === paused, "на перерыве таймер продолжает идти");
+
+await workPage.locator('.card-raised button[name="what"][value="end"]').click();
+await workPage.waitForTimeout(1200);
 await work.close();
+
+/* 10b. Тема переключается и остаётся между страницами */
+const theme = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+await theme.addCookies([{ name: "orbis_tenant", value: "seoulway", domain: "localhost", path: "/" }]);
+const themePage = await theme.newPage();
+await themePage.goto(`${BASE}/`, { waitUntil: "networkidle" });
+check(
+  (await themePage.locator("html").getAttribute("data-theme")) === "light",
+  "портал открывается не в светлой теме",
+);
+await themePage.locator("header button[aria-expanded]").last().click();
+await themePage.waitForTimeout(250);
+await themePage.locator('.card-raised button[name="theme"][value="dark"]').click();
+await themePage.waitForTimeout(1200);
+await themePage.goto(`${BASE}/tasks`, { waitUntil: "networkidle" });
+check(
+  (await themePage.locator("html").getAttribute("data-theme")) === "dark",
+  "тёмная тема не сохранилась между страницами",
+);
+await theme.close();
+
+/* 10c. Календарь: день по часам и линия настоящего времени */
+await page.goto(`${BASE}/calendar`, { waitUntil: "networkidle" });
+check(/Сентябрь|Октябрь|Ноябрь|Декабрь|Январь/.test(await page.locator("body").innerText()), "календарь не открылся месяцем");
+const todayIso = new Date().toISOString().slice(0, 10);
+await page.goto(`${BASE}/calendar?view=day&date=${todayIso}`, { waitUntil: "networkidle" });
+await page.waitForTimeout(900);
+const nowLine = await page.locator("text=/^\\d{2}:\\d{2}$/").count();
+check(nowLine > 0, "в дневном разрезе нет отметки настоящего времени");
+
+/* 10d. Структура компании: дерево и панель подразделения */
+await page.goto(`${BASE}/team/structure`, { waitUntil: "networkidle" });
+await page.waitForTimeout(400);
+const depCards = await page.locator("[data-dep]").count();
+check(depCards >= 5, `на схеме мало подразделений: ${depCards}`);
+await page.locator("[data-dep]").nth(1).click();
+await page.waitForTimeout(300);
+check(
+  await page.getByText("Подчинённые", { exact: false }).first().isVisible(),
+  "панель подразделения не показывает подчинённых",
+);
 
 /*
  * 11. Название и цвет стадии меняются в настройках воронки.

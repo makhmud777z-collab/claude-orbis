@@ -30,7 +30,7 @@ export function EditableFields({
   locale,
   canEdit,
 }: {
-  entity: "lead" | "deal" | "contact";
+  entity: "lead" | "deal" | "contact" | "employee";
   id: string;
   title: string;
   fields: EditableField[];

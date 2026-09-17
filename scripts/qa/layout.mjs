@@ -2,7 +2,7 @@ import { chromium } from "playwright";
 
 const BASE = process.env.QA_BASE_URL ?? "http://localhost:3000";
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
-const routes = ["/", "/crm/contacts", "/crm/deals", "/crm/leads", "/universities", "/documents", "/tasks", "/team", "/admin/permissions", "/settings"];
+const routes = ["/", "/crm/contacts", "/crm/deals", "/crm/leads", "/universities", "/documents", "/tasks", "/calendar", "/team", "/team/structure", "/admin/permissions", "/settings"];
 const out = [];
 const broken = [];
 for (const width of [390, 810]) {

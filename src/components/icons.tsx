@@ -54,6 +54,27 @@ export const IconSettings = (p: IconProps) => (
 export const IconCalendar = (p: IconProps) => (
   <Icon {...p}><rect x="3" y="5" width="18" height="16" rx="2.4" /><path d="M3 10h18" /><path d="M8 3v4" /><path d="M16 3v4" /></Icon>
 );
+export const IconPlay = (p: IconProps) => (
+  <Icon {...p}><path d="M7 4.5 19 12 7 19.5V4.5Z" fill="currentColor" stroke="none" /></Icon>
+);
+export const IconPause = (p: IconProps) => (
+  <Icon {...p}><rect x="6.5" y="4.5" width="4" height="15" rx="1.4" fill="currentColor" stroke="none" /><rect x="13.5" y="4.5" width="4" height="15" rx="1.4" fill="currentColor" stroke="none" /></Icon>
+);
+export const IconStop = (p: IconProps) => (
+  <Icon {...p}><rect x="5.5" y="5.5" width="13" height="13" rx="2.4" fill="currentColor" stroke="none" /></Icon>
+);
+export const IconSun = (p: IconProps) => (
+  <Icon {...p}><circle cx="12" cy="12" r="4" /><path d="M12 2.5v2.2M12 19.3v2.2M21.5 12h-2.2M4.7 12H2.5M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6M18.7 18.7l-1.6-1.6M6.9 6.9 5.3 5.3" /></Icon>
+);
+export const IconMoon = (p: IconProps) => (
+  <Icon {...p}><path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2Z" /></Icon>
+);
+export const IconInstagram = (p: IconProps) => (
+  <Icon {...p}><rect x="3" y="3" width="18" height="18" rx="5.2" /><circle cx="12" cy="12" r="4" /><circle cx="17.4" cy="6.6" r="1.1" fill="currentColor" stroke="none" /></Icon>
+);
+export const IconTelegram = (p: IconProps) => (
+  <Icon {...p}><path d="M21 4.5 2.8 11.3c-.8.3-.8 1.4 0 1.7l4.6 1.5 1.7 5c.3.8 1.3 1 1.8.3l2.4-2.9 4.6 3.4c.6.5 1.5.1 1.7-.6L22 5.6c.2-.8-.4-1.4-1-1.1Z" /><path d="m7.4 14.5 10.2-7.6-7.5 8.5" /></Icon>
+);
 export const IconSearch = (p: IconProps) => (
   <Icon {...p}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.2-3.2" /></Icon>
 );

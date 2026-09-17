@@ -24,7 +24,21 @@ const S = {
   tasks: { mine: false, assignee: "all" },
   lead: { name: "", phone: "", checked: false },
   noteKind: "activity",
+  theme: "light",      // светлая по умолчанию, как в Битриксе
+  filters: {},         // scope → {q, values, fields, preset}
+  filterOpen: null,    // какой раздел раскрыл панель фильтра
+  saved: {},           // userId:scope → [{name, state}]
+  cal: { view: "month", date: TODAY_ISO },
+  events: [],          // свои встречи, добавленные в прототипе
+  org: { selected: null, zoom: 90, q: "" },
+  moves: {},           // userId → departmentId (перенос в структуре)
+  depts: [],           // отделы, созданные в прототипе
+  heads: {},           // departmentId → userId
 };
+try {
+  const savedTheme = localStorage.getItem("orbis-theme");
+  if (savedTheme === "dark" || savedTheme === "light") S.theme = savedTheme;
+} catch { /* приватное окно — тема на сессию */ }
 try {
   const saved = localStorage.getItem("orbis-shortlist");
   if (saved) S.shortlist = JSON.parse(saved);
@@ -145,6 +159,25 @@ function sessionMinutes(s) {
 }
 const hhmm = (mins) => `${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, "0")}`;
 
+/**
+ * Секунды рабочего дня. Отметка, поставленная прямо сейчас, считается по
+ * настоящим часам — счётчик в шапке обязан идти вживую, иначе он украшение.
+ * Демо-отметки из сидов остаются на демо-времени, иначе прототип показал бы
+ * тысячи часов.
+ */
+function sessionSeconds(w) {
+  if (!w) return 0;
+  const breakMs = (w.breakSeconds ?? (w.breakMinutes ?? 0) * 60) * 1000;
+  const paused = w.onBreak && w.breakSince ? Date.now() - w.breakSince : 0;
+  if (w.startedMs) return Math.max(0, Math.round((Date.now() - w.startedMs - breakMs - paused) / 1000));
+  return sessionMinutes(w) * 60;
+}
+const clockText = (sec) => {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  return `${h}:${String(m).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
+};
+
 /* ── дедлайны: считаются из сделок, документов и задач ───── */
 function dossier(studentId) {
   const docs = D.documents.filter((d) => d.studentId === studentId);
@@ -180,3 +213,123 @@ function scopedDeadlines() {
   }
   return items.sort((a, b) => a.date.localeCompare(b.date));
 }
+
+/* ── умный фильтр ────────────────────────────────────────── */
+/**
+ * Фильтр в портале один на все разделы: раздел описывает поля и отдаёт
+ * плоскую строку (row), сопоставление делает одна функция. Новый раздел
+ * получает фильтр, написав только эти две вещи.
+ */
+function filterState(scopeKey) {
+  S.filters[scopeKey] ??= { q: "", values: {}, fields: null, preset: null };
+  return S.filters[scopeKey];
+}
+function activeFields(scopeKey, fields) {
+  const st = filterState(scopeKey);
+  return st.fields ?? fields.filter((f) => f.def).map((f) => f.key);
+}
+function matchesFilter(row, fields, values, query) {
+  if (query) {
+    const hay = String(row.search ?? "").toLowerCase();
+    if (!hay.includes(query.trim().toLowerCase())) return false;
+  }
+  for (const f of fields) {
+    if (f.range) {
+      const from = values[f.key + "From"];
+      const to = values[f.key + "To"];
+      const v = row[f.key];
+      if (from !== undefined && from !== "" && !(Number(v) >= Number(from))) return false;
+      if (to !== undefined && to !== "" && !(Number(v) <= Number(to))) return false;
+      continue;
+    }
+    const want = values[f.key];
+    if (want === undefined || want === "" || want === "all") continue;
+    const v = row[f.key];
+    if (f.kind === "text") {
+      if (!String(v ?? "").toLowerCase().includes(String(want).toLowerCase())) return false;
+    } else if (Array.isArray(v)) {
+      if (!v.map(String).includes(String(want))) return false;
+    } else if (String(v ?? "") !== String(want)) return false;
+  }
+  return true;
+}
+/** Условия, которые реально сужают выдачу, — их и показываем чипами. */
+function activeConditions(fields, values) {
+  const out = [];
+  for (const f of fields) {
+    if (f.range) {
+      if (values[f.key + "From"]) out.push({ key: f.key + "From", label: t(f.label), value: `≥ ${values[f.key + "From"]}` });
+      if (values[f.key + "To"]) out.push({ key: f.key + "To", label: t(f.label), value: `≤ ${values[f.key + "To"]}` });
+      continue;
+    }
+    const v = values[f.key];
+    if (v === undefined || v === "" || v === "all") continue;
+    const opt = f.options?.find((o) => String(o.value) === String(v));
+    out.push({ key: f.key, label: t(f.label), value: opt ? t(opt.label) : String(v) });
+  }
+  return out;
+}
+const savedKey = (scopeKey) => `${S.userId}:${scopeKey}`;
+const savedFilters = (scopeKey) => S.saved[savedKey(scopeKey)] ?? [];
+
+/* ── календарь ───────────────────────────────────────────── */
+const EVENT_KIND = {
+  meeting: { label: loc("Встреча", "Uchrashuv"), color: "var(--accent)" },
+  call: { label: loc("Звонок", "Qo‘ng‘iroq"), color: "var(--violet)" },
+  interview: { label: loc("Собеседование", "Suhbat"), color: "var(--deal)" },
+  personal: { label: loc("Личное", "Shaxsiy"), color: "var(--hold)" },
+};
+const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const shiftDay = (isoDate, days) => { const d = parseDate(isoDate); d.setDate(d.getDate() + days); return iso(d); };
+/** Неделя начинается с понедельника — так её читают и в Ташкенте, и в Сеуле. */
+function weekStart(isoDate) {
+  const d = parseDate(isoDate);
+  const shift = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - shift);
+  return iso(d);
+}
+const minutesOf = (hhmmStr) => {
+  const [h, m] = String(hhmmStr).split(":").map(Number);
+  return h * 60 + (m || 0);
+};
+
+/** Демо-встречи вокруг сегодняшнего дня: без них дневной срез пустой. */
+function seedEvents() {
+  const mine = scopedDeals().slice(0, 6);
+  const plan = [
+    { d: 0, s: "10:00", e: "11:00", k: "meeting", n: loc("Консультация по подаче", "Hujjat topshirish bo‘yicha maslahat") },
+    { d: 0, s: "13:30", e: "14:00", k: "call", n: loc("Звонок родителям", "Ota-onaga qo‘ng‘iroq") },
+    { d: 0, s: "16:00", e: "17:30", k: "interview", n: loc("Собеседование с вузом", "Universitet bilan suhbat") },
+    { d: 1, s: "09:30", e: "10:30", k: "meeting", n: loc("Разбор досье", "Hujjatlar tahlili") },
+    { d: 2, s: "15:00", e: "16:00", k: "meeting", n: loc("Встреча в офисе", "Ofisda uchrashuv") },
+    { d: -1, s: "11:00", e: "12:00", k: "call", n: loc("Уточнение по визе", "Viza bo‘yicha aniqlik") },
+  ];
+  return plan.map((x, i) => {
+    const deal = mine[i % Math.max(1, mine.length)];
+    const contact = deal ? studentById(deal.studentId) : null;
+    return {
+      id: `ev_seed_${i}`, date: shiftDay(TODAY_ISO, x.d), startTime: x.s, endTime: x.e,
+      kind: x.k, title: t(x.n), ownerId: S.userId,
+      relation: contact ? contact.fullName : "",
+    };
+  });
+}
+
+/** Всё, что видно в календаре: свои встречи плюс сроки из других разделов. */
+function calendarItems() {
+  const own = [...seedEvents(), ...S.events.filter((e) => e.ownerId === S.userId)]
+    .map((e) => ({ ...e, source: "event" }));
+  const deadlines = scopedDeadlines().map((d) => ({
+    id: d.id, date: d.date, startTime: "09:00", endTime: "09:30",
+    kind: "deadline", title: t(d.title), relation: "", source: "deadline", go: d.go,
+  }));
+  return [...own, ...deadlines];
+}
+const itemsOn = (isoDate) => calendarItems().filter((x) => x.date === isoDate)
+  .sort((a, b) => minutesOf(a.startTime) - minutesOf(b.startTime));
+
+/* ── структура компании ──────────────────────────────────── */
+const allDepartments = () => [...D.departments.filter((d) => d.tenantId === S.tenant), ...S.depts];
+const departmentOf = (userId) => S.moves[userId] ?? D.departmentOf[userId] ?? null;
+const headOf = (deptId) => S.heads[deptId] ?? allDepartments().find((d) => d.id === deptId)?.headId ?? null;
+const staffOf = (deptId) => D.users.filter((u) => u.tenantId === S.tenant && departmentOf(u.id) === deptId);
