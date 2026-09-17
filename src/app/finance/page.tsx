@@ -1,5 +1,5 @@
 import { IconExport } from "@/components/icons";
-import { NoAccess } from "@/components/NoAccess";
+import { moduleGate } from "@/components/guard";
 import {
   Avatar,
   PageHeader,
@@ -23,11 +23,8 @@ export default async function FinancePage() {
   const session = await getSession();
   const t = translator(session.locale);
   const f = formatters(session.locale);
-  if (!can(session.role, "finance")) {
-    return (
-      <NoAccess role={session.role} module={t(S.nav.finance)} locale={session.locale} />
-    );
-  }
+  const gate = moduleGate(session, "finance", t(S.nav.finance));
+  if (gate) return gate;
 
   const apps = scopedApplications(session).filter((a) => a.contractValue > 0);
   const contracted = apps.reduce((n, a) => n + a.contractValue, 0);

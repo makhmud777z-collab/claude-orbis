@@ -84,6 +84,8 @@ export function usdToSom(value: number, rate: number): number {
 
 export interface Formatters {
   locale: Locale;
+  /** склонение существительного при числе: 1 вуз · 2 вуза · 12 вузов */
+  plural: (n: number, forms: Record<Locale, [string, string, string]>) => string;
   date: (value: string | null) => string;
   shortDate: (value: string | null) => string;
   time: (value: string) => string;
@@ -147,6 +149,8 @@ export function formatters(locale: Locale): Formatters {
 
   return {
     locale,
+    plural: (n, forms) =>
+      locale === "ru" ? pluralRu(n, ...forms.ru) : `${n} ${forms.uz[0]}`,
     date,
     shortDate,
     time: (value: string) => {

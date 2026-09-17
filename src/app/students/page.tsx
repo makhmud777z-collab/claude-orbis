@@ -1,5 +1,5 @@
+import { moduleGate } from "@/components/guard";
 import { IconExport, IconPlus } from "@/components/icons";
-import { NoAccess } from "@/components/NoAccess";
 import { StudentsTable, type StudentRow } from "@/components/StudentsTable";
 import { PageHeader } from "@/components/ui";
 import { applicationsOfStudent } from "@/lib/data/applications";
@@ -15,11 +15,8 @@ import { getSession } from "@/lib/session";
 export default async function StudentsPage() {
   const session = await getSession();
   const t = translator(session.locale);
-  if (!can(session.role, "students")) {
-    return (
-      <NoAccess role={session.role} module={t(S.nav.students)} locale={session.locale} />
-    );
-  }
+  const gate = moduleGate(session, "students", t(S.nav.students));
+  if (gate) return gate;
 
   const branches = new Map(session.tenant.branches.map((b) => [b.id, b]));
   const rows: StudentRow[] = scopedStudents(session).map((s) => ({

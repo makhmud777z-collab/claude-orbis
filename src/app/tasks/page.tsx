@@ -1,5 +1,5 @@
+import { moduleGate } from "@/components/guard";
 import { IconPlus } from "@/components/icons";
-import { NoAccess } from "@/components/NoAccess";
 import { TasksBoard, type TaskCard } from "@/components/TasksBoard";
 import { PageHeader } from "@/components/ui";
 import { applicationById } from "@/lib/data/applications";
@@ -14,11 +14,8 @@ import { getSession } from "@/lib/session";
 export default async function TasksPage() {
   const session = await getSession();
   const t = translator(session.locale);
-  if (!can(session.role, "tasks")) {
-    return (
-      <NoAccess role={session.role} module={t(S.nav.tasks)} locale={session.locale} />
-    );
-  }
+  const gate = moduleGate(session, "tasks", t(S.nav.tasks));
+  if (gate) return gate;
 
   const cards: TaskCard[] = scopedTasks(session).map((task) => {
     let relationLabel: string | null = null;

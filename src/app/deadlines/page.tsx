@@ -1,6 +1,6 @@
+import { moduleGate } from "@/components/guard";
 import Link from "next/link";
 import { IconExport } from "@/components/icons";
-import { NoAccess } from "@/components/NoAccess";
 import { Avatar, PageHeader, SectionTitle, StatusDot } from "@/components/ui";
 import { userById } from "@/lib/data/users";
 import { daysUntil, formatters } from "@/lib/format";
@@ -24,11 +24,8 @@ export default async function DeadlinesPage() {
   const session = await getSession();
   const t = translator(session.locale);
   const f = formatters(session.locale);
-  if (!can(session.role, "deadlines")) {
-    return (
-      <NoAccess role={session.role} module={t(S.nav.deadlines)} locale={session.locale} />
-    );
-  }
+  const gate = moduleGate(session, "deadlines", t(S.nav.deadlines));
+  if (gate) return gate;
 
   const deadlines = scopedDeadlines(session);
   const overdue = deadlines.filter((d) => daysUntil(d.date) < 0).length;

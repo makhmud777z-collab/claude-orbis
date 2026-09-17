@@ -1,5 +1,5 @@
+import { moduleGate } from "@/components/guard";
 import { IconPlus } from "@/components/icons";
-import { NoAccess } from "@/components/NoAccess";
 import { Avatar, Chip, PageHeader, SectionTitle, StatusDot } from "@/components/ui";
 import { formatters } from "@/lib/format";
 import { translator, type Loc } from "@/lib/i18n";
@@ -28,11 +28,8 @@ export default async function TeamPage() {
   const session = await getSession();
   const t = translator(session.locale);
   const f = formatters(session.locale);
-  if (!can(session.role, "team")) {
-    return (
-      <NoAccess role={session.role} module={t(S.nav.team)} locale={session.locale} />
-    );
-  }
+  const gate = moduleGate(session, "team", t(S.nav.team));
+  if (gate) return gate;
 
   const team = scopedTeam(session);
   const students = scopedStudents(session);

@@ -8,7 +8,7 @@ import type { Program, Student, University } from "./types";
  * Никакой магии — оператор должен понимать, почему вуз в шорт-листе.
  */
 
-export type MatchVerdict = "strong" | "possible" | "risky" | "blocked";
+export type MatchVerdict = "suitable" | "possible" | "not_suitable";
 
 export interface MatchReason {
   key: string;
@@ -26,11 +26,11 @@ export interface MatchResult {
   yearCost: number;
 }
 
+/** Три состояния из дорожной карты: Suitable / Possible / Not suitable. */
 const VERDICT_LABEL: Record<MatchVerdict, Loc> = {
-  strong: loc("Сильное совпадение", "Kuchli moslik"),
-  possible: loc("Подходит", "Mos keladi"),
-  risky: loc("С риском", "Xavf bilan"),
-  blocked: loc("Не проходит", "O‘tmaydi"),
+  suitable: loc("Подходит", "Mos keladi"),
+  possible: loc("Возможен", "Ehtimoli bor"),
+  not_suitable: loc("Не подходит", "Mos emas"),
 };
 
 export function verdictLabel(v: MatchVerdict): Loc {
@@ -39,10 +39,9 @@ export function verdictLabel(v: MatchVerdict): Loc {
 
 export function verdictDot(v: MatchVerdict): string {
   return {
-    strong: "var(--color-status-deal)",
-    possible: "var(--color-status-open)",
-    risky: "var(--color-status-progress)",
-    blocked: "var(--color-status-risk)",
+    suitable: "var(--color-status-deal)",
+    possible: "var(--color-status-progress)",
+    not_suitable: "var(--color-status-risk)",
   }[v];
 }
 
@@ -208,15 +207,14 @@ export function matchProgram(
   }
 
   score = Math.max(0, Math.min(100, score));
+
+  // Провал жёсткого требования — «не подходит», сколько бы баллов ни набралось:
+  // оператор не должен предлагать семье вуз, куда студента не примут.
   const verdict: MatchVerdict = blocked
-    ? score >= 55
-      ? "risky"
-      : "blocked"
-    : score >= 85
-      ? "strong"
-      : score >= 65
-        ? "possible"
-        : "risky";
+    ? "not_suitable"
+    : score >= 80
+      ? "suitable"
+      : "possible";
 
   return { university, program, score, verdict, reasons, yearCost };
 }

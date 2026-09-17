@@ -1,6 +1,6 @@
+import { moduleGate } from "@/components/guard";
 import { ApplicationsBoard, type BoardCard } from "@/components/ApplicationsBoard";
 import { IconExport, IconPlus } from "@/components/icons";
-import { NoAccess } from "@/components/NoAccess";
 import { PageHeader } from "@/components/ui";
 import { dossierProgress } from "@/lib/data/documents";
 import { studentById } from "@/lib/data/students";
@@ -21,15 +21,8 @@ export default async function ApplicationsPage({
   const session = await getSession();
   const t = translator(session.locale);
   const f = formatters(session.locale);
-  if (!can(session.role, "applications")) {
-    return (
-      <NoAccess
-        role={session.role}
-        module={t(S.nav.applications)}
-        locale={session.locale}
-      />
-    );
-  }
+  const gate = moduleGate(session, "applications", t(S.nav.applications));
+  if (gate) return gate;
 
   const { stage } = await searchParams;
   const apps = scopedApplications(session);

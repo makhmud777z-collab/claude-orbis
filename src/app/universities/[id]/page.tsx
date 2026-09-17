@@ -1,6 +1,6 @@
+import { moduleGate } from "@/components/guard";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { NoAccess } from "@/components/NoAccess";
 import {
   Chip,
   Field,
@@ -25,6 +25,9 @@ import { matchProgram, verdictDot, verdictLabel } from "@/lib/matching";
 import { can } from "@/lib/rbac";
 import { scopedApplications, scopedStudents } from "@/lib/queries";
 import { getSession } from "@/lib/session";
+import { NO_STUDENT } from "@/lib/shortlist";
+import { shortlistFor } from "@/lib/shortlist.server";
+import { toggleShortlist } from "@/app/actions";
 import { S } from "@/lib/strings";
 
 export async function generateStaticParams() {
@@ -42,19 +45,13 @@ export default async function UniversityPage({
   const f = formatters(session.locale);
   const rate = session.tenant.usdRate;
 
-  if (!can(session.role, "universities")) {
-    return (
-      <NoAccess
-        role={session.role}
-        module={t(S.nav.universities)}
-        locale={session.locale}
-      />
-    );
-  }
+  const gate = moduleGate(session, "universities", t(S.nav.universities));
+  if (gate) return gate;
 
   const uni = universityById(id);
   if (!uni) notFound();
 
+  const picked = await shortlistFor(NO_STUDENT);
   const apps = scopedApplications(session).filter((a) => a.universityId === uni.id);
   const students = scopedStudents(session);
   /** Кому из базы этот вуз подходит прямо сейчас — обратный подбор. */
@@ -65,7 +62,7 @@ export default async function UniversityPage({
         .sort((a, b) => b.score - a.score)[0];
       return { student: s, match: best };
     })
-    .filter((x) => x.match && x.match.verdict !== "blocked")
+    .filter((x) => x.match && x.match.verdict !== "not_suitable")
     .sort((a, b) => b.match.score - a.match.score)
     .slice(0, 6);
 
@@ -108,12 +105,20 @@ export default async function UniversityPage({
         }
         actions={
           <>
-            <button className="btn btn-secondary btn-sm">
+            <Link href="/universities/compare" className="btn btn-secondary btn-sm">
               {t(S.universities.compare)}
-            </button>
-            <button className="btn btn-primary btn-sm">
-              {t(S.universities.addToShortlist)}
-            </button>
+            </Link>
+            <form action={toggleShortlist}>
+              <input type="hidden" name="universityId" value={uni.id} />
+              <input type="hidden" name="studentId" value={NO_STUDENT} />
+              <button
+                className={`btn btn-sm ${
+                  picked.includes(uni.id) ? "btn-secondary" : "btn-primary"
+                }`}
+              >
+                {t(picked.includes(uni.id) ? S.shortlist.added : S.shortlist.add)}
+              </button>
+            </form>
           </>
         }
       />
@@ -261,6 +266,30 @@ export default async function UniversityPage({
               label={t(S.universities.intakes)}
               value={uni.intakes.map((i) => t(ref(INTAKE_LABEL, i))).join(", ")}
             />
+          </div>
+
+          <div className="card p-5">
+            <div className="t-caption mb-3 uppercase tracking-[0.07em] text-ink-faint">
+              {t(S.shortlist.deadline)}
+            </div>
+            {uni.intakeDeadlines.map((d) => (
+              <Field
+                key={d.intake}
+                label={t(ref(INTAKE_LABEL, d.intake))}
+                value={
+                  <span
+                    style={{
+                      color:
+                        d.deadline < "2026-09-17"
+                          ? "var(--color-ink-faint)"
+                          : undefined,
+                    }}
+                  >
+                    {f.date(d.deadline)} · {f.relativeDeadline(d.deadline)}
+                  </span>
+                }
+              />
+            ))}
           </div>
 
           <div className="card p-5">

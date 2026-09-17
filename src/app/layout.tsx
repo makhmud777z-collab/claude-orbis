@@ -4,6 +4,7 @@ import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { usersOfTenant } from "@/lib/data/users";
+import { editionModules } from "@/lib/edition";
 import { roleLabel, visibleModules } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
 import { ROOT_DOMAIN, TENANTS } from "@/lib/tenants";
@@ -27,6 +28,9 @@ export default async function RootLayout({
 }) {
   const session = await getSession();
   const host = session.host || `${session.tenant.slug}.${ROOT_DOMAIN}`;
+  // Навигация = права роли ∩ модули версии продукта.
+  const allowed = new Set(editionModules(session.tenant.edition));
+  const modules = visibleModules(session.role).filter((m) => allowed.has(m));
 
   return (
     <html lang={session.locale} className={inter.variable}>
@@ -36,7 +40,7 @@ export default async function RootLayout({
             tenantName={session.tenant.name}
             tenantMark={session.tenant.mark}
             host={host}
-            modules={visibleModules(session.role)}
+            modules={modules}
             roleLabel={roleLabel(session.role)}
             locale={session.locale}
           />

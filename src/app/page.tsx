@@ -22,6 +22,7 @@ import {
   scopedStudents,
   scopedTasks,
 } from "@/lib/queries";
+import { editionModules, hasModule, homeHref } from "@/lib/edition";
 import { can, visibleModules } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
 import { S } from "@/lib/strings";
@@ -29,12 +30,20 @@ import { S } from "@/lib/strings";
 export default async function DashboardPage() {
   const session = await getSession();
 
+  // В версии MVP дашборда нет: система открывается сразу каталогом вузов.
+  if (!hasModule(session.tenant.edition, "dashboard")) {
+    redirect(homeHref(session.tenant.edition));
+  }
+
   // У роли может не быть дашборда (например, у агента-партнёра) —
   // уводим на первый доступный ей раздел вместо пустого экрана.
   if (!can(session.role, "dashboard")) {
-    const allowed = new Set(visibleModules(session.role));
+    const inEdition = new Set(editionModules(session.tenant.edition));
+    const allowed = new Set(
+      visibleModules(session.role).filter((m) => inEdition.has(m)),
+    );
     const first = NAV.find((n) => n.href !== "/" && allowed.has(n.module));
-    redirect(first?.href ?? "/students");
+    redirect(first?.href ?? "/universities");
   }
 
   const t = translator(session.locale);

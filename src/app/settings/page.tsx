@@ -1,5 +1,5 @@
+import { moduleGate } from "@/components/guard";
 import { DomainCard } from "@/components/DomainCard";
-import { NoAccess } from "@/components/NoAccess";
 import {
   Chip,
   Field,
@@ -34,11 +34,8 @@ export default async function SettingsPage() {
   const session = await getSession();
   const t = translator(session.locale);
   const f = formatters(session.locale);
-  if (!can(session.role, "settings")) {
-    return (
-      <NoAccess role={session.role} module={t(S.nav.settings)} locale={session.locale} />
-    );
-  }
+  const gate = moduleGate(session, "settings", t(S.nav.settings));
+  if (gate) return gate;
 
   const { tenant } = session;
 

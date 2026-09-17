@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IconArrowUpRight, IconCheck } from "@/components/icons";
-import { NoAccess } from "@/components/NoAccess";
+import { moduleGate } from "@/components/guard";
 import {
   Avatar,
   Chip,
@@ -46,15 +46,8 @@ export default async function ApplicationPage({
   const f = formatters(session.locale);
   const rate = session.tenant.usdRate;
 
-  if (!can(session.role, "applications")) {
-    return (
-      <NoAccess
-        role={session.role}
-        module={t(S.nav.applications)}
-        locale={session.locale}
-      />
-    );
-  }
+  const gate = moduleGate(session, "applications", t(S.nav.applications));
+  if (gate) return gate;
 
   const app = scopedApplications(session).find((a) => a.id === id);
   if (!app) notFound();

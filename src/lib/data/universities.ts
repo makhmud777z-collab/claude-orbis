@@ -53,6 +53,10 @@ export const UNIVERSITIES: University[] = [
       graduationWithinYears: 3,
     },
     intakes: ["2026 Осень", "2027 Весна"],
+    intakeDeadlines: [
+      { intake: "2026 Осень", deadline: "2026-05-20" },
+      { intake: "2027 Весна", deadline: "2026-10-13" },
+    ],
     fields: ["IT и Computer Science", "Инженерия", "Бизнес и менеджмент"],
     programs: [
       { id: "p_hangang_cs", name: "Computer Science & Engineering", field: "IT и Computer Science", degreeLevel: "bachelor", tuitionPerYear: 7800, language: "ko/en", topikMin: 3, ieltsMin: 5.5 },
@@ -86,6 +90,10 @@ export const UNIVERSITIES: University[] = [
       graduationWithinYears: 2,
     },
     intakes: ["2026 Осень", "2027 Весна"],
+    intakeDeadlines: [
+      { intake: "2026 Осень", deadline: "2026-05-21" },
+      { intake: "2027 Весна", deadline: "2026-10-16" },
+    ],
     fields: ["Медицина", "Естественные науки", "Инженерия"],
     programs: [
       { id: "p_dongbaek_med", name: "Pre-Medicine", field: "Медицина", degreeLevel: "bachelor", tuitionPerYear: 11200, language: "ko", topikMin: 5, ieltsMin: null },
@@ -119,6 +127,11 @@ export const UNIVERSITIES: University[] = [
       graduationWithinYears: null,
     },
     intakes: ["2026 Осень", "2027 Весна", "2027 Осень"],
+    intakeDeadlines: [
+      { intake: "2026 Осень", deadline: "2026-05-22" },
+      { intake: "2027 Весна", deadline: "2026-10-19" },
+      { intake: "2027 Осень", deadline: "2027-05-14" },
+    ],
     fields: ["Бизнес и менеджмент", "Дизайн и искусство", "Языковая программа"],
     programs: [
       { id: "p_sejong_des", name: "Visual Communication Design", field: "Дизайн и искусство", degreeLevel: "bachelor", tuitionPerYear: 6900, language: "ko", topikMin: 3, ieltsMin: null },
@@ -152,6 +165,9 @@ export const UNIVERSITIES: University[] = [
       graduationWithinYears: 3,
     },
     intakes: ["2027 Весна"],
+    intakeDeadlines: [
+      { intake: "2027 Весна", deadline: "2026-10-17" },
+    ],
     fields: ["Инженерия", "IT и Computer Science", "Естественные науки"],
     programs: [
       { id: "p_taebaek_ee", name: "Electrical Engineering", field: "Инженерия", degreeLevel: "bachelor", tuitionPerYear: 5200, language: "ko", topikMin: 3, ieltsMin: null },
@@ -184,6 +200,10 @@ export const UNIVERSITIES: University[] = [
       graduationWithinYears: 2,
     },
     intakes: ["2026 Осень", "2027 Весна"],
+    intakeDeadlines: [
+      { intake: "2026 Осень", deadline: "2026-05-24" },
+      { intake: "2027 Весна", deadline: "2026-10-25" },
+    ],
     fields: ["Гуманитарные науки", "Дизайн и искусство", "Медицина"],
     programs: [
       { id: "p_mirae_nurse", name: "Nursing", field: "Медицина", degreeLevel: "bachelor", tuitionPerYear: 9100, language: "ko", topikMin: 4, ieltsMin: null },
@@ -216,6 +236,11 @@ export const UNIVERSITIES: University[] = [
       graduationWithinYears: null,
     },
     intakes: ["2026 Осень", "2027 Весна", "2027 Осень"],
+    intakeDeadlines: [
+      { intake: "2026 Осень", deadline: "2026-05-25" },
+      { intake: "2027 Весна", deadline: "2026-10-08" },
+      { intake: "2027 Осень", deadline: "2027-05-17" },
+    ],
     fields: ["Бизнес и менеджмент", "Гуманитарные науки", "Языковая программа"],
     programs: [
       { id: "p_geumho_hotel", name: "Hotel & Tourism Management", field: "Бизнес и менеджмент", degreeLevel: "bachelor", tuitionPerYear: 4300, language: "ko", topikMin: 2, ieltsMin: null },
@@ -248,6 +273,9 @@ export const UNIVERSITIES: University[] = [
       graduationWithinYears: 2,
     },
     intakes: ["2027 Весна"],
+    intakeDeadlines: [
+      { intake: "2027 Весна", deadline: "2026-10-26" },
+    ],
     fields: ["Медицина", "Естественные науки"],
     programs: [
       { id: "p_hallim_med", name: "Medicine", field: "Медицина", degreeLevel: "bachelor", tuitionPerYear: 14800, language: "ko", topikMin: 5, ieltsMin: null },
@@ -281,6 +309,10 @@ export const UNIVERSITIES: University[] = [
       graduationWithinYears: null,
     },
     intakes: ["2026 Осень", "2027 Весна"],
+    intakeDeadlines: [
+      { intake: "2026 Осень", deadline: "2026-05-27" },
+      { intake: "2027 Весна", deadline: "2026-10-14" },
+    ],
     fields: ["Инженерия", "IT и Computer Science", "Языковая программа"],
     programs: [
       { id: "p_nakdong_it", name: "Software Engineering", field: "IT и Computer Science", degreeLevel: "bachelor", tuitionPerYear: 4800, language: "ko", topikMin: 3, ieltsMin: null },
@@ -314,6 +346,10 @@ export const UNIVERSITIES: University[] = [
       graduationWithinYears: 3,
     },
     intakes: ["2026 Осень", "2027 Весна"],
+    intakeDeadlines: [
+      { intake: "2026 Осень", deadline: "2026-05-20" },
+      { intake: "2027 Весна", deadline: "2026-10-17" },
+    ],
     fields: ["Естественные науки", "Инженерия", "Гуманитарные науки"],
     programs: [
       { id: "p_cheongsan_chem", name: "Chemical Engineering", field: "Инженерия", degreeLevel: "bachelor", tuitionPerYear: 4100, language: "ko", topikMin: 3, ieltsMin: null },
@@ -346,6 +382,10 @@ export const UNIVERSITIES: University[] = [
       graduationWithinYears: null,
     },
     intakes: ["2026 Осень", "2027 Весна"],
+    intakeDeadlines: [
+      { intake: "2026 Осень", deadline: "2026-05-21" },
+      { intake: "2027 Весна", deadline: "2026-10-20" },
+    ],
     fields: ["Дизайн и искусство", "Гуманитарные науки"],
     programs: [
       { id: "p_dosan_anim", name: "Animation & Media Art", field: "Дизайн и искусство", degreeLevel: "bachelor", tuitionPerYear: 8200, language: "ko", topikMin: 3, ieltsMin: null },
@@ -378,6 +418,10 @@ export const UNIVERSITIES: University[] = [
       graduationWithinYears: 3,
     },
     intakes: ["2026 Осень", "2027 Весна"],
+    intakeDeadlines: [
+      { intake: "2026 Осень", deadline: "2026-05-22" },
+      { intake: "2027 Весна", deadline: "2026-10-23" },
+    ],
     fields: ["IT и Computer Science", "Инженерия", "Бизнес и менеджмент"],
     programs: [
       { id: "p_baekdu_cs", name: "Computer Engineering", field: "IT и Computer Science", degreeLevel: "bachelor", tuitionPerYear: 5600, language: "ko/en", topikMin: 3, ieltsMin: 5.5 },
@@ -410,6 +454,11 @@ export const UNIVERSITIES: University[] = [
       graduationWithinYears: 2,
     },
     intakes: ["2026 Осень", "2027 Весна", "2027 Осень"],
+    intakeDeadlines: [
+      { intake: "2026 Осень", deadline: "2026-05-23" },
+      { intake: "2027 Весна", deadline: "2026-10-26" },
+      { intake: "2027 Осень", deadline: "2027-05-23" },
+    ],
     fields: ["Бизнес и менеджмент", "IT и Computer Science", "Гуманитарные науки"],
     programs: [
       { id: "p_hanul_gb", name: "Global Business (English track)", field: "Бизнес и менеджмент", degreeLevel: "bachelor", tuitionPerYear: 9600, language: "en", topikMin: 0, ieltsMin: 6.0 },
@@ -420,6 +469,20 @@ export const UNIVERSITIES: University[] = [
     updatedAt: "2026-09-12",
   },
 ];
+
+/** Есть ли у вуза программа на английском — отдельный фильтр в каталоге. */
+export function hasEnglishTrack(u: University): boolean {
+  return u.programs.some((p) => p.language === "en" || p.language === "ko/en");
+}
+
+/** Ближайший непрошедший дедлайн подачи. */
+export function nextDeadline(u: University, today = "2026-09-17") {
+  return (
+    u.intakeDeadlines
+      .filter((d) => d.deadline >= today)
+      .sort((a, b) => a.deadline.localeCompare(b.deadline))[0] ?? null
+  );
+}
 
 export const PROGRAMS = UNIVERSITIES.flatMap((u) =>
   u.programs.map((p) => ({ ...p, universityId: u.id })),

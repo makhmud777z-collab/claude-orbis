@@ -15,6 +15,9 @@ import {
   ref,
 } from "@/lib/labels";
 import { S } from "@/lib/strings";
+import { toggleShortlist } from "@/app/actions";
+import { hasEnglishTrack, nextDeadline } from "@/lib/data/universities";
+import { NO_STUDENT, SHORTLIST_LIMIT, type ShortlistMap } from "@/lib/shortlist";
 import { matchProgram, verdictDot, verdictLabel, type MatchResult } from "@/lib/matching";
 import type { DegreeLevel, Ownership, Student, University } from "@/lib/types";
 
@@ -41,6 +44,7 @@ interface Filters {
   scholarship: boolean;
   languageCenter: boolean;
   certifiedOnly: boolean;
+  englishTaught: boolean;
 }
 
 const EMPTY: Filters = {
@@ -57,6 +61,7 @@ const EMPTY: Filters = {
   scholarship: false,
   languageCenter: false,
   certifiedOnly: false,
+  englishTaught: false,
 };
 
 const BUDGETS = [4000, 6000, 8000, 10000, 12000, 15000];
@@ -69,6 +74,7 @@ export function CatalogExplorer({
   intakes,
   locale,
   usdRate,
+  shortlist,
 }: {
   universities: University[];
   students: Pick<Student, "id" | "fullName" | "profile">[];
@@ -77,13 +83,21 @@ export function CatalogExplorer({
   intakes: string[];
   locale: Locale;
   usdRate: number;
+  shortlist: ShortlistMap;
 }) {
   const t = translator(locale);
   const f = formatters(locale);
   const [filters, setFilters] = useState<Filters>(EMPTY);
   const [studentId, setStudentId] = useState<string>("none");
+  /**
+   * Профиль студента по умолчанию только сортирует выдачу и объясняет каждый вуз.
+   * Жёстко отсекать варианты — отдельное осознанное действие оператора:
+   * иначе список схлопывается до одной строки и выбирать не из чего.
+   */
+  const [strict, setStrict] = useState(false);
 
   const student = students.find((s) => s.id === studentId);
+  const picked = shortlist[studentId !== "none" ? studentId : NO_STUDENT] ?? [];
 
   const set = <K extends keyof Filters>(key: K, value: Filters[K]) =>
     setFilters((f) => ({ ...f, [key]: value }));
@@ -103,25 +117,38 @@ export function CatalogExplorer({
     });
 
   /** Выбор студента переносит его портфолио в фильтры — одно действие вместо десяти. */
+  const preferencesOf = (s: Pick<Student, "profile">): Filters => ({
+    ...EMPTY,
+    cities: [...s.profile.preferredCities],
+    ownership: [...s.profile.preferredOwnership],
+    fields: [...s.profile.preferredMajors],
+    degree: s.profile.degreeLevel,
+    topik: s.profile.topik,
+    ielts: s.profile.ielts ?? "all",
+    budget: s.profile.budgetPerYear,
+    intake: s.profile.intake,
+    dorm: s.profile.needsDorm,
+    scholarship: s.profile.needsScholarship,
+  });
+
   const applyStudent = (id: string) => {
     setStudentId(id);
     const s = students.find((x) => x.id === id);
-    if (!s) return setFilters(EMPTY);
-    setFilters({
-      ...EMPTY,
-      cities: [...s.profile.preferredCities],
-      ownership: [...s.profile.preferredOwnership],
-      fields: [...s.profile.preferredMajors],
-      degree: s.profile.degreeLevel,
-      topik: s.profile.topik,
-      ielts: s.profile.ielts ?? "all",
-      budget: s.profile.budgetPerYear,
-      intake: s.profile.intake,
-      dorm: s.profile.needsDorm,
-      scholarship: s.profile.needsScholarship,
-      languageCenter: false,
-      certifiedOnly: false,
-    });
+    if (!s) {
+      setStrict(false);
+      return setFilters(EMPTY);
+    }
+    // Уровень обучения — единственный жёсткий критерий: бакалавриат и языковые
+    // курсы это разные продукты, смешивать их в одной выдаче бессмысленно.
+    setFilters(strict ? preferencesOf(s) : { ...EMPTY, degree: s.profile.degreeLevel });
+  };
+
+  const toggleStrict = () => {
+    const next = !strict;
+    setStrict(next);
+    const s = students.find((x) => x.id === studentId);
+    if (!s) return;
+    setFilters(next ? preferencesOf(s) : { ...EMPTY, degree: s.profile.degreeLevel });
   };
 
   const rows = useMemo(() => {
@@ -139,6 +166,7 @@ export function CatalogExplorer({
       if (filters.scholarship && u.scholarshipMax < 50) continue;
       if (filters.languageCenter && !u.hasLanguageCenter) continue;
       if (filters.certifiedOnly && u.visaGrade !== "certified") continue;
+      if (filters.englishTaught && !hasEnglishTrack(u)) continue;
       if (filters.intake !== "all" && !u.intakes.includes(filters.intake)) continue;
 
       const programs = u.programs.filter((p) => {
@@ -185,7 +213,13 @@ export function CatalogExplorer({
     (filters.ielts !== "all" ? 1 : 0) +
     (filters.budget !== "all" ? 1 : 0) +
     (filters.intake !== "all" ? 1 : 0) +
-    [filters.dorm, filters.scholarship, filters.languageCenter, filters.certifiedOnly].filter(Boolean).length;
+    [
+      filters.dorm,
+      filters.scholarship,
+      filters.languageCenter,
+      filters.certifiedOnly,
+      filters.englishTaught,
+    ].filter(Boolean).length;
 
   return (
     <div className="grid gap-5 lg:grid-cols-[272px_1fr]">
@@ -207,6 +241,16 @@ export function CatalogExplorer({
                 </option>
               ))}
             </select>
+            {student ? (
+              <>
+                <button onClick={toggleStrict} className="mt-2.5 block">
+                  <Chip active={strict}>{t(S.universities.applyPreferences)}</Chip>
+                </button>
+                <div className="t-micro mt-2 leading-relaxed text-ink-faint">
+                  {t(S.universities.preferencesHint)}
+                </div>
+              </>
+            ) : null}
             {student ? (
               <div className="t-micro mt-2 leading-relaxed text-ink-faint">
                 TOPIK {student.profile.topik || "—"} ·{" "}
@@ -357,6 +401,11 @@ export function CatalogExplorer({
               <button onClick={() => set("certifiedOnly", !filters.certifiedOnly)}>
                 <Chip active={filters.certifiedOnly}>{t(S.universities.visaGradeA)}</Chip>
               </button>
+              <button onClick={() => set("englishTaught", !filters.englishTaught)}>
+                <Chip active={filters.englishTaught}>
+                  {t(S.universities.englishTaught)}
+                </Chip>
+              </button>
             </FilterGroup>
 
             <button
@@ -373,24 +422,46 @@ export function CatalogExplorer({
       </aside>
 
       <div>
-        <div className="t-caption mb-4 flex items-center justify-between text-ink-muted">
+        <div className="t-caption mb-4 flex flex-wrap items-center justify-between gap-3 text-ink-muted">
           <span>
-            {t(S.universities.found)} {rows.length} {t(S.universities.universities)}
+            {t(S.universities.found)}{" "}
+            {f.plural(rows.length, {
+              ru: ["вуз", "вуза", "вузов"],
+              uz: ["universitet", "universitet", "universitet"],
+            })}
             {student
               ? ` · ${t(S.universities.sortedByMatch)}: ${student.fullName}`
               : ""}
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="t-micro text-ink-faint">
+              {picked.length} / {SHORTLIST_LIMIT} {t(S.shortlist.count)}
+            </span>
+            <Link
+              href={
+                studentId !== "none"
+                  ? `/universities/compare?student=${studentId}`
+                  : "/universities/compare"
+              }
+              className={`btn btn-sm ${picked.length ? "btn-primary" : "btn-secondary"}`}
+            >
+              {t(S.shortlist.compare)}
+            </Link>
           </span>
         </div>
 
         <div className="space-y-4">
           {rows.map(({ university: u, programs, match }) => (
-            <Link key={u.id} href={`/universities/${u.id}`} className="card card-hover block p-5">
+            <div key={u.id} className="card card-hover p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2.5">
+                  <Link
+                    href={`/universities/${u.id}`}
+                    className="flex items-center gap-2.5 hover:opacity-90"
+                  >
                     <span className="t-body-lg">{u.name}</span>
                     <span className="t-micro text-ink-faint">{u.nameKo}</span>
-                  </div>
+                  </Link>
                   <div className="t-caption mt-1.5 text-ink-muted">
                     {t(ref(CITY_LABEL, u.city))} · {t(OWNERSHIP_LABEL[u.ownership])} ·{" "}
                     {u.nationalRank
@@ -399,28 +470,47 @@ export function CatalogExplorer({
                     · {t(S.universities.founded)} {u.founded}
                   </div>
                 </div>
-                {match ? (
-                  <span className="chip chip-active">
-                    <StatusDot color={verdictDot(match.verdict)} />
-                    {t(verdictLabel(match.verdict))} · {match.score}
-                  </span>
-                ) : (
-                  <span className="chip">
-                    {t(
-                      u.dataStatus === "draft"
-                        ? S.universities.draft
-                        : S.universities.verified,
-                    )}
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {match ? (
+                    <span className="chip chip-active">
+                      <StatusDot color={verdictDot(match.verdict)} />
+                      {t(verdictLabel(match.verdict))} · {match.score}
+                    </span>
+                  ) : (
+                    <span className="chip">
+                      {t(
+                        u.dataStatus === "draft"
+                          ? S.universities.draft
+                          : S.universities.verified,
+                      )}
+                    </span>
+                  )}
+                  <form action={toggleShortlist}>
+                    <input type="hidden" name="universityId" value={u.id} />
+                    <input
+                      type="hidden"
+                      name="studentId"
+                      value={studentId !== "none" ? studentId : NO_STUDENT}
+                    />
+                    <button
+                      className={`btn btn-sm ${
+                        picked.includes(u.id) ? "btn-primary" : "btn-secondary"
+                      }`}
+                    >
+                      {t(picked.includes(u.id) ? S.shortlist.added : S.shortlist.add)}
+                    </button>
+                  </form>
+                </div>
               </div>
 
               <div className="mt-4 grid gap-4 sm:grid-cols-3">
                 <Metric
                   label={t(S.universities.tuitionPerYear)}
-                  value={`${f.usd(Math.min(...programs.map((p) => p.tuitionPerYear)))} – ${f.usd(
-                    Math.max(...programs.map((p) => p.tuitionPerYear)),
-                  )}`}
+                  value={(() => {
+                    const low = Math.min(...programs.map((p) => p.tuitionPerYear));
+                    const high = Math.max(...programs.map((p) => p.tuitionPerYear));
+                    return low === high ? f.usd(low) : `${f.usd(low)} – ${f.usd(high)}`;
+                  })()}
                   hint={f.som(
                     Math.min(...programs.map((p) => p.tuitionPerYear)) * usdRate,
                     { compact: true },
@@ -439,6 +529,12 @@ export function CatalogExplorer({
                   value={`TOPIK ${u.requirements.topikMin}+${
                     u.requirements.ieltsMin ? ` · IELTS ${u.requirements.ieltsMin}` : ""
                   } · GPA ${u.requirements.gpaMin ?? "—"}`}
+                  hint={(() => {
+                    const d = nextDeadline(u);
+                    return d
+                      ? `${t(S.universities.deadlineSoon)}: ${f.shortDate(d.deadline)} · ${t(ref(INTAKE_LABEL, d.intake))}`
+                      : t(S.shortlist.noDeadline);
+                  })()}
                 />
               </div>
 
@@ -473,7 +569,7 @@ export function CatalogExplorer({
                   ))}
                 </div>
               ) : null}
-            </Link>
+            </div>
           ))}
 
           {!rows.length ? (

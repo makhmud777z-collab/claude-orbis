@@ -240,6 +240,11 @@ export const S = {
       "1-bosqich: tuzilma va filtrlar. Kartalar demo ma’lumotlar bilan to‘ldirilgan va «qoralama» deb belgilangan. 2-bosqichda ma’lumotlar universitetlarning rasmiy sahifalari va admission guideline fayllaridan olinadi, tekshiruvdan so‘ng karta «tekshirilgan» maqomini oladi.",
     ),
     pickForStudent: loc("Подобрать под студента", "Talaba uchun tanlash"),
+    applyPreferences: loc("Фильтровать по профилю", "Profil bo‘yicha filtrlash"),
+    preferencesHint: loc(
+      "Профиль студента сортирует список и объясняет каждый вуз. Включите, чтобы жёстко отсечь неподходящие.",
+      "Talaba profili ro‘yxatni saralaydi va har bir universitetni izohlaydi. Mos kelmaganlarni butunlay olib tashlash uchun yoqing.",
+    ),
     chooseStudent: loc("— выбрать студента —", "— talabani tanlang —"),
     budget: loc("бюджет", "byudjet"),
     cityAny: loc("город любой", "shahar ixtiyoriy"),
@@ -257,6 +262,8 @@ export const S = {
     grantFrom: loc("Грант от 50%", "Grant 50% dan"),
     languageCenter: loc("Языковой центр", "Til markazi"),
     visaGradeA: loc("Визовый рейтинг A", "Viza reytingi A"),
+    englishTaught: loc("Есть английский трек", "Ingliz tili treki bor"),
+    deadlineSoon: loc("Дедлайн", "Muddat"),
     any: loc("Любой", "Istalgan"),
     notImportant: loc("Не важно", "Farqi yo‘q"),
     noCertificate: loc("Нет сертификата", "Sertifikat yo‘q"),
@@ -305,6 +312,32 @@ export const S = {
       "На этапе 2 сюда подключается разбор официальной страницы вуза и PDF с правилами приёма: система сверяет цифры и ставит дату проверки.",
       "2-bosqichda bu yerga universitetning rasmiy sahifasi va qabul qoidalari PDF fayli ulanadi: tizim raqamlarni solishtirib, tekshiruv sanasini qo‘yadi.",
     ),
+  },
+
+  shortlist: {
+    add: loc("В шорт-лист", "Qisqa ro‘yxatga"),
+    added: loc("В шорт-листе", "Ro‘yxatda"),
+    title: loc("Шорт-лист", "Qisqa ro‘yxat"),
+    count: loc("в шорт-листе", "qisqa ro‘yxatda"),
+    compare: loc("Сравнить", "Solishtirish"),
+    clear: loc("Очистить", "Tozalash"),
+    limit: loc("максимум 6 вузов", "eng ko‘pi 6 ta universitet"),
+    empty: loc("Шорт-лист пуст", "Qisqa ro‘yxat bo‘sh"),
+    emptyHint: loc(
+      "Откройте каталог, отфильтруйте вузы под профиль студента и добавьте подходящие — здесь они встанут рядом для сравнения.",
+      "Katalogni oching, universitetlarni talaba profiliga moslab filtrlang va mos kelganlarini qo‘shing — bu yerda ular yonma-yon solishtiriladi.",
+    ),
+    forStudent: loc("для студента", "talaba uchun"),
+    compareTitle: loc("Сравнение вузов", "Universitetlarni solishtirish"),
+    backToCatalog: loc("К каталогу", "Katalogga"),
+    criterion: loc("Критерий", "Mezon"),
+    verdict: loc("Вердикт подбора", "Tanlov xulosasi"),
+    yearCost: loc("Полная стоимость года", "Yillik to‘liq narx"),
+    englishTaught: loc("Программы на английском", "Ingliz tilidagi dasturlar"),
+    deadline: loc("Дедлайн подачи", "Topshirish muddati"),
+    noDeadline: loc("набор закрыт", "qabul yopilgan"),
+    selectStudent: loc("Студент", "Talaba"),
+    withoutStudent: loc("Без студента", "Talabasiz"),
   },
 
   finance: {
@@ -418,6 +451,21 @@ export const S = {
     storageHint: loc("S3-совместимое, с версиями файлов", "S3-mos, fayl versiyalari bilan"),
     catalog: loc("Импорт каталога вузов", "Universitetlar katalogini import qilish"),
     catalogHint: loc("разбор admission guideline", "admission guideline tahlili"),
+  },
+
+  edition: {
+    notIncluded: loc(
+      "Модуль не входит в вашу версию продукта. Он включается вместе с версией CRM — вместе со всей работой по студентам: заявки, документы, задачи и сроки.",
+      "Modul sizning mahsulot versiyangizga kirmaydi. U CRM versiyasi bilan birga ochiladi: arizalar, hujjatlar, vazifalar va muddatlar.",
+    ),
+    yourEdition: loc("Ваша версия", "Sizning versiyangiz"),
+    upgrade: loc("Подключить версию", "Versiyani ulash"),
+    edition: loc("Версия продукта", "Mahsulot versiyasi"),
+    includedModules: loc("модулей включено", "modul yoqilgan"),
+    roadmap: loc("Дорожная карта", "Yo‘l xaritasi"),
+    current: loc("текущая", "joriy"),
+    next: loc("следующая", "keyingi"),
+    later: loc("позже", "keyinroq"),
   },
 
   plans: {

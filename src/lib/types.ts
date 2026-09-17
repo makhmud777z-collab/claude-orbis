@@ -1,3 +1,4 @@
+import type { Edition } from "./edition";
 import type { Loc, Locale } from "./i18n";
 
 /**
@@ -20,6 +21,8 @@ export interface Tenant {
   customDomain: string | null;
   customDomainStatus: "none" | "pending" | "verified";
   plan: TenantPlan;
+  /** версия продукта: какой набор модулей куплен агентством */
+  edition: Edition;
   /** язык интерфейса по умолчанию; сотрудник может переключить себе */
   locale: Locale;
   /** договоры агентства ведутся в сумах */
@@ -260,6 +263,8 @@ export interface University {
     graduationWithinYears: number | null;
   };
   intakes: string[];
+  /** дедлайн подачи документов по каждому набору — ключевая дата для оператора */
+  intakeDeadlines: { intake: string; deadline: string }[];
   fields: string[];
   programs: Program[];
   /** пока каталог заполняется вручную: draft → verified после сверки с guideline */

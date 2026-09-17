@@ -1,6 +1,6 @@
+import { moduleGate } from "@/components/guard";
 import { DocumentsExplorer, type DossierFolder } from "@/components/DocumentsExplorer";
 import { IconPlus } from "@/components/icons";
-import { NoAccess } from "@/components/NoAccess";
 import { PageHeader } from "@/components/ui";
 import { userById } from "@/lib/data/users";
 import { translator } from "@/lib/i18n";
@@ -12,11 +12,8 @@ import { getSession } from "@/lib/session";
 export default async function DocumentsPage() {
   const session = await getSession();
   const t = translator(session.locale);
-  if (!can(session.role, "documents")) {
-    return (
-      <NoAccess role={session.role} module={t(S.nav.documents)} locale={session.locale} />
-    );
-  }
+  const gate = moduleGate(session, "documents", t(S.nav.documents));
+  if (gate) return gate;
 
   const docs = scopedDocuments(session);
   const folders: DossierFolder[] = scopedStudents(session)

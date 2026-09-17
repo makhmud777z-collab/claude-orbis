@@ -1,6 +1,6 @@
+import { moduleGate } from "@/components/guard";
 import { CatalogExplorer } from "@/components/CatalogExplorer";
 import { IconExport, IconPlus } from "@/components/icons";
-import { NoAccess } from "@/components/NoAccess";
 import { Banner, PageHeader } from "@/components/ui";
 import { UNIVERSITIES } from "@/lib/data/universities";
 import { translator } from "@/lib/i18n";
@@ -8,24 +8,19 @@ import { can } from "@/lib/rbac";
 import { S } from "@/lib/strings";
 import { scopedStudents } from "@/lib/queries";
 import { getSession } from "@/lib/session";
+import { readShortlist } from "@/lib/shortlist.server";
 
 export default async function UniversitiesPage() {
   const session = await getSession();
   const t = translator(session.locale);
-  if (!can(session.role, "universities")) {
-    return (
-      <NoAccess
-        role={session.role}
-        module={t(S.nav.universities)}
-        locale={session.locale}
-      />
-    );
-  }
+  const gate = moduleGate(session, "universities", t(S.nav.universities));
+  if (gate) return gate;
 
   const cities = [...new Set(UNIVERSITIES.map((u) => u.city))].sort();
   const fields = [...new Set(UNIVERSITIES.flatMap((u) => u.fields))].sort();
   const intakes = [...new Set(UNIVERSITIES.flatMap((u) => u.intakes))].sort();
 
+  const shortlist = await readShortlist();
   const students = scopedStudents(session)
     .filter((s) => s.status !== "lost")
     .map((s) => ({ id: s.id, fullName: s.fullName, profile: s.profile }));
@@ -71,6 +66,7 @@ export default async function UniversitiesPage() {
         intakes={intakes}
         locale={session.locale}
         usdRate={session.tenant.usdRate}
+        shortlist={shortlist}
       />
     </>
   );

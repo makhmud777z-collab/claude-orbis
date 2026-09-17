@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IconArrowUpRight, IconMail, IconPhone, IconPlus } from "@/components/icons";
-import { NoAccess } from "@/components/NoAccess";
+import { moduleGate } from "@/components/guard";
 import {
   Avatar,
   Chip,
@@ -47,11 +47,8 @@ export default async function StudentPage({
   const f = formatters(session.locale);
   const rate = session.tenant.usdRate;
 
-  if (!can(session.role, "students")) {
-    return (
-      <NoAccess role={session.role} module={t(S.nav.students)} locale={session.locale} />
-    );
-  }
+  const gate = moduleGate(session, "students", t(S.nav.students));
+  if (gate) return gate;
 
   const student = scopedStudents(session).find((s) => s.id === id);
   if (!student) notFound();
@@ -68,7 +65,7 @@ export default async function StudentPage({
         apps.some((a) => a.id === task.relation?.id)),
   );
   const shortlist = matchStudent(student, UNIVERSITIES)
-    .filter((m) => m.verdict !== "blocked")
+    .filter((m) => m.verdict !== "not_suitable")
     .slice(0, 4);
 
   return (
