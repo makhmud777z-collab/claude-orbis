@@ -48,7 +48,7 @@ export function NotInEdition({
           {t(homeLabel)}
         </Link>
         {canManageSettings ? (
-          <Link href="/settings" className="btn btn-primary btn-sm">
+          <Link href="/admin/portal" className="btn btn-primary btn-sm">
             {t(S.edition.upgrade)}
           </Link>
         ) : null}

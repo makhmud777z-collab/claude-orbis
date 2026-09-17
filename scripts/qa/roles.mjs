@@ -11,57 +11,57 @@ const BASE = process.env.QA_BASE_URL ?? "http://localhost:3000";
 const EXPECT = {
   u_aziz: {
     role: "Владелец",
-    must: ["/", "/crm/leads", "/crm/deals", "/crm/contacts", "/crm/channels", "/crm/settings",
+    must: ["/", "/crm/leads", "/crm/deals", "/crm/contacts",
       "/tasks", "/tasks/projects", "/documents", "/deadlines", "/calendar", "/universities",
-      "/finance", "/team", "/team/structure", "/team/reports", "/admin/users",
-      "/admin/permissions", "/settings"],
-    mustNot: ["/tasks/templates"],
+      "/finance", "/team", "/team/structure", "/team/reports", "/admin"],
+    // настройки живут только внутри «Администрирования», отдельных пунктов нет
+    mustNot: ["/tasks/templates", "/crm/channels", "/crm/settings", "/crm/pipelines", "/settings"],
   },
   u_dilnoza: {
     role: "Директор",
-    must: ["/", "/crm/leads", "/crm/deals", "/crm/contacts", "/crm/channels",
+    must: ["/", "/crm/leads", "/crm/deals", "/crm/contacts",
       "/tasks", "/documents", "/deadlines", "/calendar", "/universities", "/finance",
-      "/team", "/admin/users"],
-    mustNot: [],
+      "/team", "/admin"],
+    mustNot: ["/crm/channels", "/crm/settings", "/settings"],
   },
   u_shohruh: {
     role: "Руководитель филиала",
     must: ["/", "/crm/leads", "/crm/deals", "/crm/contacts", "/tasks", "/documents",
-      "/deadlines", "/calendar", "/universities", "/finance", "/team", "/settings"],
-    mustNot: ["/crm/channels", "/crm/settings", "/admin/users", "/admin/permissions"],
+      "/deadlines", "/calendar", "/universities", "/finance", "/team"],
+    mustNot: ["/crm/channels", "/crm/settings", "/admin", "/settings"],
   },
   u_kamila: {
     role: "Менеджер по продажам",
     must: ["/", "/crm/leads", "/crm/deals", "/crm/contacts", "/tasks", "/documents",
       "/deadlines", "/calendar", "/universities"],
-    mustNot: ["/finance", "/team", "/admin/users", "/admin/permissions", "/crm/channels"],
+    mustNot: ["/finance", "/team", "/admin", "/crm/channels"],
   },
   u_nilufar: {
     role: "Куратор (оператор)",
     must: ["/", "/crm/leads", "/crm/deals", "/crm/contacts", "/tasks", "/documents",
       "/deadlines", "/calendar", "/universities"],
-    mustNot: ["/finance", "/team", "/admin/users", "/crm/channels"],
+    mustNot: ["/finance", "/team", "/admin", "/crm/channels"],
   },
   u_madina: {
     role: "Специалист по документам",
     must: ["/", "/crm/deals", "/crm/contacts", "/tasks", "/documents", "/deadlines", "/calendar"],
-    mustNot: ["/crm/leads", "/finance", "/team", "/admin/users", "/universities"],
+    mustNot: ["/crm/leads", "/finance", "/team", "/admin", "/universities"],
   },
   u_rustam: {
     role: "Финансы",
     must: ["/", "/crm/deals", "/crm/contacts", "/tasks", "/deadlines", "/calendar", "/finance", "/team/reports"],
-    mustNot: ["/crm/leads", "/documents", "/admin/users", "/universities", "/team/structure"],
+    mustNot: ["/crm/leads", "/documents", "/admin", "/universities", "/team/structure"],
   },
   u_partner1: {
     role: "Агент-партнёр",
     must: ["/crm/deals", "/crm/contacts", "/tasks"],
-    mustNot: ["/", "/crm/leads", "/finance", "/team", "/admin/users", "/documents", "/universities", "/calendar"],
+    mustNot: ["/", "/crm/leads", "/finance", "/team", "/admin", "/documents", "/universities", "/calendar"],
   },
 };
 
 /** Разделы, прямой заход в которые должен давать заглушку, а не данные. */
-const GUARDED = ["/finance", "/team", "/settings", "/documents", "/universities",
-  "/crm/leads", "/crm/channels", "/crm/settings", "/calendar", "/admin/users", "/admin/permissions"];
+const GUARDED = ["/finance", "/team", "/documents", "/universities",
+  "/crm/leads", "/calendar", "/admin"];
 
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const issues = [];

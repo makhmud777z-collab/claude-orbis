@@ -71,7 +71,6 @@ export default async function LeadsPage({
             <PipelinePicker
               locale={session.locale}
               current={pipeline?.id ?? ""}
-              canEdit={allow(session.tenant.id, session.role, "crmSettings", "edit")}
               pipelines={[{ id: pipeline?.id ?? "", name: pipeline ? t(pipeline.name) : "" }]}
             />
             {allow(session.tenant.id, session.role, "leads", "create") ? (
@@ -115,9 +114,6 @@ export default async function LeadsPage({
           fields={cardFieldsOf(session.user.id).filter((key) =>
             ["phone", "source", "comment", "owner"].includes(key),
           )}
-          allFields={CARD_FIELDS.filter((key) =>
-            ["phone", "source", "comment", "owner"].includes(key),
-          ).map((key) => ({ key, label: t(CARD_FIELD_LABEL[key]) }))}
         />
       ) : (
         <EmptyState title={t(FILTER_TEXT.nothing)} />

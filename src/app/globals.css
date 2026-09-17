@@ -42,6 +42,7 @@
   --shadow-raised: 0 8px 24px rgb(16 24 40 / 0.1), 0 2px 6px rgb(16 24 40 / 0.05);
   --edge-top: inset 0 1px 0 0 rgb(255 255 255 / 0.6);
   --color-rail: #ffffff;
+  --color-scrim: rgb(16 24 40 / 0.38);
   --grain-opacity: 0;
 
   /* atmosphere (spotlight cards only — scarce by design) */
@@ -99,6 +100,7 @@
     --shadow-raised: 0 12px 34px rgb(0 0 0 / 0.45);
     --edge-top: inset 0 1px 0 0 rgb(255 255 255 / 0.05);
     --color-rail: #111214;
+    --color-scrim: rgb(0 0 0 / 0.72);
     --grain-opacity: 0.02;
 
     color-scheme: dark;
@@ -355,6 +357,9 @@
     color: var(--color-accent);
   }
   .dot {
+    /* Своя раскладка обязательна: как inline-элемент точка теряет размеры
+       и исчезает везде, где её родитель — не flex-контейнер. */
+    display: inline-block;
     width: 6px;
     height: 6px;
     border-radius: 9999px;

@@ -139,26 +139,27 @@ export function WorkdayPanel({ workday, locale }: { workday: WorkdayState; local
         </div>
       ) : null}
 
-      <form action={workdayAction} className="mt-3.5 flex gap-1.5">
+      {/* Две кнопки в панели 320px: подписи короткие, иначе текст вылезает. */}
+      <form action={workdayAction} className="mt-3.5 flex flex-wrap gap-1.5">
         {workday.started ? (
           <>
             <button
               name="what"
               value="break"
-              className="btn btn-secondary btn-sm flex-1 justify-center"
+              className="btn btn-secondary btn-sm min-w-0 flex-1 justify-center"
               type="submit"
             >
               {workday.onBreak ? <IconPlay size={13} /> : <IconPause size={13} />}
-              {workday.onBreak ? t(S.workday.breakEnd) : t(S.workday.breakStart)}
+              {workday.onBreak ? t(S.workday.breakEndShort) : t(S.workday.breakStart)}
             </button>
             <button
               name="what"
               value="end"
-              className="btn btn-primary btn-sm flex-1 justify-center"
+              className="btn btn-primary btn-sm min-w-0 flex-1 justify-center"
               type="submit"
             >
               <IconStop size={13} />
-              {t(S.workday.end)}
+              {t(S.workday.endShort)}
             </button>
           </>
         ) : (

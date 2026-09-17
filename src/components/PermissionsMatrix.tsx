@@ -159,7 +159,7 @@ function CellDialog({
       footer={
         <>
           <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
-            {t(S.common.reset)}
+            {t(S.common.cancel)}
           </button>
           <button type="submit" form="permission-form" className="btn btn-primary btn-sm">
             {t(S.common.save)}

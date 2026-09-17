@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { moveCardAction, setCardFieldsAction } from "@/app/actions";
-import { Modal, Tooltip } from "./controls";
-import { IconMore, IconSettings } from "./icons";
+import { IconMore } from "./icons";
 import { Avatar, StatusDot } from "./ui";
 import { translator, type Locale } from "@/lib/i18n";
 import { som } from "@/lib/format";
@@ -59,7 +58,6 @@ export function Kanban({
   locale,
   canEdit,
   fields,
-  allFields,
   showTotals = true,
 }: {
   entity: "lead" | "deal";
@@ -69,7 +67,6 @@ export function Kanban({
   canEdit: boolean;
   /** какие поля сотрудник выбрал показывать */
   fields: string[];
-  allFields: FieldOption[];
   showTotals?: boolean;
 }) {
   const t = translator(locale);
@@ -77,7 +74,6 @@ export function Kanban({
   const [moved, setMoved] = useState<Record<string, string>>({});
   const [dragging, setDragging] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
-  const [settings, setSettings] = useState(false);
 
   // Пришли свежие данные с сервера — локальные догадки больше не нужны.
   useEffect(() => setMoved({}), [cards]);
@@ -104,16 +100,9 @@ export function Kanban({
 
   return (
     <>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="t-micro text-ink-faint">
-          {canEdit ? t(S.pipelines.dragHint) : t(S.pipelines.cardViewHint)}
-        </div>
-        <Tooltip text={t(S.pipelines.cardView)}>
-          <button className="btn-icon" onClick={() => setSettings(true)} aria-label={t(S.pipelines.cardView)}>
-            <IconSettings size={16} />
-          </button>
-        </Tooltip>
-      </div>
+      {canEdit ? (
+        <div className="t-micro mb-3 text-ink-faint">{t(S.pipelines.dragHint)}</div>
+      ) : null}
 
       <div className="-mx-5 overflow-x-auto px-5 pb-2 lg:-mx-8 lg:px-8">
         <div className="flex min-w-max gap-3">
@@ -186,13 +175,6 @@ export function Kanban({
         </div>
       </div>
 
-      <CardSettings
-        open={settings}
-        onClose={() => setSettings(false)}
-        fields={fields}
-        allFields={allFields}
-        locale={locale}
-      />
     </>
   );
 }
@@ -257,92 +239,5 @@ function Card({
         </div>
       ) : null}
     </Link>
-  );
-}
-
-/** «Карточка просмотра»: набор полей на карточке настраивает сам сотрудник. */
-function CardSettings({
-  open,
-  onClose,
-  fields,
-  allFields,
-  locale,
-}: {
-  open: boolean;
-  onClose: () => void;
-  fields: string[];
-  allFields: FieldOption[];
-  locale: Locale;
-}) {
-  const t = translator(locale);
-  const [picked, setPicked] = useState(fields);
-  const form = useRef<HTMLFormElement>(null);
-
-  useEffect(() => setPicked(fields), [fields, open]);
-
-  const toggle = (key: string) =>
-    setPicked((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={t(S.pipelines.cardView)}
-      footer={
-        <>
-          <button className="btn btn-ghost btn-sm" onClick={onClose} type="button">
-            {t(S.common.reset)}
-          </button>
-          <button
-            className="btn btn-primary btn-sm"
-            type="button"
-            onClick={() => {
-              form.current?.requestSubmit();
-              onClose();
-            }}
-          >
-            {t(S.common.save)}
-          </button>
-        </>
-      }
-    >
-      <p className="t-caption mb-4 text-ink-muted">{t(S.pipelines.cardViewHint)}</p>
-      <form ref={form} action={setCardFieldsAction} className="space-y-1">
-        {allFields.map((field) => {
-          const on = picked.includes(field.key);
-          return (
-            <label
-              key={field.key}
-              className="flex cursor-pointer items-center gap-3 rounded-[10px] px-3 py-2 transition-colors hover:bg-surface-1"
-            >
-              {/* свой переключатель вместо системного чекбокса */}
-              <span
-                className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-[5px] border transition-colors"
-                style={{
-                  borderColor: on ? "var(--color-ink)" : "var(--color-hairline)",
-                  background: on ? "var(--color-ink)" : "transparent",
-                }}
-              >
-                {on ? (
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="m4.5 12.5 5 5 10-11" />
-                  </svg>
-                ) : null}
-              </span>
-              <span className="t-caption flex-1">{field.label}</span>
-              <input
-                type="checkbox"
-                name="field"
-                value={field.key}
-                checked={on}
-                onChange={() => toggle(field.key)}
-                className="sr-only"
-              />
-              <IconMore size={14} className="text-ink-faint" />
-            </label>
-          );
-        })}
-      </form>
-    </Modal>
   );
 }

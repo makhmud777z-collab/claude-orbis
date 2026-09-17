@@ -258,7 +258,7 @@ export default async function ContactPage({
             </SectionTitle>
             <div className="card p-5">
               <Progress percent={dossier.percent} />
-              <div className="mt-4 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+              <div className="mt-4 grid min-w-0 grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
                 {docs.map((d) => {
                   const st = DOCUMENT_STATUS[d.status];
                   return (
@@ -274,7 +274,7 @@ export default async function ContactPage({
                           {d.needsApostille ? ` · ${t(S.students.needsApostille)}` : ""}
                         </div>
                       </div>
-                      <span className="t-micro text-ink-faint">{t(st.label)}</span>
+                      <span className="t-micro flex-none text-ink-faint">{t(st.label)}</span>
                     </div>
                   );
                 })}

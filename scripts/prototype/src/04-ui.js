@@ -14,9 +14,13 @@ const head = (title, meta, actions) => `
     </div>
     ${actions ? `<div style="display:flex;gap:8px;flex-wrap:wrap">${actions}</div>` : ""}
   </div>`;
+/**
+ * Заголовок раздела. Второй заголовок в колонке обязан отступать от блока
+ * выше: без этого он липнет к предыдущей карточке и выглядит обрезанным.
+ */
 const sectionTitle = (text, right) => `
-  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 14px">
-    <h2 class="t-headline">${esc(text)}</h2>${right ?? ""}
+  <div class="section-title" style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 14px">
+    <h2 class="t-headline" style="min-width:0">${esc(text)}</h2>${right ?? ""}
   </div>`;
 const tile = (label, value, hint, color) => `
   <div class="card card-hover" style="padding:18px">
@@ -47,7 +51,7 @@ function select(id, value, options, width) {
       <span class="truncate" style="flex:1;min-width:0;text-align:left">${esc(current?.label ?? "—")}</span>
       ${icon("chevron", 13)}
     </button>
-    ${open ? `<span class="pop" style="top:38px;left:0">${options.map((o) => `
+    ${open ? `<span class="pop" style="top:38px;left:0;min-width:${width ? `${width}px` : "220px"}">${options.map((o) => `
       <button data-act="${esc(id)}" data-value="${esc(o.value)}">
         ${o.color ? dot(o.color) : ""}
         <span style="flex:1;min-width:0">

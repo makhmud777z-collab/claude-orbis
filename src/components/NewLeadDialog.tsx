@@ -71,7 +71,7 @@ export function NewLeadDialog({
         footer={
           <>
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(false)}>
-              {t(S.common.reset)}
+              {t(S.common.cancel)}
             </button>
             <button
               type="submit"

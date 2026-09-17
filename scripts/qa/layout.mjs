@@ -2,12 +2,12 @@ import { chromium } from "playwright";
 
 const BASE = process.env.QA_BASE_URL ?? "http://localhost:3000";
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
-const routes = ["/", "/crm/contacts", "/crm/deals", "/crm/leads", "/universities", "/documents", "/tasks", "/calendar", "/team", "/team/structure", "/admin/permissions", "/settings"];
+const routes = ["/", "/crm/contacts", "/crm/deals", "/crm/leads", "/universities", "/documents", "/tasks", "/calendar", "/team", "/team/structure", "/admin/permissions", "/admin/pipelines", "/admin/portal"];
 const out = [];
 const broken = [];
 for (const width of [390, 810]) {
   const ctx = await browser.newContext({ viewport: { width, height: 900 }, deviceScaleFactor: 2 });
-  await ctx.addCookies([{ name: "orbis_tenant", value: "seoulway", domain: "localhost", path: "/" }]);
+  await ctx.addCookies([{ name: "orbis_tenant", value: "seoulway", domain: "localhost", path: "/" }, { name: "orbis_admin", value: "t_seoulway", domain: "localhost", path: "/" }]);
   const page = await ctx.newPage();
   for (const r of routes) {
     await page.goto(BASE + r, { waitUntil: "networkidle" });

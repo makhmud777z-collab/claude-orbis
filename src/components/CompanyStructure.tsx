@@ -359,7 +359,7 @@ export function CompanyStructure({
           </label>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => setAdding(null)}>
-              {t(S.common.reset)}
+              {t(S.common.cancel)}
             </button>
             <button type="submit" className="btn btn-primary btn-sm">
               {t(S.common.save)}

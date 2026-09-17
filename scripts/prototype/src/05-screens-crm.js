@@ -442,61 +442,68 @@ function screenContact(id) {
 }
 
 /* ── настройки CRM, воронки и каналы ─────────────────────── */
-/** Одна точка входа во всё, что настраивается в воронке. */
-function screenCrmSettings() {
-  const pipelines = [...pipelinesOf("lead"), ...pipelinesOf("deal")];
-  const channels = D.channels.filter((c) => c.tenantId === S.tenant);
-  const items = [
-    { go: "pipelines", title: loc("Воронки и стадии", "Voronkalar va bosqichlar"),
-      hint: loc("названия, порядок и цвета стадий", "bosqich nomlari, tartibi va ranglari"), value: String(pipelines.length) },
-    { go: "channels", title: loc("Каналы продаж", "Sotuv kanallari"),
-      hint: loc("откуда приходят обращения", "murojaatlar qayerdan keladi"),
-      value: `${channels.filter((c) => c.status === "connected").length} / ${channels.length}` },
-    { go: "deals", title: loc("Карточка просмотра", "Ko‘rish kartasi"),
-      hint: loc("какие поля показывать на канбане", "kanbanda qaysi maydonlar ko‘rinadi"), value: String(S.cardFields.length) },
-  ];
-  return `
-    ${head(t(loc("Настройки CRM", "CRM sozlamalari")),
-      `<span>${t(loc("воронки, каналы и вид карточки", "voronkalar, kanallar va karta ko‘rinishi"))}</span>`)}
-    <div class="card divide">
-      ${items.map((x) => `<a href="#" data-go="${x.go}" class="row">
-        ${dot("var(--accent)")}
-        <span style="flex:1;min-width:0">
-          <span class="t-body-sm" style="display:block">${esc(t(x.title))}</span>
-          <span class="t-micro faint" style="display:block">${esc(t(x.hint))}</span>
-        </span>
-        <span class="t-caption num muted">${esc(x.value)}</span>
-        ${icon("right", 15)}
-      </a>`).join("")}
-    </div>`;
-}
-
 function screenPipelines() {
   const list = [...pipelinesOf("lead"), ...pipelinesOf("deal")];
+  const cardsOn = (p, key) => (p.entity === "lead"
+    ? scopedLeads().filter((l) => currentStage(l) === key)
+    : scopedDeals().filter((d) => d.pipelineId === p.id && currentStage(d) === key)).length;
+
   return `
-    ${crumb("crmsettings", t(loc("Настройки CRM", "CRM sozlamalari")), t(loc("Воронки", "Voronkalar")))}
+    ${crumb("admin", t(loc("Администрирование", "Boshqaruv")), t(loc("Воронки", "Voronkalar")))}
     ${head(t(loc("Воронки", "Voronkalar")),
-      `<span>${t(loc("стадии, их порядок и цвета — то, как агентство видит свою работу", "bosqichlar, tartibi va ranglari"))}</span>`)}
-    <div class="grid">
-      ${list.map((p) => `<section class="card" style="padding:18px">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:14px">
-          <h2 class="t-headline">${esc(t(p.name))}</h2>
+      `<span>${t(loc("стадии, их порядок, цвета и финалы — то, как агентство видит свою работу", "bosqichlar, tartibi, ranglari va yakunlari"))}</span>`,
+      `<button class="btn btn-secondary" data-act="newpipeline">${icon("plus", 15)} ${t(loc("Новая воронка", "Yangi voronka"))}</button>`)}
+
+    <div class="grid" style="gap:20px">
+      ${list.map((p) => `<section class="card" style="padding:0;overflow:hidden">
+        <div class="card-head" style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+          <span class="t-body-sm" style="flex:1;min-width:0" class="truncate">${esc(t(p.name))}</span>
+          <span class="chip">${t(p.entity === "lead" ? loc("Для лидов", "Lidlar uchun") : loc("Для сделок", "Bitimlar uchun"))}</span>
+          ${p.isDefault ? `<span class="chip on">${t(loc("Основная", "Asosiy"))}</span>` : ""}
           <span class="t-micro faint">${plural(p.stages.length, ["стадия", "стадии", "стадий"], "bosqich")}</span>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${stagesOf(p).map((s) => `<button class="card card-hover" style="padding:10px 12px;display:flex;gap:10px;align-items:center;min-width:190px;text-align:left;cursor:pointer;color:inherit;border-radius:15px"
-              data-act="stage" data-value="${esc(p.id)}:${esc(s.key)}">
-            <span style="width:4px;height:28px;border-radius:999px;background:${s.color};flex:none"></span>
-            <span style="min-width:0">
-              <span class="t-caption truncate" style="display:block">${esc(s.label.ru)}</span>
-              <span class="t-micro faint truncate" style="display:block">${esc(s.label.uz)}</span>
-            </span>
-            ${s.final ? dot(s.final === "won" ? "var(--deal)" : "var(--risk)") : ""}
-          </button>`).join("")}
+
+        <div class="divide">
+          ${stagesOf(p).map((stage, i, all) => {
+            const cards = cardsOn(p, stage.key);
+            return `<div class="row" style="gap:12px">
+              <span style="width:4px;height:30px;border-radius:999px;background:${stage.color};flex:none"></span>
+              <button style="flex:1;min-width:0;text-align:left;background:none;border:0;cursor:pointer;color:inherit;padding:0"
+                data-act="stage" data-value="${esc(p.id)}:${esc(stage.key)}">
+                <span class="t-body-sm truncate" style="display:flex;gap:8px;align-items:center">
+                  ${esc(stage.label.ru)}
+                  ${stage.final ? dot(stage.final === "won" ? "var(--deal)" : "var(--risk)") : ""}
+                </span>
+                <span class="t-micro faint truncate" style="display:block">
+                  ${esc(stage.label.uz)}${cards ? ` · ${plural(cards, ["карточка", "карточки", "карточек"], "karta")}` : ""}
+                </span>
+              </button>
+              <span style="display:flex;gap:2px;flex:none">
+                <button class="icon-btn" style="width:28px;height:28px" data-act="movestage" data-value="${esc(p.id)}:${esc(stage.key)}:-1"
+                  ${i === 0 ? "disabled" : ""} title="${t(loc("Выше", "Yuqoriga"))}">${icon("arrow-up", 13)}</button>
+                <button class="icon-btn" style="width:28px;height:28px" data-act="movestage" data-value="${esc(p.id)}:${esc(stage.key)}:1"
+                  ${i === all.length - 1 ? "disabled" : ""} title="${t(loc("Ниже", "Pastga"))}">${icon("arrow-down", 13)}</button>
+                <button class="icon-btn" style="width:28px;height:28px" data-act="delstage" data-value="${esc(p.id)}:${esc(stage.key)}"
+                  ${cards ? "disabled" : ""} title="${t(cards ? loc("На стадии есть карточки", "Bosqichda kartalar bor") : loc("Удалить стадию", "Bosqichni o‘chirish"))}">${icon("trash", 13)}</button>
+              </span>
+            </div>`;
+          }).join("")}
+        </div>
+
+        <div style="padding:14px 18px;border-top:1px solid var(--hairline-soft)">
+          <button class="btn btn-secondary" data-act="newstage" data-value="${esc(p.id)}">${icon("plus", 14)} ${t(loc("Добавить стадию", "Bosqich qo‘shish"))}</button>
         </div>
       </section>`).join("")}
     </div>`;
 }
+
+/** Настоящие иконки каналов: глобус на месте Instagram выглядел заглушкой. */
+const CHANNEL_ICON = {
+  instagram: { icon: "instagram", color: "var(--magenta)" },
+  telegram: { icon: "telegram", color: "var(--accent)" },
+  email: { icon: "mail", color: "var(--violet)" },
+  phone: { icon: "phone", color: "var(--deal)" },
+};
 
 function screenChannels() {
   const channels = D.channels.filter((c) => c.tenantId === S.tenant);
@@ -520,7 +527,7 @@ function screenChannels() {
         const st = STATUS[c.status];
         return `<article class="card" style="padding:18px">
           <div style="display:flex;gap:12px;align-items:flex-start">
-            <span class="avatar" style="width:36px;height:36px;border-radius:10px">${icon(c.kind === "email" ? "mail" : c.kind === "phone" ? "phone" : "globe", 17)}</span>
+            <span class="avatar" style="width:36px;height:36px;border-radius:10px;color:${CHANNEL_ICON[c.kind]?.color ?? "var(--ink-muted)"};background:color-mix(in srgb, ${CHANNEL_ICON[c.kind]?.color ?? "var(--ink-muted)"} 12%, var(--surface-2))">${icon(CHANNEL_ICON[c.kind]?.icon ?? "globe", 17)}</span>
             <span style="min-width:0;flex:1">
               <span class="t-body-sm truncate" style="display:block">${esc(c.title)}</span>
               <span class="t-micro faint truncate" style="display:block">${esc(c.handle)}</span>

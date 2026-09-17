@@ -370,3 +370,127 @@ function screenPermissions() {
       </table>
     </div>`;
 }
+
+/* ── администрирование: один вход во все настройки ───────── */
+/**
+ * Замок. Настройки портала — не раздел меню, а зона ответственности:
+ * сюда заходит тот, кто портал ведёт, и делает это осознанно, набрав код.
+ */
+function screenAdminLock() {
+  return `
+    <div style="display:flex;align-items:center;justify-content:center;min-height:70vh;padding:0 16px">
+      <div class="card" style="width:100%;max-width:420px;padding:32px;text-align:center">
+        <span style="display:inline-flex;width:48px;height:48px;border-radius:999px;align-items:center;justify-content:center;margin-bottom:18px;
+          background:color-mix(in srgb, var(--accent) 12%, transparent);color:var(--accent)">${icon("lock", 20)}</span>
+        <h1 class="t-headline">${t(loc("Настройки портала", "Portal sozlamalari"))}</h1>
+        <p class="t-caption muted" style="margin:10px 0 0;line-height:1.6">${t(loc(
+          "Раздел закрыт кодом: здесь меняются воронки, права и тариф. Сотрудникам он не нужен и не виден.",
+          "Bo‘lim kod bilan yopilgan: bu yerda voronkalar, huquqlar va tarif o‘zgaradi."))}</p>
+        <input id="admin-code" type="password" inputmode="numeric" class="field num" data-enter="unlock"
+          placeholder="${t(loc("Код", "Kod"))}" style="margin-top:22px;height:44px;text-align:center;letter-spacing:.4em">
+        ${S.adminError ? `<p class="t-caption" style="margin:10px 0 0;color:var(--risk)">${t(loc("Неверный код", "Kod noto‘g‘ri"))}</p>` : ""}
+        <button class="btn btn-primary" style="width:100%;height:40px;margin-top:16px" data-act="unlock">${t(loc("Войти", "Kirish"))}</button>
+      </div>
+    </div>`;
+}
+
+/** Пульт портала: всё, что настраивается, собрано плитками по смыслу. */
+function screenAdmin() {
+  if (!S.adminUnlocked) return screenAdminLock();
+  const pipelines = [...pipelinesOf("lead"), ...pipelinesOf("deal")];
+  const channels = D.channels.filter((c) => c.tenantId === S.tenant);
+  const groups = [
+    { label: loc("CRM", "CRM"), icon: "board", items: [
+      { go: "pipelines", title: loc("Воронки", "Voronkalar"),
+        hint: loc("стадии, порядок, цвета и финалы", "bosqichlar, tartib, ranglar"), value: String(pipelines.length) },
+      { go: "channels", title: loc("Каналы продаж", "Sotuv kanallari"),
+        hint: loc("откуда приходят обращения", "murojaatlar qayerdan keladi"),
+        value: `${channels.filter((c) => c.status === "connected").length} / ${channels.length}` },
+      { go: "cards", title: loc("Карточка просмотра", "Ko‘rish kartasi"),
+        hint: loc("какие поля показывать на канбане", "kanbanda qaysi maydonlar"), value: String(S.cardFields.length) },
+    ] },
+    { label: loc("Люди и доступы", "Odamlar va huquqlar"), icon: "people", items: [
+      { go: "users", title: loc("Пользователи", "Foydalanuvchilar"),
+        hint: loc("мест по тарифу", "tarif bo‘yicha o‘rin"), value: `${tenant().seatsUsed} / ${tenant().seatsLimit}` },
+      { go: "permissions", title: loc("Права доступа", "Kirish huquqlari"),
+        hint: loc("матрица ролей и разделов", "rollar va bo‘limlar matritsasi"), value: "—" },
+    ] },
+    { label: loc("Портал", "Portal"), icon: "gear", items: [
+      { go: "portal", title: loc("Настройки портала", "Portal sozlamalari"),
+        hint: loc("домен, брендинг, филиалы, тариф", "domen, brending, filiallar, tarif"), value: tenant().slug },
+      { go: "demo", title: loc("Демо-режим", "Demo rejim"),
+        hint: loc("агентство и сотрудник для показа", "ko‘rsatish uchun agentlik va xodim"), value: user().name.split(" ")[0] },
+    ] },
+  ];
+
+  return `
+    ${head(t(loc("Администрирование", "Boshqaruv")),
+      `<span>${t(loc("один вход во все настройки портала: воронки, каналы, права, тариф и домен",
+        "portal sozlamalariga yagona kirish"))}</span>`,
+      `<button class="btn btn-secondary" data-act="lock">${icon("lock", 14)} ${t(loc("Закрыть настройки", "Sozlamalarni yopish"))}</button>`)}
+
+    ${groups.map((g) => `
+      ${sectionTitle(t(g.label))}
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
+        ${g.items.map((x) => `<a class="card card-hover" href="#" data-go="${x.go}" style="display:flex;gap:14px;align-items:center;padding:16px 18px">
+          <span style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex:none;
+            background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent)">${icon(g.icon, 18)}</span>
+          <span style="flex:1;min-width:0">
+            <span class="t-body-sm" style="display:block">${esc(t(x.title))}</span>
+            <span class="t-micro faint" style="display:block;margin-top:2px">${esc(t(x.hint))}</span>
+          </span>
+          <span class="t-caption num muted nowrap">${esc(x.value)}</span>
+          ${icon("right", 15)}
+        </a>`).join("")}
+      </div>`).join("")}`;
+}
+
+/** Показ портала: выбор агентства и сотрудника — это настройка, а не шапка. */
+function screenDemo() {
+  const staff = D.users.filter((u) => u.tenantId === S.tenant);
+  return `
+    ${crumb("admin", t(loc("Администрирование", "Boshqaruv")), t(loc("Демо-режим", "Demo rejim")))}
+    ${head(t(loc("Демо-режим", "Demo rejim")),
+      `<span>${t(loc("агентство и сотрудник, от лица которого вы смотрите систему", "agentlik va siz kimning nomidan ko‘rayotganingiz"))}</span>`)}
+
+    ${sectionTitle(t(loc("Агентство", "Agentlik")))}
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+      ${D.tenants.map((x) => `<button class="card card-hover" data-act="tenant" data-value="${esc(x.id)}"
+        style="display:flex;gap:12px;align-items:center;padding:14px 16px;text-align:left;cursor:pointer;color:inherit;
+        ${x.id === S.tenant ? "border-color:var(--accent)" : ""}">
+        <span style="width:32px;height:32px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex:none">${esc(x.mark)}</span>
+        <span style="min-width:0">
+          <span class="t-body-sm truncate" style="display:block">${esc(x.name)}</span>
+          <span class="t-micro faint truncate" style="display:block">${esc(x.slug)} · ${esc(x.edition === "mvp" ? "01 / MVP" : "02 / CRM")}</span>
+        </span>
+      </button>`).join("")}
+    </div>
+
+    ${sectionTitle(t(loc("Войти как сотрудник", "Xodim sifatida kirish")))}
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+      ${staff.map((u) => `<button class="card card-hover" data-act="user" data-value="${esc(u.id)}"
+        style="display:flex;gap:12px;align-items:center;padding:14px 16px;text-align:left;cursor:pointer;color:inherit;
+        ${u.id === S.userId ? "border-color:var(--accent)" : ""}">
+        ${avatar(u.name, 32)}
+        <span style="min-width:0;flex:1">
+          <span class="t-body-sm truncate" style="display:block">${esc(u.name)}</span>
+          <span class="t-micro faint truncate" style="display:block">${esc(t(roleDef(u.role).label))} · ${esc(u.title)}</span>
+        </span>
+      </button>`).join("")}
+    </div>`;
+}
+
+/** Какие поля показывать на карточке канбана. */
+function screenCards() {
+  return `
+    ${crumb("admin", t(loc("Администрирование", "Boshqaruv")), t(loc("Карточка просмотра", "Ko‘rish kartasi")))}
+    ${head(t(loc("Карточка просмотра", "Ko‘rish kartasi")),
+      `<span>${t(loc("какие поля показывать на карточке канбана и в каком порядке", "kanban kartasida qaysi maydonlar"))}</span>`)}
+    <div class="card" style="max-width:520px;padding:0;overflow:hidden">
+      ${CARD_FIELDS.map((f) => `<button data-act="togglefield" data-value="${esc(f.key)}"
+        style="display:flex;gap:12px;align-items:center;width:100%;padding:12px 18px;border:0;border-top:1px solid var(--hairline-soft);
+        background:none;cursor:pointer;color:inherit;text-align:left">
+        ${checkbox(S.cardFields.includes(f.key))}<span class="t-body-sm" style="flex:1">${esc(t(f.label))}</span>
+      </button>`).join("")}
+    </div>`;
+}

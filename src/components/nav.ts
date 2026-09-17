@@ -36,8 +36,6 @@ export const NAV: NavEntry[] = [
       { href: "/crm/leads", label: loc("Лиды", "Lidlar"), module: "leads" },
       { href: "/crm/deals", label: loc("Сделки", "Bitimlar"), module: "deals" },
       { href: "/crm/contacts", label: loc("Контакты", "Kontaktlar"), module: "contacts" },
-      { href: "/crm/channels", label: loc("Каналы продаж", "Sotuv kanallari"), module: "crmSettings" },
-      { href: "/crm/settings", label: loc("Настройки CRM", "CRM sozlamalari"), module: "crmSettings" },
     ],
   },
   {
@@ -82,18 +80,11 @@ export const NAV: NavEntry[] = [
       { href: "/team/reports", label: loc("Отчётность", "Hisobot"), module: "staffReports" },
     ],
   },
+  // «Администрирование» — одна строка без раскрытия: внутри код, а за ним
+  // все настройки портала. Сотруднику этого пункта не видно вовсе.
   {
-    key: "admin", href: "/admin/users", label: loc("Администрирование", "Boshqaruv"),
-    icon: IconSettings, group: "admin",
-    children: [
-      { href: "/admin/users", label: loc("Пользователи", "Foydalanuvchilar"), module: "admin" },
-      { href: "/admin/permissions", label: loc("Права доступа", "Kirish huquqlari"), module: "admin" },
-      { href: "/settings", label: loc("Настройки портала", "Portal sozlamalari"), module: "settings" },
-    ],
-  },
-  {
-    key: "settings", href: "/settings", label: loc("Настройки", "Sozlamalar"),
-    icon: IconSettings, group: "admin", module: "settings",
+    key: "admin", href: "/admin", label: loc("Администрирование", "Boshqaruv"),
+    icon: IconSettings, group: "admin", module: "admin",
   },
 ];
 
@@ -106,11 +97,9 @@ export const GROUP_LABEL: Record<NavEntry["group"], Loc> = {
 /**
  * Пункты меню для сотрудника: пересечение прав роли и модулей версии продукта.
  * Раздел-контейнер остаётся, если доступен хотя бы один его пункт.
- * Отдельный пункт «Настройки» показывается только там, где нет раздела
- * «Администрирование» — иначе портал дублировал бы одну и ту же страницу.
  */
 export function navFor(allowed: Set<Module>): NavEntry[] {
-  const visible = NAV.map((entry) => {
+  return NAV.map((entry) => {
     const children = entry.children?.filter((c) => allowed.has(c.module));
     if (entry.children) {
       if (!children?.length) return null;
@@ -118,7 +107,9 @@ export function navFor(allowed: Set<Module>): NavEntry[] {
     }
     return entry.module && allowed.has(entry.module) ? entry : null;
   }).filter((x): x is NavEntry => x !== null);
+}
 
-  const hasAdmin = visible.some((e) => e.key === "admin");
-  return visible.filter((e) => !(hasAdmin && e.key === "settings"));
+/** Все подпункты одним списком — меню закрепляет их в корень. */
+export function navChildren(entries: NavEntry[]) {
+  return entries.flatMap((e) => (e.children ?? []).map((c) => ({ ...c, parent: e.key, icon: e.icon })));
 }

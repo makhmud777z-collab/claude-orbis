@@ -156,11 +156,16 @@ export default async function DashboardPage() {
             <Link
               key={stage}
               href={`/crm/deals?stage=${stage}`}
-              className="group px-5 py-5 transition-colors hover:bg-surface-2 sm:border-r sm:border-hairline-soft sm:last:border-r-0"
+              className="group min-w-0 px-5 py-5 transition-colors hover:bg-surface-2 sm:border-r sm:border-hairline-soft sm:last:border-r-0"
             >
-              <div className="t-micro flex items-center gap-2 whitespace-nowrap text-ink-muted">
-                <StatusDot color={dot} />
-                {label}
+              {/* Восемь стадий в ряд: подпись переносится, а не вылезает за
+                  колонку. Две строки заняты всегда, иначе числа под ними
+                  прыгают по вертикали от длины названия. */}
+              <div className="t-micro flex min-h-[2.6em] min-w-0 items-start gap-2 text-ink-muted">
+                <span className="mt-[3px] flex-none">
+                  <StatusDot color={dot} />
+                </span>
+                <span className="min-w-0 leading-snug">{label}</span>
               </div>
               <div className="t-num mt-3 text-[26px] font-medium tracking-[-1.2px]">
                 {count}

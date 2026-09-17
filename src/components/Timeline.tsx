@@ -103,11 +103,12 @@ export function Timeline({
             className="field resize-none text-[13px]"
           />
 
-          <div className="mt-2 flex items-center justify-between gap-2">
+          {/* Узкая колонка карточки: строка переносится, а не режется. */}
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
             {kind === "activity" ? (
-              <label className="t-micro flex items-center gap-2 text-ink-faint">
+              <label className="t-micro flex min-w-0 items-center gap-2 text-ink-faint">
                 {t(S.timeline.dueTo)}
-                <DatePicker name="dueAt" value="" locale={locale} width={160} />
+                <DatePicker name="dueAt" value="" locale={locale} width={150} />
               </label>
             ) : (
               <span />

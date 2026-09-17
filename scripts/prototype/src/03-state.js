@@ -34,7 +34,27 @@ const S = {
   moves: {},           // userId → departmentId (перенос в структуре)
   depts: [],           // отделы, созданные в прототипе
   heads: {},           // departmentId → userId
+  openSections: [],    // раскрытые разделы меню — независимо друг от друга
+  railCollapsed: false,
+  pinned: [],          // закреплённые подпункты в корне меню
+  adminUnlocked: false, // замок на «Администрировании»
+  adminCode: "7777",
+  adminError: false,
+  stageOrder: {},      // pipelineId → свой порядок стадий
+  stageHidden: {},     // pipelineId → удалённые стадии
+  stageExtra: {},      // pipelineId → добавленные стадии
 };
+try {
+  const savedNav = localStorage.getItem("orbis-nav");
+  if (savedNav) Object.assign(S, JSON.parse(savedNav));
+} catch { /* приватное окно — меню на сессию */ }
+function saveNav() {
+  try {
+    localStorage.setItem("orbis-nav", JSON.stringify({
+      openSections: S.openSections, railCollapsed: S.railCollapsed, pinned: S.pinned,
+    }));
+  } catch { /* приватное окно */ }
+}
 try {
   const savedTheme = localStorage.getItem("orbis-theme");
   if (savedTheme === "dark" || savedTheme === "light") S.theme = savedTheme;
@@ -63,12 +83,31 @@ const pipelineById = (id) => D.pipelines.find((p) => p.id === id);
 
 /** Стадия с учётом правок пользователя: он переименовывает и красит их сам. */
 function stageOf(pipeline, key) {
-  const base = pipeline?.stages.find((s) => s.key === key);
+  if (!pipeline) return null;
+  const base = pipeline.stages.find((s) => s.key === key)
+    ?? (S.stageExtra[pipeline.id] ?? []).find((s) => s.key === key);
   if (!base) return null;
   const patch = S.stages[pipeline.id]?.[key];
   return patch ? { ...base, ...patch } : base;
 }
-const stagesOf = (pipeline) => (pipeline?.stages ?? []).map((s) => stageOf(pipeline, s.key));
+/**
+ * Стадии воронки с учётом правок агентства: свой порядок, добавленные
+ * и удалённые стадии живут в состоянии прототипа, как в продукте — в базе.
+ */
+const stagesOf = (pipeline) => {
+  if (!pipeline) return [];
+  const base = [...pipeline.stages, ...(S.stageExtra[pipeline.id] ?? [])]
+    .filter((s) => !(S.stageHidden[pipeline.id] ?? []).includes(s.key));
+  const order = S.stageOrder[pipeline.id];
+  const list = order
+    ? [...base].sort((a, b) => {
+        const ia = order.indexOf(a.key);
+        const ib = order.indexOf(b.key);
+        return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
+      })
+    : base;
+  return list.map((s) => stageOf(pipeline, s.key) ?? s);
+};
 
 /** Текущая стадия карточки: локальный перенос важнее исходных данных. */
 const currentStage = (record) => S.moved[record.id] ?? record.stage;

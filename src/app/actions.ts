@@ -7,6 +7,8 @@ import { loc } from "@/lib/i18n";
 import { allow, type Action, type Module } from "@/lib/rbac";
 import * as db from "@/lib/store";
 import type { CalendarEvent, Lead, Role, TimelineEvent } from "@/lib/types";
+import { ADMIN_COOKIE, adminUnlocked, passcodeMatches } from "@/lib/admin-lock";
+import { getSession } from "@/lib/session";
 import {
   NO_STUDENT,
   parseShortlist,
@@ -85,10 +87,7 @@ export async function clearShortlist(formData: FormData) {
 
 /* ── CRM: перенос карточек, лиды, конвертация ────────────────── */
 
-async function actor() {
-  const { getSession } = await import("@/lib/session");
-  return getSession();
-}
+const actor = getSession;
 
 /** Перенос карточки канбана на другую стадию — запись уходит и в историю. */
 export async function moveCardAction(formData: FormData) {
@@ -180,11 +179,86 @@ export async function updateStageAction(formData: FormData) {
   const uz = String(formData.get("labelUz") ?? "").trim();
   const color = String(formData.get("color") ?? "").trim();
 
+  const hintRu = String(formData.get("hintRu") ?? "").trim();
+  const hintUz = String(formData.get("hintUz") ?? "").trim();
+  const final = String(formData.get("final") ?? "");
+
   if (ru && uz) db.renameStage(pipelineId, stageKey, { ru, uz });
   if (/^#[0-9a-fA-F]{6}$/.test(color)) db.setStageColor(pipelineId, stageKey, color.toLowerCase());
-  revalidatePath("/crm/pipelines");
+  db.setStageHint(pipelineId, stageKey, { ru: hintRu, uz: hintUz });
+  db.setStageFinal(pipelineId, stageKey, final === "won" || final === "lost" ? final : null);
+  revalidateCrm();
+}
+
+/** Порядок стадий, добавление и удаление — то же право на настройки CRM. */
+export async function moveStageAction(formData: FormData) {
+  if (!(await canEditCrm())) return;
+  db.moveStage(
+    String(formData.get("pipelineId") ?? ""),
+    String(formData.get("stageKey") ?? ""),
+    Number(formData.get("delta") ?? 0),
+  );
+  revalidateCrm();
+}
+
+export async function addStageAction(formData: FormData) {
+  if (!(await canEditCrm())) return;
+  const ru = String(formData.get("labelRu") ?? "").trim();
+  const uz = String(formData.get("labelUz") ?? "").trim() || ru;
+  const color = String(formData.get("color") ?? "").trim();
+  if (!ru) return;
+  db.addStage(
+    String(formData.get("pipelineId") ?? ""),
+    { ru, uz },
+    /^#[0-9a-fA-F]{6}$/.test(color) ? color.toLowerCase() : "#0a6ed1",
+  );
+  revalidateCrm();
+}
+
+export async function removeStageAction(formData: FormData) {
+  if (!(await canEditCrm())) return;
+  db.removeStage(String(formData.get("pipelineId") ?? ""), String(formData.get("stageKey") ?? ""));
+  revalidateCrm();
+}
+
+export async function updatePipelineAction(formData: FormData) {
+  if (!(await canEditCrm())) return;
+  const id = String(formData.get("pipelineId") ?? "");
+  const ru = String(formData.get("nameRu") ?? "").trim();
+  const uz = String(formData.get("nameUz") ?? "").trim() || ru;
+  if (ru) db.renamePipeline(id, { ru, uz });
+  if (formData.get("makeDefault")) db.setDefaultPipeline(id);
+  revalidateCrm();
+}
+
+export async function addPipelineAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "crmSettings", "edit")) return;
+  const ru = String(formData.get("nameRu") ?? "").trim();
+  const uz = String(formData.get("nameUz") ?? "").trim() || ru;
+  const entity = String(formData.get("entity") ?? "deal") === "lead" ? "lead" : "deal";
+  if (!ru) return;
+  db.addPipeline(session.tenant.id, entity, { ru, uz });
+  revalidateCrm();
+}
+
+export async function removePipelineAction(formData: FormData) {
+  if (!(await canEditCrm())) return;
+  db.removePipeline(String(formData.get("pipelineId") ?? ""));
+  revalidateCrm();
+}
+
+async function canEditCrm() {
+  const session = await actor();
+  return allow(session.tenant.id, session.role, "crmSettings", "edit");
+}
+
+/** Воронка видна на трёх экранах сразу — обновляем их вместе. */
+function revalidateCrm() {
+  revalidatePath("/admin/pipelines");
   revalidatePath("/crm/deals");
   revalidatePath("/crm/leads");
+  revalidatePath("/");
 }
 
 /** Какие поля показывать на карточке канбана — настройка каждого сотрудника. */
@@ -298,6 +372,42 @@ export async function switchTheme(formData: FormData) {
     maxAge: 60 * 60 * 24 * 365,
   });
   revalidatePath("/", "layout");
+}
+
+/* ── замок администрирования ─────────────────────────────────── */
+
+/**
+ * Вход в настройки по коду. Портал сотрудников и портал владельца — это
+ * два разных места: менеджер работает, владелец настраивает. Код держит
+ * границу между ними и в демо, и в бою.
+ */
+export async function unlockAdminAction(formData: FormData) {
+  const session = await getSession();
+  const code = String(formData.get("code") ?? "");
+  const back = String(formData.get("next") ?? "/admin");
+  if (!passcodeMatches(session.tenant, code)) {
+    redirect(`/admin?e=1&next=${encodeURIComponent(back)}`);
+  }
+  const store = await cookies();
+  // без maxAge: замок закрывается вместе с браузером — так безопаснее
+  store.set(ADMIN_COOKIE, session.tenant.id, { path: "/", httpOnly: true, sameSite: "lax" });
+  redirect(back);
+}
+
+export async function lockAdminAction() {
+  const store = await cookies();
+  store.delete(ADMIN_COOKIE);
+  redirect("/");
+}
+
+export async function setPasscodeAction(formData: FormData) {
+  const session = await getSession();
+  if (!(await adminUnlocked(session.tenant.id))) return;
+  const code = String(formData.get("code") ?? "").trim();
+  // Четыре цифры — компромисс: код набирают с телефона по десять раз в день.
+  if (!/^\d{4,12}$/.test(code)) return;
+  db.setPasscode(session.tenant.id, code);
+  revalidatePath("/admin", "layout");
 }
 
 /* ── умный фильтр ────────────────────────────────────────────── */

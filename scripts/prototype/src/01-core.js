@@ -116,8 +116,6 @@ const NAV = [
       { m: "leads", href: "leads", label: loc("Лиды", "Lidlar") },
       { m: "deals", href: "deals", label: loc("Сделки", "Bitimlar") },
       { m: "contacts", href: "contacts", label: loc("Контакты", "Kontaktlar") },
-      { m: "crmSettings", href: "channels", label: loc("Каналы продаж", "Sotuv kanallari") },
-      { m: "crmSettings", href: "crmsettings", label: loc("Настройки CRM", "CRM sozlamalari") },
     ],
   },
   {
@@ -147,15 +145,9 @@ const NAV = [
       { m: "staffReports", href: "staffreports", label: loc("Отчётность", "Hisobot") },
     ],
   },
-  {
-    key: "admin", href: "users", label: loc("Администрирование", "Boshqaruv"), group: "admin", icon: "gear",
-    children: [
-      { m: "admin", href: "users", label: loc("Пользователи", "Foydalanuvchilar") },
-      { m: "admin", href: "permissions", label: loc("Права доступа", "Kirish huquqlari") },
-      { m: "settings", href: "settings", label: loc("Настройки портала", "Portal sozlamalari") },
-    ],
-  },
-  { key: "settings", m: "settings", href: "settings", label: loc("Настройки", "Sozlamalar"), group: "admin", icon: "gear" },
+  // «Администрирование» — одна строка без раскрытия: внутри код, а за ним
+  // все настройки портала. Сотруднику этого пункта не видно вовсе.
+  { key: "admin", m: "admin", href: "admin", label: loc("Администрирование", "Boshqaruv"), group: "admin", icon: "gear" },
 ];
 
 /** Какому модулю принадлежит экран — нужно и меню, и защите маршрута. */
@@ -164,14 +156,14 @@ const ROUTE_MODULE = {
   leads: "leads", lead: "leads",
   deals: "deals", deal: "deals",
   contacts: "contacts", contact: "contacts",
-  pipelines: "crmSettings", channels: "crmSettings", crmsettings: "crmSettings",
+  admin: "admin", pipelines: "crmSettings", channels: "crmSettings", cards: "crmSettings",
+  portal: "settings", demo: "admin",
   tasks: "tasks", taskreports: "tasks", projects: "projects",
   documents: "documents", deadlines: "deadlines", calendar: "calendar",
   universities: "universities", compare: "universities",
   finance: "finance",
   team: "team", employee: "team", structure: "structure", staffreports: "staffReports",
   users: "admin", permissions: "admin",
-  settings: "settings",
 };
 const GROUPS = {
   work: loc("Операционка", "Kundalik ish"),

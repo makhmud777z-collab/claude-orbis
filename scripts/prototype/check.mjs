@@ -22,11 +22,25 @@ await page.goto(file, { waitUntil: "load" });
 const check = (ok, msg) => { if (!ok) fail.push(msg); };
 
 /* каждый раздел меню открывается и что-то показывает */
-const routes = ["dashboard", "leads", "deals", "contacts", "crmsettings", "pipelines", "channels",
+const routes = ["dashboard", "leads", "deals", "contacts",
   "tasks", "projects", "taskreports", "documents", "deadlines", "calendar",
-  "universities", "compare", "finance", "team", "structure", "staffreports",
-  "users", "permissions", "settings"];
-for (const route of routes) {
+  "universities", "compare", "finance", "team", "structure", "staffreports"];
+const adminRoutes = ["admin", "pipelines", "channels", "cards", "users", "permissions", "portal", "demo"];
+
+// Замок «Администрирования» проверяем до обхода: сначала он закрыт.
+await page.evaluate(() => window.go("admin"));
+await page.waitForTimeout(80);
+check(/Настройки портала/.test(await page.locator("#content").innerText()), "раздел настроек открылся без кода");
+await page.locator("#admin-code").fill("0000");
+await page.getByRole("button", { name: "Войти" }).click();
+await page.waitForTimeout(120);
+check(/Неверный код/.test(await page.locator("#content").innerText()), "неверный код пустил в настройки");
+await page.locator("#admin-code").fill("7777");
+await page.getByRole("button", { name: "Войти" }).click();
+await page.waitForTimeout(150);
+check(/Администрирование/.test(await page.locator("#content").innerText()), "верный код не открыл настройки");
+
+for (const route of [...routes, ...adminRoutes]) {
   await page.evaluate((r) => window.go(r), route);
   await page.waitForTimeout(60);
   const text = await page.locator("#content").innerText();
@@ -106,6 +120,32 @@ check(await page.locator(".cal-day.today").count() === 1, "сегодняшне�
 await page.locator(".cal-day.today").click();
 await page.waitForTimeout(150);
 check(await page.locator(".now-line").count() === 1, "в дневном срезе нет красной линии текущего времени");
+
+/* меню: разделы раскрываются независимо, рельса сворачивается, пункт крепится */
+await page.evaluate(() => window.go("dashboard"));
+await page.waitForTimeout(100);
+await page.evaluate(() => { window.handle("section", "crm"); window.handle("section", "tasks"); });
+await page.waitForTimeout(150);
+const railText = await page.locator("#rail").innerText();
+check(/Лиды/.test(railText) && /Проекты/.test(railText), "второй раскрытый раздел закрыл первый");
+check(!/ОПЕРАЦИОНКА|АГЕНТСТВО/.test(railText), "над меню остались заголовки групп");
+await page.evaluate(() => window.handle("pin", "deals"));
+await page.waitForTimeout(150);
+check((await page.locator("#rail a[data-go='deals']").count()) >= 2, "закреплённый пункт не появился в корне меню");
+await page.evaluate(() => window.handle("rail"));
+await page.waitForTimeout(250);
+const railWidth = await page.locator("#rail").evaluate((el) => el.getBoundingClientRect().width);
+check(railWidth < 110, `рельса не свернулась: ${Math.round(railWidth)}px`);
+await page.evaluate(() => window.handle("rail"));
+await page.waitForTimeout(250);
+
+/* каналы продаж: настоящие иконки, а не глобус-заглушка */
+await page.evaluate(() => window.go("channels"));
+await page.waitForTimeout(120);
+check(
+  (await page.locator("#content svg rect[rx='5']").count()) > 0,
+  "в каналах продаж нет иконки Instagram",
+);
 
 /* структура компании: дерево и панель подчинённых */
 await page.evaluate(() => window.go("structure"));

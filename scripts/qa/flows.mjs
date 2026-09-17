@@ -3,7 +3,7 @@ import { chromium } from "playwright";
 const BASE = process.env.QA_BASE_URL ?? "http://localhost:3000";
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const ctx = await browser.newContext({ viewport: { width: 1600, height: 1100 } });
-await ctx.addCookies([{ name: "orbis_tenant", value: "seoulway", domain: "localhost", path: "/" }]);
+await ctx.addCookies([{ name: "orbis_tenant", value: "seoulway", domain: "localhost", path: "/" }, { name: "orbis_admin", value: "t_seoulway", domain: "localhost", path: "/" }]);
 const page = await ctx.newPage();
 const fail = [];
 const check = (ok, msg) => { if (!ok) fail.push(msg); };
@@ -202,28 +202,38 @@ const workPage = await work.newPage();
 await workPage.goto(`${BASE}/`, { waitUntil: "networkidle" });
 
 const profile = () => workPage.locator("header button[aria-expanded]").last();
-await profile().click();
-await workPage.waitForTimeout(250);
+
+/**
+ * Меню профиля закрывается после каждого действия — так и задумано.
+ * Поэтому перед каждым шагом панель открываем заново, а не полагаемся
+ * на то, что она осталась открытой с прошлого клика.
+ */
+async function openPanel() {
+  if (await workPage.locator(".card-raised").count()) return;
+  await profile().click();
+  await workPage.waitForSelector(".card-raised", { timeout: 5000 });
+}
+const panel = () => workPage.locator(".card-raised").first().innerText();
+const press = async (value) => {
+  await openPanel();
+  await workPage.locator(`.card-raised button[name="what"][value="${value}"]`).click();
+  await workPage.waitForTimeout(1200);
+};
 
 // Прогон мог оставить день начатым: состояние живёт в памяти сервера.
+await openPanel();
 if (await workPage.locator('.card-raised button[name="what"][value="end"]').count()) {
-  await workPage.locator('.card-raised button[name="what"][value="end"]').click();
-  await workPage.waitForTimeout(1200);
-  await profile().click();
-  await workPage.waitForTimeout(250);
+  await press("end");
+  await openPanel();
 }
 // Статус набран капителью через CSS, поэтому сравниваем без учёта регистра.
 check(
-  /рабочий день не начат/i.test(await workPage.locator("body").innerText()),
+  /рабочий день не начат/i.test(await panel()),
   "у сотрудника без отметки не показан статус «Рабочий день не начат»",
 );
 
-// кнопка в самой панели профиля, а не компактная в шапке
-await workPage.locator('.card-raised button[name="what"][value="start"]').click();
-await workPage.waitForTimeout(1500);
-await profile().click();
-await workPage.waitForTimeout(250);
-const panel = () => workPage.locator(".card-raised").first().innerText();
+await press("start");
+await openPanel();
 check(/рабочий день идёт/i.test(await panel()), "рабочий день не начался после нажатия");
 
 const clockOf = (text) => text.match(/\d{2}:\d{2}:\d{2}/)?.[0] ?? "";
@@ -234,16 +244,13 @@ const second = clockOf(await panel());
 check(second !== first, `таймер не идёт: ${first} → ${second}`);
 
 // на перерыве счёт останавливается — иначе отчётность по часам завышена
-await workPage.locator('.card-raised button[name="what"][value="break"]').click();
-await workPage.waitForTimeout(1200);
-await profile().click();
-await workPage.waitForTimeout(250);
+await press("break");
+await openPanel();
 const paused = clockOf(await panel());
 await workPage.waitForTimeout(2200);
 check(clockOf(await panel()) === paused, "на перерыве таймер продолжает идти");
 
-await workPage.locator('.card-raised button[name="what"][value="end"]').click();
-await workPage.waitForTimeout(1200);
+await press("end");
 await work.close();
 
 /* 10b. Тема переключается и остаётся между страницами */
@@ -292,9 +299,9 @@ check(
  * Стадию берём по месту в основной воронке, а не по подписи: подпись — как раз
  * то, что этот сценарий и меняет, иначе тест пройдёт только один раз.
  */
-await page.goto(`${BASE}/crm/pipelines`, { waitUntil: "networkidle" });
+await page.goto(`${BASE}/admin/pipelines`, { waitUntil: "networkidle" });
 const mainPipeline = page.locator("section", { hasText: "Поступление в вуз" }).first();
-await mainPipeline.locator("button").first().click();
+await mainPipeline.locator("button[data-stage]").first().click();
 await page.waitForTimeout(400);
 const renamed = `Новая сделка ${Date.now() % 1000}`;
 await page.locator('input[name="labelRu"]').fill(renamed);

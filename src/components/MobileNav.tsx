@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { GROUP_LABEL, navFor, type NavEntry } from "./nav";
+import { navFor } from "./nav";
 import { IconLogo } from "./icons";
 import { translator, type Locale } from "@/lib/i18n";
 import type { Module } from "@/lib/rbac";
@@ -42,7 +42,6 @@ export function MobileNav({
   }, [open]);
 
   const entries = navFor(new Set(modules));
-  const groups: NavEntry["group"][] = ["work", "base", "admin"];
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
@@ -85,7 +84,7 @@ export function MobileNav({
               <nav className="absolute left-0 top-0 flex h-full w-[264px] flex-col overflow-y-auto border-r border-hairline px-4 py-5"
                 style={{ background: "var(--color-rail)" }}>
                 <Link href={home} className="mb-7 flex items-center gap-3 px-2">
-                  <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-ink text-canvas">
+                  <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-accent text-white">
                     <IconLogo size={18} />
                   </span>
                   <span className="min-w-0">
@@ -98,17 +97,8 @@ export function MobileNav({
                   </span>
                 </Link>
 
-                <div className="space-y-6">
-                  {groups.map((group) => {
-                    const items = entries.filter((e) => e.group === group);
-                    if (!items.length) return null;
-                    return (
-                      <div key={group}>
-                        <div className="t-micro mb-2 px-3 uppercase tracking-[0.08em] text-ink-faint">
-                          {t(GROUP_LABEL[group])}
-                        </div>
-                        <div className="space-y-0.5">
-                          {items.map(({ href, label, icon: Icon, children }) => (
+                <div className="space-y-0.5">
+                  {entries.map(({ href, label, icon: Icon, children }) => (
                             <div key={href}>
                               <Link
                                 href={href}
@@ -127,7 +117,7 @@ export function MobileNav({
                                       className="t-caption block rounded-[8px] px-2.5 py-1.5"
                                       style={{
                                         color: isActive(child.href)
-                                          ? "var(--color-ink)"
+                                          ? "var(--color-accent)"
                                           : "var(--color-ink-faint)",
                                         background: isActive(child.href)
                                           ? "var(--color-surface-1)"
@@ -140,11 +130,7 @@ export function MobileNav({
                                 </div>
                               ) : null}
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  ))}
                 </div>
               </nav>
             </div>,

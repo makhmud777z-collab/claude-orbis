@@ -36,6 +36,7 @@ export const TENANTS: Tenant[] = [
     mark: "S",
     seatsUsed: 9,
     seatsLimit: 15,
+    adminPasscode: "7777",
     branches: [
       { id: "b_tas", name: "Головной офис", city: "Ташкент" },
       { id: "b_sam", name: "Филиал", city: "Самарканд" },
@@ -58,6 +59,7 @@ export const TENANTS: Tenant[] = [
     mark: "X",
     seatsUsed: 4,
     seatsLimit: 10,
+    adminPasscode: "7777",
     branches: [{ id: "b_alm", name: "Головной офис", city: "Алматы" }],
     createdAt: "2026-02-18",
   },
@@ -77,6 +79,7 @@ export const TENANTS: Tenant[] = [
     mark: "H",
     seatsUsed: 2,
     seatsLimit: 5,
+    adminPasscode: "7777",
     branches: [{ id: "b_bis", name: "Головной офис", city: "Бишкек" }],
     createdAt: "2026-08-30",
   },

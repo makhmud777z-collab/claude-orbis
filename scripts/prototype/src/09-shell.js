@@ -21,54 +21,83 @@ function navItems() {
 
 const isOn = (href) => S.route === href || (S.param && ROUTE_MODULE[S.route] === ROUTE_MODULE[href] && S.route !== "dashboard");
 
+/**
+ * Левое меню — как в Битриксе: без заголовков групп, разделы раскрываются
+ * независимо друг от друга, рельсу можно свернуть до иконок, а нужную
+ * страницу — закрепить в корне меню.
+ */
 function renderRail() {
   const items = navItems();
-  const groups = [["work", loc("Операционка", "Kundalik ish")], ["base", loc("База знаний", "Bilimlar bazasi")], ["admin", loc("Агентство", "Agentlik")]];
-  return `
-    <a href="#" data-go="${esc(items[0]?.href ?? "universities")}" style="display:flex;gap:12px;align-items:center;padding:0 8px;margin-bottom:26px">
-      <span style="width:32px;height:32px;border-radius:999px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;flex:none">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3.4" fill="currentColor"/>
-          <circle cx="19.6" cy="6.4" r="2.1" fill="currentColor"/>
-        </svg>
-      </span>
-      <span style="min-width:0">
-        <span style="display:block;font-size:16px;font-weight:600;letter-spacing:-.5px">Orbis</span>
-        <span class="t-micro faint truncate" style="display:block">${esc(tenant().slug)}.orbisystem.us</span>
-      </span>
-    </a>
+  const narrow = S.railCollapsed;
+  const allChildren = items.flatMap((e) => (e.children ?? []).map((c) => ({ ...c, icon: e.icon })));
+  const pins = S.pinned.map((href) => allChildren.find((c) => c.href === href)).filter(Boolean);
 
-    <nav style="flex:1;display:flex;flex-direction:column;gap:22px;overflow-y:auto">
-      ${groups.map(([group, label]) => {
-        const list = items.filter((e) => e.group === group);
-        if (!list.length) return "";
+  const sub = (entry) => entry.children.map((c) => `
+    <span style="display:flex;align-items:center;gap:2px">
+      <a class="t-caption truncate" style="flex:1;min-width:0;padding:6px 10px;border-radius:8px;
+          color:${isOn(c.href) ? "var(--accent)" : "var(--ink-muted)"};font-weight:${isOn(c.href) ? 600 : 500};
+          background:${isOn(c.href) ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "transparent"}"
+          href="#" data-go="${esc(c.href)}">${esc(t(c.label))}</a>
+      <button class="icon-btn" style="width:24px;height:24px;${S.pinned.includes(c.href) ? "color:var(--accent)" : ""}"
+        data-act="pin" data-value="${esc(c.href)}"
+        title="${t(S.pinned.includes(c.href) ? loc("Открепить", "Mahkamlashni bekor qilish") : loc("Закрепить в меню", "Menyuga mahkamlash"))}">${icon("pin", 12)}</button>
+    </span>`).join("");
+
+  return `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:22px">
+      <a href="#" data-go="${esc(items[0]?.href ?? "universities")}" style="display:flex;gap:12px;align-items:center;flex:1;min-width:0;padding:0 4px">
+        <span style="width:32px;height:32px;border-radius:999px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;flex:none">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3.4" fill="currentColor"/>
+            <circle cx="19.6" cy="6.4" r="2.1" fill="currentColor"/>
+          </svg>
+        </span>
+        ${narrow ? "" : `<span style="min-width:0">
+          <span style="display:block;font-size:16px;font-weight:600;letter-spacing:-.5px;line-height:1.2">Orbis</span>
+          <span class="t-micro faint truncate" style="display:block">${esc(tenant().slug)}.orbisystem.us</span>
+        </span>`}
+      </a>
+      ${narrow ? "" : `<button class="icon-btn" style="width:28px;height:28px" data-act="rail"
+        title="${t(loc("Свернуть меню", "Menyuni yig‘ish"))}">${icon("panel", 15)}</button>`}
+    </div>
+
+    ${narrow ? `<button class="icon-btn" style="width:36px;height:36px;align-self:center;margin-bottom:10px" data-act="rail"
+      title="${t(loc("Развернуть меню", "Menyuni ochish"))}">${icon("panel", 15)}</button>` : ""}
+
+    <nav style="flex:1;display:flex;flex-direction:column;gap:2px;overflow-y:auto;overflow-x:hidden">
+      ${pins.length && !narrow ? `<div style="display:flex;flex-direction:column;gap:2px;padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--hairline-soft)">
+        ${pins.map((c) => `<span style="display:flex;align-items:center;gap:2px">
+          <a class="nav-item${isOn(c.href) ? " on" : ""}" style="flex:1;min-width:0" href="#" data-go="${esc(c.href)}">
+            ${icon(c.icon, 16)}<span class="truncate">${esc(t(c.label))}</span>
+          </a>
+          <button class="icon-btn" style="width:24px;height:24px;color:var(--accent)" data-act="pin" data-value="${esc(c.href)}"
+            title="${t(loc("Открепить", "Mahkamlashni bekor qilish"))}">${icon("pin", 12)}</button>
+        </span>`).join("")}
+      </div>` : ""}
+
+      ${items.map((entry) => {
+        const inside = (entry.children ?? []).some((c) => isOn(c.href));
+        const open = S.openSections.includes(entry.key);
+        if (narrow) {
+          return `<a class="nav-item${isOn(entry.href) || inside ? " on" : ""}" style="justify-content:center;padding:9px 0"
+            href="#" data-go="${esc(entry.href)}" title="${esc(t(entry.label))}">${icon(entry.icon, 18)}</a>`;
+        }
         return `<div>
-          <div class="nav-group">${esc(t(label))}</div>
-          <div style="display:flex;flex-direction:column;gap:2px">
-            ${list.map((entry) => {
-              const inside = (entry.children ?? []).some((c) => isOn(c.href));
-              const open = S.openSection === entry.key || (S.openSection === undefined && inside) || (S.openSection !== entry.key && inside && S.openSection == null);
-              return `<div>
-                <div style="display:flex;align-items:center">
-                  <a class="nav-item${isOn(entry.href) || inside ? " on" : ""}" style="flex:1" href="#" data-go="${esc(entry.href)}">
-                    ${icon(entry.icon)}<span class="truncate">${esc(t(entry.label))}</span>
-                  </a>
-                  ${entry.children ? `<button class="icon-btn" style="width:28px;height:28px" data-act="section" data-value="${esc(entry.key)}"
-                    aria-expanded="${open}"><span style="display:inline-flex;transform:rotate(${open ? 180 : 0}deg);transition:transform .16s ease">${icon("chevron", 13)}</span></button>` : ""}
-                </div>
-                ${entry.children && open ? `<div style="margin-left:22px;padding-left:12px;border-left:1px solid var(--hairline-soft);display:flex;flex-direction:column;gap:2px;margin-top:2px">
-                  ${entry.children.map((c) => `<a class="t-caption truncate" style="padding:6px 10px;border-radius:8px;
-                      color:${isOn(c.href) ? "var(--ink)" : "var(--ink-faint)"};background:${isOn(c.href) ? "var(--surface-1)" : "transparent"}"
-                      href="#" data-go="${esc(c.href)}">${esc(t(c.label))}</a>`).join("")}
-                </div>` : ""}
-              </div>`;
-            }).join("")}
+          <div style="display:flex;align-items:center">
+            <a class="nav-item${isOn(entry.href) || inside ? " on" : ""}" style="flex:1;min-width:0" href="#" data-go="${esc(entry.href)}">
+              ${icon(entry.icon)}<span class="truncate">${esc(t(entry.label))}</span>
+            </a>
+            ${entry.children ? `<button class="icon-btn" style="width:28px;height:28px" data-act="section" data-value="${esc(entry.key)}"
+              aria-expanded="${open}"><span style="display:inline-flex;transform:rotate(${open ? 180 : 0}deg);transition:transform .16s ease">${icon("chevron", 13)}</span></button>` : ""}
           </div>
+          ${entry.children && open ? `<div style="margin-left:22px;padding-left:8px;border-left:1px solid var(--hairline-soft);display:flex;flex-direction:column;gap:2px;margin-top:2px">
+            ${sub(entry)}
+          </div>` : ""}
         </div>`;
       }).join("")}
     </nav>
 
-    <div class="card" style="padding:12px;margin-top:20px">
+    ${narrow ? "" : `<div class="card" style="padding:12px;margin-top:20px">
       <div style="display:flex;gap:10px;align-items:center">
         <span style="width:28px;height:28px;border-radius:7px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex:none">${esc(tenant().mark)}</span>
         <span style="min-width:0">
@@ -76,7 +105,7 @@ function renderRail() {
           <span class="t-micro faint truncate" style="display:block">${esc(t(roleDef(user().role).label))}</span>
         </span>
       </div>
-    </div>`;
+    </div>`}`;
 }
 
 function renderTopbar() {
@@ -145,27 +174,10 @@ function renderTopbar() {
             `<button class="btn ${S.theme === key ? "btn-primary" : "btn-secondary"}" style="flex:1" data-act="theme" data-value="${key}">${icon(ic, 14)} ${esc(t(label))}</button>`).join("")}
         </span>
 
-        <span class="t-micro faint" style="display:block;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">${t(loc("Агентство", "Agentlik"))}</span>
-        <span style="display:flex;flex-direction:column;gap:2px;margin-bottom:16px">
-          ${D.tenants.map((x) => `<button data-act="tenant" data-value="${esc(x.id)}"
-            style="display:flex;gap:10px;align-items:center;padding:7px 8px;border-radius:8px;border:0;cursor:pointer;text-align:left;color:inherit;
-            background:${x.id === S.tenant ? "var(--surface-1)" : "transparent"}">
-            <span style="width:22px;height:22px;border-radius:6px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex:none">${esc(x.mark)}</span>
-            <span style="min-width:0"><span class="t-caption truncate" style="display:block">${esc(x.name)}</span>
-            <span class="t-micro faint truncate" style="display:block">${esc(x.slug)} · ${esc(x.edition === "mvp" ? "01 / MVP" : "02 / CRM")}</span></span>
-          </button>`).join("")}
-        </span>
-
-        <span class="t-micro faint" style="display:block;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">${t(loc("Войти как сотрудник", "Xodim sifatida kirish"))}</span>
-        <span style="display:flex;flex-direction:column;gap:2px;max-height:210px;overflow-y:auto">
-          ${D.users.filter((u) => u.tenantId === S.tenant).map((u) => `<button data-act="user" data-value="${esc(u.id)}"
-            style="display:flex;gap:10px;align-items:center;padding:6px 8px;border-radius:8px;border:0;cursor:pointer;text-align:left;color:inherit;
-            background:${u.id === S.userId ? "var(--surface-1)" : "transparent"}">
-            ${avatar(u.name, 24)}
-            <span style="min-width:0"><span class="t-caption truncate" style="display:block">${esc(u.name)}</span>
-            <span class="t-micro faint truncate" style="display:block">${esc(u.title)}</span></span>
-          </button>`).join("")}
-        </span>
+        ${allow(user().role, "admin") ? `<a class="t-caption" href="#" data-go="admin"
+          style="display:flex;gap:8px;align-items:center;padding:8px;border-radius:8px;color:var(--ink-muted)">
+          ${icon("lock", 14)} ${t(loc("Администрирование", "Boshqaruv"))}
+        </a>` : ""}
       </span>` : ""}
     </span>`;
 }
@@ -214,6 +226,38 @@ function renderModal() {
         "В продукте админ правит имя, должность, телефоны, почту, день рождения и дату приёма прямо в карточке. В прототипе правки не сохраняются.",
         "Mahsulotda admin kartani to‘g‘ridan-to‘g‘ri tahrirlaydi. Prototipda o‘zgarishlar saqlanmaydi."))}</p>`,
       `<button class="btn btn-primary" data-act="closemodal">${t(loc("Понятно", "Tushunarli"))}</button>`);
+  }
+  if (m.kind === "newstage") {
+    return modal(t(loc("Добавить стадию", "Bosqich qo‘shish")), `
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <label><span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Новая стадия", "Yangi bosqich"))} · RU</span>
+          <input class="field" id="stage-new-ru" autofocus></label>
+        <label><span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Новая стадия", "Yangi bosqich"))} · UZ</span>
+          <input class="field" id="stage-new-uz"></label>
+      </div>
+      <span class="t-micro faint" style="display:block;margin-bottom:8px">${t(loc("Цвет", "Rang"))}</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${PALETTE.map((c) => `<button class="swatch" data-act="stagecolor" data-value="${c}"
+          style="background:${c};border-color:${(m.color ?? "") === c ? "var(--ink)" : "transparent"}"></button>`).join("")}
+      </div>`,
+      `<button class="btn btn-primary" data-act="savenewstage">${t(loc("Добавить", "Qo‘shish"))}</button>`);
+  }
+  if (m.kind === "newpipeline") {
+    return modal(t(loc("Новая воронка", "Yangi voronka")), `
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <label><span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Название воронки", "Voronka nomi"))} · RU</span>
+          <input class="field" id="pipeline-ru" autofocus></label>
+        <label><span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Название воронки", "Voronka nomi"))} · UZ</span>
+          <input class="field" id="pipeline-uz"></label>
+      </div>
+      <div style="display:flex;gap:6px">
+        ${[["deal", loc("Для сделок", "Bitimlar uchun")], ["lead", loc("Для лидов", "Lidlar uchun")]].map(([key, label]) =>
+          `<button class="chip${m.entity === key ? " on" : ""}" data-act="pipelineentity" data-value="${key}">${esc(t(label))}</button>`).join("")}
+      </div>
+      <p class="t-micro faint" style="margin:14px 0 0;line-height:1.55">${t(loc(
+        "Новая воронка повторяет стадии существующей: пустая никому не нужна.",
+        "Yangi voronka mavjudining bosqichlarini takrorlaydi."))}</p>`,
+      `<button class="btn btn-primary" data-act="savepipeline">${t(loc("Создать", "Yaratish"))}</button>`);
   }
   if (m.kind === "cardfields") {
     return modal(t(loc("Карточка просмотра", "Ko‘rish kartasi")), `
@@ -307,8 +351,12 @@ const modal = (title, body, footer) => `
   </div>`;
 
 /* ── маршрутизация ───────────────────────────────────────── */
+const ADMIN_ROUTES = ["admin", "pipelines", "channels", "cards", "users", "permissions", "portal", "demo"];
+
 function renderScreen() {
   const module = ROUTE_MODULE[S.route];
+  // Замок общий: обойти его прямой ссылкой на страницу настроек нельзя.
+  if (ADMIN_ROUTES.includes(S.route) && !S.adminUnlocked) return screenAdminLock();
   if (module && !editionModules(tenant().edition).includes(module)) return screenNotInEdition(module);
   if (module && !allow(user().role, module)) return screenNoAccess(module);
 
@@ -320,7 +368,9 @@ function renderScreen() {
     case "deal": return screenDeal(S.param);
     case "contacts": return screenContacts();
     case "contact": return screenContact(S.param);
-    case "crmsettings": return screenCrmSettings();
+    case "admin": return screenAdmin();
+    case "demo": return screenDemo();
+    case "cards": return screenCards();
     case "pipelines": return screenPipelines();
     case "channels": return screenChannels();
     case "tasks": return screenTasks();
@@ -338,7 +388,7 @@ function renderScreen() {
     case "staffreports": return screenStaffReports();
     case "users": return screenAdminUsers();
     case "permissions": return screenPermissions();
-    case "settings": return screenSettings();
+    case "portal": return screenSettings();
     default: return screenNotFound();
   }
 }
@@ -348,6 +398,7 @@ function render() {
   document.getElementById("topbar").innerHTML = renderTopbar();
   document.getElementById("content").innerHTML = renderScreen() + renderModal();
   document.getElementById("rail").classList.toggle("open", S.menu);
+  document.getElementById("rail").classList.toggle("narrow", S.railCollapsed);
   document.getElementById("scrim").hidden = !S.menu;
   document.documentElement.lang = S.locale;
   document.documentElement.dataset.theme = S.theme;
@@ -444,7 +495,69 @@ function moveCard(entity, id, stageKey) {
 const ACTIONS = {
   menu: () => { S.menu = !S.menu; },
   locale: (v) => { S.locale = v; S.popover = null; },
-  section: (v) => { S.openSection = S.openSection === v ? "" : v; },
+  // Разделы раскрываются независимо: открытый CRM не закрывается от того,
+  // что человек открыл «Задачи».
+  section: (v) => {
+    S.openSections = S.openSections.includes(v)
+      ? S.openSections.filter((k) => k !== v)
+      : [...S.openSections, v];
+    saveNav();
+  },
+  rail: () => { S.railCollapsed = !S.railCollapsed; saveNav(); },
+  movestage: (v) => {
+    const [pipelineId, key, delta] = v.split(":");
+    const pipeline = pipelineById(pipelineId);
+    const stages = stagesOf(pipeline).slice();
+    const from = stages.findIndex((x) => x.key === key);
+    const to = from + Number(delta);
+    if (from < 0 || to < 0 || to >= stages.length) return;
+    const [moved] = stages.splice(from, 1);
+    stages.splice(to, 0, moved);
+    S.stageOrder[pipelineId] = stages.map((x) => x.key);
+  },
+  delstage: (v) => {
+    const [pipelineId, key] = v.split(":");
+    S.stageHidden[pipelineId] = [...(S.stageHidden[pipelineId] ?? []), key];
+  },
+  newstage: (v) => { S.modal = { kind: "newstage", pipelineId: v, color: "#0a6ed1" }; },
+  savenewstage: () => {
+    const m = S.modal;
+    const ru = document.getElementById("stage-new-ru")?.value.trim();
+    if (!ru) return;
+    const uz = document.getElementById("stage-new-uz")?.value.trim() || ru;
+    const key = "st_" + Math.random().toString(36).slice(2, 7);
+    S.stageExtra[m.pipelineId] = [...(S.stageExtra[m.pipelineId] ?? []),
+      { key, label: { ru, uz }, color: m.color ?? "#0a6ed1", hint: { ru: "", uz: "" } }];
+    S.modal = null;
+  },
+  newpipeline: () => { S.modal = { kind: "newpipeline", entity: "deal" }; },
+  pipelineentity: (v) => { S.modal = { ...S.modal, entity: v }; },
+  savepipeline: () => {
+    const ru = document.getElementById("pipeline-ru")?.value.trim();
+    if (!ru) return;
+    const uz = document.getElementById("pipeline-uz")?.value.trim() || ru;
+    const sample = defaultPipeline(S.modal.entity);
+    D.pipelines.push({
+      id: "pl_" + Math.random().toString(36).slice(2, 7), tenantId: S.tenant,
+      entity: S.modal.entity, name: { ru, uz }, isDefault: false,
+      stages: sample.stages.map((x) => ({ ...x, label: { ...x.label }, hint: { ...x.hint } })),
+    });
+    S.modal = null;
+  },
+  pin: (v) => {
+    S.pinned = S.pinned.includes(v) ? S.pinned.filter((x) => x !== v) : [...S.pinned, v];
+    saveNav();
+  },
+  unlock: () => {
+    const code = document.getElementById("admin-code")?.value.trim() ?? "";
+    if (code === S.adminCode) { S.adminUnlocked = true; S.adminError = false; }
+    else S.adminError = true;
+  },
+  lock: () => { S.adminUnlocked = false; go("dashboard"); },
+  passcode: () => {
+    const code = document.getElementById("admin-newcode")?.value.trim() ?? "";
+    if (/^\d{4,12}$/.test(code)) S.adminCode = code;
+  },
   tenant: (v) => {
     S.tenant = v;
     S.userId = D.users.find((u) => u.tenantId === v).id;

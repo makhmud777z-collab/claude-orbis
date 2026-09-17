@@ -12,8 +12,8 @@ import { CITY_LABEL, ref, TASK_STATUS } from "@/lib/labels";
 import { scopedContacts, scopedDeals, scopedTasks, scopedTeam } from "@/lib/queries";
 import { allow, roleDef } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
-import { departmentOf, sessionMinutes, sessionsOf } from "@/lib/store";
-import { S } from "@/lib/strings";
+import { departmentOf, pipelineById, sessionMinutes, sessionsOf, stageOf } from "@/lib/store";
+import { P, S } from "@/lib/strings";
 import { timelineItems } from "@/lib/timeline-view";
 
 /** Карточка сотрудника: ФИО, день рождения, два номера, дата приёма и нагрузка. */
@@ -122,7 +122,11 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
             ]}
           />
 
-          <div className="card p-5">
+          <div className="card overflow-hidden">
+            <div className="card-head">
+              <span className="t-caption">{t(S.team.placeInCompany)}</span>
+            </div>
+            <div className="px-5 py-2">
             <Field
               label={t(S.team.department)}
               value={
@@ -140,12 +144,14 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
                   ? S.common.scopeBranch
                   : S.common.scopeOwn,
             )} />
+            </div>
           </div>
 
-          <div className="card p-5">
-            <div className="t-caption mb-3 uppercase tracking-[0.07em] text-ink-faint">
-              {t(S.staffReports.title)}
+          <div className="card overflow-hidden">
+            <div className="card-head">
+              <span className="t-caption">{t(S.staffReports.title)}</span>
             </div>
+            <div className="px-5 py-2">
             <Field label={t(S.staffReports.days)} value={sessions.length} />
             <Field
               label={t(S.staffReports.hours)}
@@ -159,35 +165,43 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
                   : t(S.staffReports.noData)
               }
             />
-            <Link href="/team/reports" className="btn btn-ghost btn-sm mt-3">
-              {t(S.staffReports.title)}
-            </Link>
+            </div>
+            <div className="border-t border-hairline-soft px-5 py-3">
+              <Link href="/team/reports" className="t-caption text-ink-muted hover:text-ink">
+                {t(S.staffReports.openReport)}
+              </Link>
+            </div>
           </div>
         </div>
 
         <div className="min-w-0 space-y-8">
           <section>
             <SectionTitle
-              action={<span className="t-caption text-ink-faint">{sessions.length}</span>}
+              action={
+                <span className="t-caption whitespace-nowrap text-ink-faint">
+                  {f.plural(sessions.length, P.days)}
+                </span>
+              }
             >
               {t(S.team.workdayToday)}
             </SectionTitle>
             <div className="card divide-y divide-hairline-soft">
               {sessions.length ? (
                 sessions.slice(0, 8).map((s) => (
-                  <div key={s.id} className="flex items-center gap-4 px-5 py-3">
+                  // На телефоне строка отметки переносится, а не режется.
+                  <div key={s.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3">
                     <StatusDot
                       color={s.endedAt ? "var(--color-status-deal)" : "var(--color-status-progress)"}
                     />
-                    <span className="t-body-sm w-28 flex-none">{f.shortDate(s.date)}</span>
-                    <span className="t-caption t-num flex-1 text-ink-muted">
+                    <span className="t-body-sm w-24 flex-none">{f.shortDate(s.date)}</span>
+                    <span className="t-caption t-num min-w-0 flex-1 text-ink-muted">
                       {f.time(s.startedAt)} — {s.endedAt ? f.time(s.endedAt) : "…"}
                     </span>
                     <span className="t-caption t-num flex-none">
                       {Math.floor(sessionMinutes(s) / 60)}:
                       {String(sessionMinutes(s) % 60).padStart(2, "0")}
                     </span>
-                    <span className="t-micro w-20 flex-none text-right text-ink-faint">
+                    <span className="t-micro w-16 flex-none text-right text-ink-faint">
                       {s.breakMinutes ? `−${s.breakMinutes} ${t(S.common.minutesShort)}` : ""}
                     </span>
                   </div>
@@ -227,14 +241,48 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
           <section>
             <SectionTitle
               action={
-                <span className="t-caption text-ink-faint">
-                  {contacts.length} {t(S.team.studentsShort)} · {deals.length}{" "}
-                  {t(S.team.dealsShort)}
+                <span className="t-caption whitespace-nowrap text-ink-faint">
+                  {f.plural(contacts.length, P.contacts)} · {f.plural(deals.length, P.deals)}
                 </span>
               }
             >
               {t(S.crm.deals)}
             </SectionTitle>
+            <div className="card divide-y divide-hairline-soft">
+              {deals.length ? (
+                deals.slice(0, 8).map((deal) => {
+                  const stage = stageOf(pipelineById(deal.pipelineId), deal.stage);
+                  const contact = contacts.find((c) => c.id === deal.studentId);
+                  return (
+                    <Link
+                      key={deal.id}
+                      href={`/crm/deals/${deal.id}`}
+                      className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-surface-2"
+                    >
+                      <StatusDot color={stage?.color ?? "var(--color-ink-faint)"} />
+                      <span className="min-w-0 flex-1">
+                        <span className="t-body-sm block truncate">
+                          {contact?.fullName ?? deal.id.toUpperCase()}
+                        </span>
+                        <span className="t-micro block truncate text-ink-faint">
+                          {stage ? t(stage.label) : deal.stage}
+                        </span>
+                      </span>
+                      <span className="t-caption t-num flex-none text-ink-muted">
+                        {deal.contractValue ? f.som(deal.contractValue, { compact: true }) : "—"}
+                      </span>
+                    </Link>
+                  );
+                })
+              ) : (
+                <div className="t-body-sm px-5 py-8 text-center text-ink-muted">
+                  {t(S.common.nothingFound)}
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section>
             <Timeline
               entity="employee"
               entityId={user.id}

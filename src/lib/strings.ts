@@ -16,6 +16,8 @@ export const P = {
   channels: { ru: ["канал", "канала", "каналов"] as [string, string, string], uz: ["kanal", "kanal", "kanal"] as [string, string, string] },
   events: { ru: ["событие", "события", "событий"] as [string, string, string], uz: ["hodisa", "hodisa", "hodisa"] as [string, string, string] },
   pipelines: { ru: ["воронка", "воронки", "воронок"] as [string, string, string], uz: ["voronka", "voronka", "voronka"] as [string, string, string] },
+  days: { ru: ["день", "дня", "дней"] as [string, string, string], uz: ["kun", "kun", "kun"] as [string, string, string] },
+  cards: { ru: ["карточка", "карточки", "карточек"] as [string, string, string], uz: ["karta", "karta", "karta"] as [string, string, string] },
 };
 
 /** Строки интерфейса. Пользовательский контент (заметки, задачи) не переводится. */
@@ -31,9 +33,10 @@ export const S = {
     finance: loc("Финансы", "Moliya"),
     team: loc("Сотрудники", "Xodimlar"),
     settings: loc("Настройки", "Sozlamalar"),
-    groupWork: loc("Операционка", "Kundalik ish"),
-    groupBase: loc("База знаний", "Bilimlar bazasi"),
-    groupAdmin: loc("Агентство", "Agentlik"),
+    collapse: loc("Свернуть меню", "Menyuni yig‘ish"),
+    expand: loc("Развернуть меню", "Menyuni ochish"),
+    pin: loc("Закрепить в меню", "Menyuga mahkamlash"),
+    unpin: loc("Открепить", "Mahkamlashni bekor qilish"),
   },
 
   common: {
@@ -43,6 +46,12 @@ export const S = {
     filters: loc("Фильтры", "Filtrlar"),
     all: loc("Все", "Barchasi"),
     reset: loc("Сбросить", "Tozalash"),
+    cancel: loc("Отмена", "Bekor qilish"),
+    delete: loc("Удалить", "O‘chirish"),
+    add: loc("Добавить", "Qo‘shish"),
+    rename: loc("Переименовать", "Nomini o‘zgartirish"),
+    moveUp: loc("Выше", "Yuqoriga"),
+    moveDown: loc("Ниже", "Pastga"),
     today: loc("Сегодня", "Bugun"),
     clear: loc("Очистить", "Tozalash"),
     pickDate: loc("Выбрать дату", "Sanani tanlash"),
@@ -432,6 +441,7 @@ export const S = {
     levelFull: loc("полный", "to‘liq"),
     levelEdit: loc("правка", "tahrir"),
     levelRead: loc("чтение", "o‘qish"),
+    placeInCompany: loc("Место в компании", "Kompaniyadagi o‘rni"),
   },
 
   settings: {
@@ -582,6 +592,27 @@ export const S = {
     viewKanban: loc("Канбан", "Kanban"),
     viewList: loc("Список", "Ro‘yxat"),
     moved: loc("Карточка перенесена", "Karta ko‘chirildi"),
+    stageHint: loc("Подсказка", "Maslahat"),
+    stageFinal: loc("Финальная стадия", "Yakuniy bosqich"),
+    finalNone: loc("Обычная", "Oddiy"),
+    finalWon: loc("Успех", "Muvaffaqiyat"),
+    finalLost: loc("Провал", "Muvaffaqiyatsiz"),
+    finalHint: loc(
+      "Финальных стадий две на воронку: успех и провал. Они закрывают сделку и не занимают колонку на доске.",
+      "Har voronkada ikkita yakuniy bosqich: muvaffaqiyat va muvaffaqiyatsizlik.",
+    ),
+    addStage: loc("Добавить стадию", "Bosqich qo‘shish"),
+    newStage: loc("Новая стадия", "Yangi bosqich"),
+    removeStage: loc("Удалить стадию", "Bosqichni o‘chirish"),
+    stageInUse: loc("На стадии есть карточки — сначала перенесите их", "Bosqichda kartalar bor — avval ularni ko‘chiring"),
+    addPipeline: loc("Новая воронка", "Yangi voronka"),
+    removePipeline: loc("Удалить воронку", "Voronkani o‘chirish"),
+    pipelineName: loc("Название воронки", "Voronka nomi"),
+    makeDefault: loc("Сделать основной", "Asosiy qilish"),
+    isDefault: loc("Основная", "Asosiy"),
+    forLeads: loc("Для лидов", "Lidlar uchun"),
+    forDeals: loc("Для сделок", "Bitimlar uchun"),
+    order: loc("Порядок", "Tartib"),
   },
 
   channels: {
@@ -672,6 +703,8 @@ export const S = {
     end: loc("Завершить рабочий день", "Ish kunini yakunlash"),
     breakStart: loc("Перерыв", "Tanaffus"),
     breakEnd: loc("Вернуться к работе", "Ishga qaytish"),
+    endShort: loc("Завершить", "Yakunlash"),
+    breakEndShort: loc("Вернуться", "Qaytish"),
     working: loc("Рабочий день идёт", "Ish kuni davom etmoqda"),
     onBreak: loc("Перерыв", "Tanaffus"),
     notStarted: loc("Рабочий день не начат", "Ish kuni boshlanmagan"),
@@ -700,6 +733,7 @@ export const S = {
     month: loc("Месяц", "Oy"),
     stillWorking: loc("на работе", "ishda"),
     noData: loc("Отметок пока нет", "Belgilar yo‘q"),
+    openReport: loc("Открыть отчётность", "Hisobotni ochish"),
   },
 
   calendar: {
@@ -749,6 +783,37 @@ export const S = {
     changeRole: loc("Сменить роль", "Rolni o‘zgartirish"),
     seats: loc("мест по тарифу", "tarif bo‘yicha o‘rin"),
     auditLog: loc("Журнал действий", "Harakatlar jurnali"),
+    subtitle: loc(
+      "Один вход во все настройки портала: воронки, каналы, права, тариф и домен.",
+      "Portal sozlamalariga yagona kirish: voronkalar, kanallar, huquqlar, tarif va domen.",
+    ),
+    section: loc("Раздел настроек", "Sozlamalar bo‘limi"),
+    lock: loc("Закрыть настройки", "Sozlamalarni yopish"),
+    passcode: loc("Код входа", "Kirish kodi"),
+    passcodeHint: loc(
+      "От 4 до 12 цифр. Код знает только тот, кто ведёт портал; сотрудники настроек не видят вовсе.",
+      "4 dan 12 gacha raqam. Kodni faqat portalni yurituvchi biladi.",
+    ),
+    changePasscode: loc("Сменить код", "Kodni o‘zgartirish"),
+    demo: loc("Демо-режим", "Demo rejim"),
+    demoHint: loc(
+      "Показ портала: агентство и сотрудник, от лица которого вы смотрите систему.",
+      "Portalni ko‘rsatish: agentlik va siz kimning nomidan ko‘rayotganingiz.",
+    ),
+    groupCrm: loc("CRM", "CRM"),
+    groupPeople: loc("Люди и доступы", "Odamlar va huquqlar"),
+    groupPortal: loc("Портал", "Portal"),
+  },
+
+  adminLock: {
+    title: loc("Настройки портала", "Portal sozlamalari"),
+    hint: loc(
+      "Раздел закрыт кодом: здесь меняются воронки, права и тариф. Сотрудникам он не нужен и не виден.",
+      "Bo‘lim kod bilan yopilgan: bu yerda voronkalar, huquqlar va tarif o‘zgaradi.",
+    ),
+    placeholder: loc("Код", "Kod"),
+    enter: loc("Войти", "Kirish"),
+    wrong: loc("Неверный код", "Kod noto‘g‘ri"),
   },
 
   edition: {

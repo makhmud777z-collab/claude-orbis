@@ -93,7 +93,7 @@ export default async function TeamPage({
                 <span className="relative flex-none">
                   <Avatar name={u.name} size={40} />
                   <span
-                    className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2"
+                    className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2"
                     style={{
                       borderColor: "var(--color-surface-1)",
                       background: work

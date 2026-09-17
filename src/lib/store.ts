@@ -44,6 +44,8 @@ interface State {
   cardFields: Record<string, string[]>;
   /** сохранённые фильтры: «userId:раздел» → срезы сотрудника */
   filters: Record<string, SavedFilter[]>;
+  /** код входа в «Администрирование», если агентство его сменило */
+  passcodes: Record<string, string>;
   seq: number;
   version: number;
 }
@@ -53,7 +55,7 @@ interface State {
  * кода, и новое поле оказалось бы undefined — поэтому состояние с чужой
  * версией пересоздаётся целиком.
  */
-const STATE_VERSION = 3;
+const STATE_VERSION = 4;
 
 const globalStore = globalThis as unknown as { __orbisStore?: State };
 
@@ -73,6 +75,7 @@ function createState(): State {
     permissions: {},
     cardFields: {},
     filters: {},
+    passcodes: {},
     seq: 1000,
     version: STATE_VERSION,
   };
@@ -195,6 +198,13 @@ export const channelsOf = (tenantId: string) => CHANNELS.filter((c) => c.tenantI
 
 /* ── права ───────────────────────────────────────────────────── */
 export const permissionOverrides = (tenantId: string) => state.permissions[tenantId] ?? {};
+
+/* ── код входа в администрирование ───────────────────────────── */
+
+export const passcodeOverride = (tenantId: string) => state.passcodes[tenantId];
+export function setPasscode(tenantId: string, code: string) {
+  state.passcodes[tenantId] = code;
+}
 export function setPermission(
   tenantId: string, role: Role, module: Module, actions: Action[],
 ) {
@@ -250,6 +260,7 @@ export function moveCard(
 }
 
 /* ── настройки воронки ───────────────────────────────────────── */
+
 export function renameStage(pipelineId: string, stageKey: string, label: Loc) {
   const stage = stageOf(pipelineById(pipelineId), stageKey);
   if (stage) stage.label = label;
@@ -257,6 +268,123 @@ export function renameStage(pipelineId: string, stageKey: string, label: Loc) {
 export function setStageColor(pipelineId: string, stageKey: string, color: string) {
   const stage = stageOf(pipelineById(pipelineId), stageKey);
   if (stage) stage.color = color;
+}
+export function setStageHint(pipelineId: string, stageKey: string, hint: Loc) {
+  const stage = stageOf(pipelineById(pipelineId), stageKey);
+  if (stage) stage.hint = hint;
+}
+
+/**
+ * Финальная стадия — «успех» или «провал». Их ровно по одной на воронку:
+ * две победных колонки превращают конверсию в предмет спора, а не в число.
+ */
+export function setStageFinal(pipelineId: string, stageKey: string, final: "won" | "lost" | null) {
+  const pipeline = pipelineById(pipelineId);
+  const stage = stageOf(pipeline, stageKey);
+  if (!pipeline || !stage) return;
+  if (final) {
+    for (const other of pipeline.stages) {
+      if (other.key !== stageKey && other.final === final) delete other.final;
+    }
+    stage.final = final;
+  } else {
+    delete stage.final;
+  }
+}
+
+/** Порядок стадий — это порядок работы; менять его умеет только воронка. */
+export function moveStage(pipelineId: string, stageKey: string, delta: number) {
+  const pipeline = pipelineById(pipelineId);
+  if (!pipeline) return;
+  const from = pipeline.stages.findIndex((s) => s.key === stageKey);
+  const to = from + delta;
+  if (from < 0 || to < 0 || to >= pipeline.stages.length) return;
+  const [stage] = pipeline.stages.splice(from, 1);
+  pipeline.stages.splice(to, 0, stage);
+}
+
+/** Ключ стадии латиницей: он уходит в адрес доски и в данные сделок. */
+function stageKeyFrom(name: string, taken: string[]): string {
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "stage";
+  let key = base;
+  let n = 2;
+  while (taken.includes(key)) key = `${base}_${n++}`;
+  return key;
+}
+
+export function addStage(pipelineId: string, label: Loc, color: string) {
+  const pipeline = pipelineById(pipelineId);
+  if (!pipeline) return null;
+  const key = stageKeyFrom(label.ru, pipeline.stages.map((s) => s.key));
+  const stage: Stage = { key, label, color, hint: { ru: "", uz: "" } };
+  // новая стадия встаёт перед финальными: работа идёт до результата, не после
+  const finalAt = pipeline.stages.findIndex((s) => s.final);
+  if (finalAt < 0) pipeline.stages.push(stage);
+  else pipeline.stages.splice(finalAt, 0, stage);
+  return stage;
+}
+
+/**
+ * Стадию нельзя удалить, пока на ней стоят карточки: иначе сделка окажется
+ * на стадии, которой нет, и пропадёт с доски. Сначала переносим карточки.
+ */
+export function stageUsage(pipelineId: string, stageKey: string): number {
+  const pipeline = pipelineById(pipelineId);
+  if (!pipeline) return 0;
+  return pipeline.entity === "lead"
+    ? state.leads.filter((l) => l.stage === stageKey && l.tenantId === pipeline.tenantId).length
+    : state.deals.filter((d) => d.pipelineId === pipelineId && d.stage === stageKey).length;
+}
+
+export function removeStage(pipelineId: string, stageKey: string) {
+  const pipeline = pipelineById(pipelineId);
+  if (!pipeline || pipeline.stages.length <= 2) return { ok: false as const, reason: "last" as const };
+  if (stageUsage(pipelineId, stageKey) > 0) return { ok: false as const, reason: "used" as const };
+  pipeline.stages = pipeline.stages.filter((s) => s.key !== stageKey);
+  return { ok: true as const };
+}
+
+export const dealsOfPipeline = (pipelineId: string) =>
+  state.deals.filter((d) => d.pipelineId === pipelineId);
+
+export function renamePipeline(pipelineId: string, name: Loc) {
+  const pipeline = pipelineById(pipelineId);
+  if (pipeline) pipeline.name = name;
+}
+
+/** Воронка по умолчанию одна на сущность — та, что открывается без выбора. */
+export function setDefaultPipeline(pipelineId: string) {
+  const pipeline = pipelineById(pipelineId);
+  if (!pipeline) return;
+  for (const other of state.pipelines) {
+    if (other.tenantId === pipeline.tenantId && other.entity === pipeline.entity) {
+      other.isDefault = other.id === pipelineId;
+    }
+  }
+}
+
+/** Новая воронка повторяет стадии существующей: пустая никому не нужна. */
+export function addPipeline(tenantId: string, entity: "lead" | "deal", name: Loc) {
+  const sample = defaultPipeline(tenantId, entity);
+  const pipeline: Pipeline = {
+    id: nextId("pl"),
+    tenantId,
+    entity,
+    name,
+    isDefault: false,
+    stages: sample.stages.map((s) => ({ ...s, label: { ...s.label }, hint: { ...s.hint } })),
+  };
+  state.pipelines.push(pipeline);
+  return pipeline;
+}
+
+export function removePipeline(pipelineId: string) {
+  const pipeline = pipelineById(pipelineId);
+  if (!pipeline || pipeline.isDefault) return { ok: false as const, reason: "default" as const };
+  const used = state.deals.some((d) => d.pipelineId === pipelineId);
+  if (used) return { ok: false as const, reason: "used" as const };
+  state.pipelines = state.pipelines.filter((p) => p.id !== pipelineId);
+  return { ok: true as const };
 }
 
 /* ── дедупликация: один человек — один контакт и один активный лид ── */
@@ -500,9 +628,10 @@ export function updateCard(
     entity,
     entityId: id,
     kind: "system",
+    // В историю уходит то, что человек видел на экране, а не имя колонки.
     title: loc(
-      `Изменены поля: ${changed.join(", ")}`,
-      `Maydonlar o‘zgardi: ${changed.join(", ")}`,
+      `Изменены поля: ${changed.map((k) => FIELD_LABEL[k]?.ru ?? k).join(", ")}`,
+      `Maydonlar o‘zgardi: ${changed.map((k) => FIELD_LABEL[k]?.uz ?? k).join(", ")}`,
     ),
     body: null,
     authorId: actorId,
@@ -512,6 +641,28 @@ export function updateCard(
   });
   return { ok: true };
 }
+
+/** Подписи полей для истории: «Изменены поля: должность», а не «title». */
+const FIELD_LABEL: Record<string, Loc> = {
+  name: loc("имя", "ism"),
+  fullName: loc("ФИО", "F.I.Sh."),
+  latinName: loc("имя латиницей", "lotincha ism"),
+  title: loc("должность", "lavozim"),
+  email: loc("почта", "pochta"),
+  phone: loc("телефон", "telefon"),
+  phone2: loc("второй номер", "ikkinchi raqam"),
+  birthDate: loc("день рождения", "tug‘ilgan kun"),
+  joinedAt: loc("дата приёма", "ishga qabul sanasi"),
+  city: loc("город", "shahar"),
+  passport: loc("паспорт", "pasport"),
+  comment: loc("комментарий", "izoh"),
+  note: loc("заметка", "eslatma"),
+  contractValue: loc("сумма договора", "shartnoma summasi"),
+  paid: loc("оплата", "to‘lov"),
+  deadline: loc("дедлайн", "muddat"),
+  intake: loc("набор", "qabul"),
+  priority: loc("приоритет", "ustuvorlik"),
+};
 
 /* ── сотрудники ──────────────────────────────────────────────── */
 

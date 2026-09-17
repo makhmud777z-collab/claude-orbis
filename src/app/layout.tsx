@@ -5,12 +5,11 @@ import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { openModules } from "@/components/guard";
 import { navFor } from "@/components/nav";
-import { usersOfTenant } from "@/lib/data/users";
 import { homeHref } from "@/lib/edition";
 import { roleLabel } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
 import { breakSeconds, openSession, sessionSeconds } from "@/lib/store";
-import { ROOT_DOMAIN, TENANTS } from "@/lib/tenants";
+import { ROOT_DOMAIN } from "@/lib/tenants";
 
 const inter = Inter({
   subsets: ["latin", "cyrillic"],
@@ -58,9 +57,7 @@ export default async function RootLayout({
             <Topbar
               user={session.user}
               roleLabel={roleLabel(session.role)}
-              tenant={session.tenant}
-              tenants={TENANTS.map((t) => ({ slug: t.slug, name: t.name }))}
-              staff={usersOfTenant(session.tenant.id)}
+              canAdmin={modules.includes("admin")}
               locale={session.locale}
               modules={modules}
               home={home}

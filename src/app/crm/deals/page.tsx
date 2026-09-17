@@ -59,9 +59,15 @@ export default async function DealsPage({
             <span>·</span>
             <span className="t-num">{f.som(total, { compact: true })}</span>
             <span>·</span>
-            <Link href="/crm/settings" className="underline-offset-2 hover:underline">
-              {t(S.admin.crmSettings)}
-            </Link>
+            <span>
+              {t(
+                session.scope === "tenant"
+                  ? S.common.scopeTenant
+                  : session.scope === "branch"
+                    ? S.common.scopeBranch
+                    : S.common.scopeOwn,
+              )}
+            </span>
           </>
         }
         actions={
@@ -69,7 +75,6 @@ export default async function DealsPage({
             <PipelinePicker
               locale={session.locale}
               current={pipeline?.id ?? ""}
-              canEdit={allow(session.tenant.id, session.role, "crmSettings", "edit")}
               pipelines={pipelines.map((p) => ({ id: p.id, name: t(p.name) }))}
             />
             {allow(session.tenant.id, session.role, "deals", "create") ? (
@@ -99,7 +104,6 @@ export default async function DealsPage({
           stages={boardStages(pipeline?.id, session.tenant.id, "deal", t)}
           cards={deals.map((d) => dealCard(d, contacts.get(d.studentId), t, f))}
           fields={cardFieldsOf(session.user.id)}
-          allFields={CARD_FIELDS.map((key) => ({ key, label: t(CARD_FIELD_LABEL[key]) }))}
         />
       ) : (
         <EmptyState title={t(FILTER_TEXT.nothing)} />

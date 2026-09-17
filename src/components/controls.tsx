@@ -19,6 +19,56 @@ export interface Option {
   color?: string;
 }
 
+interface PopoverBox {
+  top: number;
+  left: number;
+  width: number;
+  maxHeight: number;
+}
+
+const GAP = 6;
+const EDGE = 12;
+
+/**
+ * Куда положить выпадающий список.
+ *
+ * Правила простые, но их легко нарушить: список ровно той же ширины, что
+ * и поле (иначе он выглядит чужим), не вылезает за края окна и никогда
+ * не накрывает само поле — если снизу места мало, открывается вверх.
+ */
+function popoverBox(anchorEl: HTMLElement, count: number, withSearch: boolean): PopoverBox {
+  const rect = anchorEl.getBoundingClientRect();
+  const width = Math.min(
+    Math.max(rect.width, 200),
+    Math.max(200, window.innerWidth - EDGE * 2),
+  );
+  const wanted = count * 36 + (withSearch ? 46 : 0) + 8;
+  const below = window.innerHeight - rect.bottom - GAP - EDGE;
+  const above = rect.top - GAP - EDGE;
+  const flip = below < Math.min(wanted, 180) && above > below;
+  const maxHeight = Math.max(120, Math.min(wanted, flip ? above : below));
+  return {
+    width,
+    left: Math.max(EDGE, Math.min(rect.left, window.innerWidth - width - EDGE)),
+    top: flip ? Math.max(EDGE, rect.top - GAP - maxHeight) : rect.bottom + GAP,
+    maxHeight,
+  };
+}
+
+/** То же для панели известного размера — календаря. */
+function panelBox(anchorEl: HTMLElement, width: number, height: number): PopoverBox {
+  const rect = anchorEl.getBoundingClientRect();
+  const flip = window.innerHeight - rect.bottom - GAP - EDGE < height && rect.top > height + GAP + EDGE;
+  return {
+    width,
+    left: Math.max(EDGE, Math.min(rect.left, window.innerWidth - width - EDGE)),
+    top: flip
+      ? rect.top - GAP - height
+      : Math.max(EDGE, Math.min(rect.bottom + GAP, window.innerHeight - height - EDGE)),
+    maxHeight: height,
+  };
+}
+
 export function Select({
   value, options, onChange, placeholder, locale, width = 180, searchable,
 }: {
@@ -33,7 +83,7 @@ export function Select({
   const t = translator(locale);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [rect, setRect] = useState<DOMRect | null>(null);
+  const [box, setBox] = useState<PopoverBox | null>(null);
   const button = useRef<HTMLButtonElement>(null);
   const id = useId();
 
@@ -58,10 +108,23 @@ export function Select({
   }, [open, id]);
 
   const toggle = () => {
-    if (!open && button.current) setRect(button.current.getBoundingClientRect());
+    if (!open && button.current) setBox(popoverBox(button.current, options.length, withSearch));
     setOpen((v) => !v);
     setQuery("");
   };
+
+  // Список длинный и окно узкое — позицию нужно пересчитать, иначе он
+  // останется висеть там, где кнопки уже нет.
+  useEffect(() => {
+    if (!open) return;
+    const sync = () => button.current && setBox(popoverBox(button.current, options.length, withSearch));
+    window.addEventListener("resize", sync);
+    window.addEventListener("scroll", sync, true);
+    return () => {
+      window.removeEventListener("resize", sync);
+      window.removeEventListener("scroll", sync, true);
+    };
+  }, [open, options.length, withSearch]);
 
   return (
     <>
@@ -84,18 +147,12 @@ export function Select({
         <IconChevron size={13} className="flex-none text-ink-faint" />
       </button>
 
-      {open && rect
+      {open && box
         ? createPortal(
             <div
               data-select={id}
-              className="card-raised fixed z-[60] overflow-hidden py-1"
-              style={{
-                top: Math.min(rect.bottom + 6, window.innerHeight - 320),
-                left: Math.min(rect.left, window.innerWidth - 280),
-                minWidth: Math.max(rect.width, 220),
-                maxHeight: 300,
-                overflowY: "auto",
-              }}
+              className="card-raised fixed z-[60] overflow-y-auto py-1"
+              style={{ top: box.top, left: box.left, width: box.width, maxHeight: box.maxHeight }}
               role="listbox"
             >
               {withSearch ? (
@@ -176,7 +233,8 @@ export function Modal({
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <button
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0 backdrop-blur-sm"
+        style={{ background: "var(--color-scrim)" }}
         onClick={onClose}
         aria-label="Закрыть"
       />
@@ -315,7 +373,7 @@ export function DatePicker({
   const t = translator(locale);
   const [current, setCurrent] = useState(value);
   const [open, setOpen] = useState(false);
-  const [rect, setRect] = useState<DOMRect | null>(null);
+  const [box, setBox] = useState<PopoverBox | null>(null);
   const button = useRef<HTMLButtonElement>(null);
   const id = useId();
 
@@ -364,7 +422,7 @@ export function DatePicker({
         type="button"
         data-date={id}
         onClick={() => {
-          if (!open && button.current) setRect(button.current.getBoundingClientRect());
+          if (!open && button.current) setBox(panelBox(button.current, 272, 330));
           if (!open) setView(selected ?? new Date());
           setOpen((v) => !v);
         }}
@@ -379,16 +437,12 @@ export function DatePicker({
         </span>
       </button>
 
-      {open && rect
+      {open && box
         ? createPortal(
             <div
               data-date={id}
               className="card-raised fixed z-[75] p-3"
-              style={{
-                top: Math.min(rect.bottom + 6, window.innerHeight - 330),
-                left: Math.min(rect.left, window.innerWidth - 290),
-                width: 272,
-              }}
+              style={{ top: box.top, left: box.left, width: box.width }}
             >
               <div className="mb-2 flex items-center justify-between">
                 <button type="button" className="btn-icon h-7 w-7" onClick={() => shift(-1)} aria-label="−1">

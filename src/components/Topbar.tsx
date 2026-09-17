@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { switchLocale, switchTenant, switchTheme, switchUser } from "@/app/actions";
-import { IconBell, IconChevron, IconMail, IconMoon, IconSearch, IconSun } from "./icons";
-import { Select } from "./controls";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { switchLocale, switchTheme } from "@/app/actions";
+import { IconBell, IconChevron, IconLock, IconMail, IconMoon, IconSearch, IconSun } from "./icons";
 import { Avatar } from "./ui";
 import { MobileNav } from "./MobileNav";
 import { WorkdayPanel, WorkdayPill, type WorkdayState } from "./Workday";
@@ -14,37 +15,44 @@ import { THEMES, type Theme } from "@/lib/theme";
 import type { Tenant, User } from "@/lib/types";
 
 /**
- * Шапка. Переключатели агентства и сотрудника существуют только в демо-режиме —
- * они показывают, как одна и та же система выглядит на разных поддоменах и ролях.
- * Язык интерфейса — настоящая настройка, а рабочий день — рабочий инструмент:
- * как в Битриксе, он начинается и завершается прямо из меню профиля.
+ * Шапка сотрудника. Здесь только то, чем человек пользуется каждый день:
+ * рабочий день, язык, тема и поиск. Ни одной настройки портала — они
+ * целиком уехали в «Администрирование» под код, чтобы менеджер не мог
+ * случайно переписать воронку или права.
  */
 export function Topbar({
   user,
   roleLabel,
-  tenants,
-  tenant,
-  staff,
   locale,
   modules,
   home,
   workday,
   theme,
+  canAdmin,
 }: {
   user: User;
   roleLabel: Loc;
-  tenants: Pick<Tenant, "slug" | "name">[];
-  tenant: Tenant;
-  staff: User[];
   locale: Locale;
   modules: Module[];
   home: string;
   workday: WorkdayState;
   theme: Theme;
+  /** ссылка в закрытый раздел видна только тому, у кого есть право */
+  canAdmin: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const t = translator(locale);
+  const router = useRouter();
+
+  /*
+   * Меню закрывается, когда действие уже сработало: сервер вернул новое
+   * состояние дня, темы или языка. Закрывать его в момент отправки нельзя —
+   * форма размонтируется, и серверное действие не доедет.
+   */
+  useEffect(() => {
+    setOpen(false);
+  }, [workday.started, workday.onBreak, theme, locale]);
 
   // Клик мимо меню закрывает его — иначе панель висит поверх работы.
   useEffect(() => {
@@ -70,7 +78,7 @@ export function Topbar({
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-hairline px-5 backdrop-blur-xl"
       style={{ background: "color-mix(in srgb, var(--color-rail) 88%, transparent)" }}>
-      <MobileNav modules={modules} locale={locale} tenantName={tenant.name} home={home} />
+      <MobileNav modules={modules} locale={locale} tenantName={user.name} home={home} />
 
       <label className="relative hidden max-w-[320px] flex-1 items-center sm:flex">
         <span className="pointer-events-none absolute left-3 text-ink-faint">
@@ -79,6 +87,13 @@ export function Topbar({
         <input
           className="field h-9 rounded-full pl-9 text-[13px]"
           placeholder={t(S.common.search)}
+          onKeyDown={(e) => {
+            // Поиск в шапке не должен быть украшением: Enter уводит в базу
+            // контактов с уже применённым запросом.
+            if (e.key !== "Enter") return;
+            const value = (e.target as HTMLInputElement).value.trim();
+            if (value) router.push(`/crm/contacts?q=${encodeURIComponent(value)}`);
+          }}
         />
       </label>
 
@@ -126,7 +141,7 @@ export function Topbar({
             <Avatar name={user.name} size={28} />
             {/* точка статуса рабочего дня — видно, что день идёт, не открывая меню */}
             <span
-              className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2"
+              className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2"
               style={{ background: statusColor, borderColor: "var(--color-canvas)" }}
             />
           </span>
@@ -161,13 +176,6 @@ export function Topbar({
             </form>
 
             <div className="t-micro mb-2 uppercase tracking-[0.08em] text-ink-faint">
-              {t(S.common.workspace)}
-            </div>
-            <form action={switchTenant} className="mb-4">
-              <TenantPicker tenants={tenants} current={tenant.slug} locale={locale} />
-            </form>
-
-            <div className="t-micro mb-2 uppercase tracking-[0.08em] text-ink-faint">
               {t(S.common.language)}
             </div>
             <form action={switchLocale} className="mb-4 flex gap-1.5">
@@ -183,68 +191,18 @@ export function Topbar({
               ))}
             </form>
 
-            <div className="t-micro mb-2 uppercase tracking-[0.08em] text-ink-faint">
-              {t(S.common.signInAs)}
-            </div>
-            <form action={switchUser} className="max-h-[220px] space-y-1 overflow-y-auto">
-              {staff.map((member) => (
-                <button
-                  key={member.id}
-                  name="userId"
-                  value={member.id}
-                  className={`flex w-full items-center gap-2.5 rounded-[8px] px-2 py-1.5 text-left transition-colors hover:bg-surface-1 ${
-                    member.id === user.id ? "bg-surface-1" : ""
-                  }`}
-                >
-                  <Avatar name={member.name} size={24} />
-                  <span className="min-w-0 flex-1">
-                    <span className="t-caption block truncate">{member.name}</span>
-                    <span className="t-micro block truncate text-ink-faint">{member.title}</span>
-                  </span>
-                </button>
-              ))}
-            </form>
+            {canAdmin ? (
+              <Link
+                href="/admin"
+                onClick={() => setOpen(false)}
+                className="t-caption flex items-center gap-2 rounded-[8px] px-2 py-2 text-ink-muted transition-colors hover:bg-surface-1 hover:text-ink"
+              >
+                <IconLock size={14} /> {t(S.admin.title)}
+              </Link>
+            ) : null}
           </div>
         ) : null}
       </div>
     </header>
-  );
-}
-
-/**
- * Выбор агентства собственным списком: нативный <select> рисует операционная
- * система, и на тёмном портале он выглядит чужеродно.
- */
-function TenantPicker({
-  tenants,
-  current,
-  locale,
-}: {
-  tenants: Pick<Tenant, "slug" | "name">[];
-  current: string;
-  locale: Locale;
-}) {
-  const [value, setValue] = useState(current);
-  const form = useRef<HTMLInputElement>(null);
-
-  return (
-    <>
-      <input ref={form} type="hidden" name="tenant" value={value} readOnly />
-      <Select
-        locale={locale}
-        width="100%"
-        value={value}
-        options={tenants.map((item) => ({
-          value: item.slug,
-          label: item.name,
-          hint: item.slug,
-        }))}
-        onChange={(next) => {
-          setValue(next);
-          // Сабмит после того, как значение попало в скрытое поле.
-          requestAnimationFrame(() => form.current?.form?.requestSubmit());
-        }}
-      />
-    </>
   );
 }

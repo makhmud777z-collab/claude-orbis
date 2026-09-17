@@ -1,27 +1,23 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Select, Tooltip } from "./controls";
-import { IconSettings } from "./icons";
+import { Select } from "./controls";
 import { translator, type Locale } from "@/lib/i18n";
 import { S } from "@/lib/strings";
 
 /**
  * Выбор воронки — там же, где доска, а не отдельным разделом меню.
- * Рядом шестерёнка: настройки стадий открываются из того места,
- * где сотрудник на эти стадии и смотрит.
+ * Настройка стадий сюда не вынесена намеренно: она живёт в закрытом
+ * «Администрировании», чтобы менеджер не переписал воронку с доски.
  */
 export function PipelinePicker({
   pipelines,
   current,
   locale,
-  canEdit,
 }: {
   pipelines: { id: string; name: string }[];
   current: string;
   locale: Locale;
-  canEdit: boolean;
 }) {
   const t = translator(locale);
   const router = useRouter();
@@ -47,13 +43,6 @@ export function PipelinePicker({
       ) : (
         <span className="chip">{pipelines[0]?.name ?? t(S.pipelines.title)}</span>
       )}
-      {canEdit ? (
-        <Tooltip text={t(S.pipelines.title)}>
-          <Link href="/crm/pipelines" className="btn-icon" aria-label={t(S.pipelines.title)}>
-            <IconSettings size={16} />
-          </Link>
-        </Tooltip>
-      ) : null}
     </span>
   );
 }

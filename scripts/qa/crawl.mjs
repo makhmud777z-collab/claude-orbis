@@ -5,13 +5,14 @@ const BASE = process.env.QA_BASE_URL ?? "http://localhost:3000";
 const ROUTES = [
   "/",
   "/crm/leads", "/crm/leads/l_001", "/crm/deals", "/crm/deals/d_001",
-  "/crm/contacts", "/crm/contacts/s_001", "/crm/pipelines", "/crm/channels", "/crm/settings",
+  "/crm/contacts", "/crm/contacts/s_001",
   "/tasks", "/tasks/projects", "/tasks/reports",
   "/documents", "/deadlines", "/calendar",
   "/universities", "/universities/u_hallim", "/universities/compare",
   "/finance",
   "/team", "/team/u_nilufar", "/team/structure", "/team/reports",
-  "/admin/users", "/admin/permissions", "/settings",
+  "/admin", "/admin/pipelines", "/admin/channels", "/admin/cards",
+  "/admin/users", "/admin/permissions", "/admin/portal", "/admin/demo",
 ];
 const TENANTS = ["seoulway", "agencyx", "hanbridge"];
 
@@ -36,6 +37,9 @@ for (const tenant of TENANTS) {
     await ctx.addCookies([
       { name: "orbis_tenant", value: tenant, domain: "localhost", path: "/" },
       { name: "orbis_locale", value: locale, domain: "localhost", path: "/" },
+      // «Администрирование» закрыто кодом: обходчику нужен открытый замок,
+      // иначе вместо настроек он увидит один и тот же экран входа.
+      { name: "orbis_admin", value: `t_${tenant}`, domain: "localhost", path: "/" },
     ]);
     const page = await ctx.newPage();
     const errors = [];

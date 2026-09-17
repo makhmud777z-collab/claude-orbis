@@ -92,7 +92,7 @@ export function EditableFields({
               setDraft({});
             }}
           >
-            {t(S.common.reset)}
+            {t(S.common.cancel)}
           </button>
           <button type="submit" className="btn btn-primary btn-sm">
             {t(S.common.save)}

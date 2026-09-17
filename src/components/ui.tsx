@@ -1,5 +1,31 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { initials } from "@/lib/format";
+import { IconChevronRight } from "./icons";
+
+/**
+ * Хлебные крошки. Настройки спрятаны по разделам, и без обратного пути
+ * человек в них теряется: страница обязана показывать, откуда в неё пришли.
+ */
+export function Crumbs({
+  back,
+  backLabel,
+  current,
+}: {
+  back: string;
+  backLabel: string;
+  current: string;
+}) {
+  return (
+    <nav className="t-caption mb-4 flex items-center gap-1.5 text-ink-faint">
+      <Link href={back} className="transition-colors hover:text-ink">
+        {backLabel}
+      </Link>
+      <IconChevronRight size={13} />
+      <span className="text-ink-muted">{current}</span>
+    </nav>
+  );
+}
 
 export function PageHeader({
   title,
@@ -11,8 +37,8 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="flex flex-wrap items-end justify-between gap-4 pb-6">
-      <div>
+    <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 pb-6">
+      <div className="min-w-0">
         <h1 className="t-display-md">{title}</h1>
         {meta ? (
           <div className="t-caption mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-ink-muted">
@@ -121,9 +147,11 @@ export function SectionTitle({
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-4 flex items-baseline justify-between">
-      <h2 className="t-headline">{children}</h2>
-      {action}
+    // Заголовок, который идёт вторым в колонке, обязан отступать от блока
+    // выше: иначе он липнет к предыдущей карточке и выглядит обрезанным.
+    <div className="mb-4 flex items-baseline justify-between gap-4 [&:not(:first-child)]:mt-9">
+      <h2 className="t-headline min-w-0">{children}</h2>
+      {action ? <span className="flex-none">{action}</span> : null}
     </div>
   );
 }

@@ -35,6 +35,8 @@ export interface Tenant {
   seatsUsed: number;
   seatsLimit: number;
   branches: Branch[];
+  /** код входа в «Администрирование»: настройки портала закрыты от сотрудников */
+  adminPasscode: string;
   createdAt: string;
 }
 
