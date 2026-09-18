@@ -523,16 +523,28 @@ function crmList(rows, valueLabel) {
  * Выгрузка в CSV. Разделитель — точка с запятой, кодировка — UTF-8 с BOM:
  * иначе Excel в русской локали открывает файл одной колонкой и в кракозябрах.
  */
-function exportCsv(filename, headers, rows) {
+async function exportCsv(filename, headers, rows) {
   const cell = (v) => {
     const text = v === null || v === undefined ? "" : String(v);
     return /[";\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   };
   const csv = [headers, ...rows].map((row) => row.map(cell).join(";")).join("\r\n");
-  const url = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
+  const name = `${filename}-${TODAY_ISO}.csv`;
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+
+  // Прототип открывают двумя способами: файлом с диска и по ссылке в
+  // просмотрщике claude.ai. Во втором обычная ссылка на скачивание молча
+  // не срабатывает, и кнопка выглядела бы мёртвой, поэтому сначала
+  // спрашиваем сам просмотрщик, а на диске работает прежний путь.
+  try {
+    const downloads = window.claude?.use && (await window.claude.use("downloads"));
+    if (downloads) { await downloads.save({ filename: name, data: blob }); return; }
+  } catch { /* отказ пользователя или недоступность — молча уходим на ссылку */ }
+
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${filename}-${TODAY_ISO}.csv`;
+  link.download = name;
   document.body.append(link);
   link.click();
   link.remove();
