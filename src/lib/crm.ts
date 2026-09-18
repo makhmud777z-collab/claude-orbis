@@ -1,11 +1,10 @@
-import { channelById } from "./data/channels";
-import { dossierProgress } from "./data/documents";
 import { userById } from "./data/users";
 import { programById, universityById } from "./data/universities";
 import { isPast, isSoon, type Formatters } from "./format";
 import { loc, type Loc, type Translate } from "./i18n";
 import { INTAKE_LABEL, PRIORITY_LABEL, ref, SOURCE_LABEL } from "./labels";
 import { S } from "./strings";
+import { channelById, dossierProgress } from "./store";
 import * as store from "./store";
 import type { CardField } from "./store";
 import type { Deal, Lead, Student } from "./types";

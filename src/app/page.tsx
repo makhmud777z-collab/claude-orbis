@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { navFor } from "@/components/nav";
 import { openModules } from "@/components/guard";
-import { IconArrowUpRight, IconExport, IconPlus } from "@/components/icons";
+import { IconArrowUpRight, IconPlus } from "@/components/icons";
 import {
   Avatar,
   Chip,
@@ -97,14 +97,9 @@ export default async function DashboardPage() {
           </>
         }
         actions={
-          <>
-            <button className="btn btn-secondary btn-sm">
-              <IconExport size={15} /> {t(S.common.export)}
-            </button>
-            <Link href="/crm/leads" className="btn btn-primary btn-sm">
-              <IconPlus size={15} /> {t(S.crm.newLead)}
-            </Link>
-          </>
+          <Link href="/crm/leads" className="btn btn-primary btn-sm">
+            <IconPlus size={15} /> {t(S.crm.newLead)}
+          </Link>
         }
       />
 
@@ -151,7 +146,9 @@ export default async function DashboardPage() {
         >
           {t(S.dashboard.funnel)}
         </SectionTitle>
-        <div className="card grid grid-cols-2 divide-y divide-hairline-soft sm:grid-cols-4 sm:divide-y-0 xl:grid-cols-8">
+        {/* Восемь стадий в один ряд требуют ~1500px: раньше они вставали
+            в ряд уже с 1280px, и подписи ломались посреди слова. */}
+        <div className="card grid grid-cols-2 divide-y divide-hairline-soft sm:grid-cols-4 sm:divide-y-0 2xl:grid-cols-8">
           {byStage.map(({ stage, label, dot, count }) => (
             <Link
               key={stage}

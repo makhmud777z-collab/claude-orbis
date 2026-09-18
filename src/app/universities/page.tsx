@@ -1,11 +1,12 @@
+import { ExportButton } from "@/components/ExportButton";
 import { moduleGate } from "@/components/guard";
 import { CatalogExplorer, type Filters } from "@/components/CatalogExplorer";
 import { SectionFilter } from "@/components/SectionFilter";
-import { IconExport, IconPlus } from "@/components/icons";
 import { Banner, PageHeader } from "@/components/ui";
 import { UNIVERSITIES } from "@/lib/data/universities";
 import { readFilter, readQuery } from "@/lib/filters";
 import { translator } from "@/lib/i18n";
+import { CITY_LABEL, OWNERSHIP_LABEL, ref } from "@/lib/labels";
 import { allow } from "@/lib/rbac";
 import { simplePresets, universityFields } from "@/lib/section-filters";
 import { S } from "@/lib/strings";
@@ -78,16 +79,27 @@ export default async function UniversitiesPage({
           </>
         }
         actions={
-          <>
-            <button className="btn btn-secondary btn-sm">
-              <IconExport size={15} /> {t(S.universities.exportShortlist)}
-            </button>
-            {allow(session.tenant.id, session.role, "universities", "create") ? (
-              <button className="btn btn-primary btn-sm">
-                <IconPlus size={15} /> {t(S.universities.add)}
-              </button>
-            ) : null}
-          </>
+          <ExportButton
+            locale={session.locale}
+            label={t(S.universities.exportCatalog)}
+            filename="orbis-vuzy"
+            headers={[
+              t(S.universities.colName), t(S.students.colCity), t(S.universities.ownership),
+              t(S.universities.colRank), "TOPIK", "IELTS", "GPA",
+              t(S.universities.colTuition), t(S.universities.colDorm),
+            ]}
+            rows={UNIVERSITIES.map((u) => [
+              u.name,
+              t(ref(CITY_LABEL, u.city)),
+              t(OWNERSHIP_LABEL[u.ownership]),
+              u.nationalRank ?? "",
+              u.requirements.topikMin,
+              u.requirements.ieltsMin ?? "",
+              u.requirements.gpaMin ?? "",
+              Math.min(...u.programs.map((p) => p.tuitionPerYear)),
+              u.dormAvailable ? u.dormCostPerYear : "",
+            ])}
+          />
         }
       />
 

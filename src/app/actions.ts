@@ -6,7 +6,8 @@ import { redirect } from "next/navigation";
 import { loc } from "@/lib/i18n";
 import { allow, type Action, type Module } from "@/lib/rbac";
 import * as db from "@/lib/store";
-import type { CalendarEvent, Lead, Role, TimelineEvent } from "@/lib/types";
+import type { CalendarEvent, Lead, Role, StudentDocument, TimelineEvent } from "@/lib/types";
+import { checklistKey, DOCUMENT_CHECKLIST } from "@/lib/labels";
 import { ADMIN_COOKIE, adminUnlocked, passcodeMatches } from "@/lib/admin-lock";
 import { getSession } from "@/lib/session";
 import {
@@ -267,6 +268,114 @@ export async function setCardFieldsAction(formData: FormData) {
   db.setCardFields(session.user.id, formData.getAll("field").map(String));
   revalidatePath("/crm/deals");
   revalidatePath("/crm/leads");
+}
+
+/* ── пользователи и филиалы ──────────────────────────────────── */
+
+export async function inviteUserAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "admin", "create")) return;
+
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  if (!name || !email) return;
+
+  db.inviteUser({
+    tenantId: session.tenant.id,
+    name,
+    email,
+    title: String(formData.get("title") ?? "").trim() || name,
+    role: (String(formData.get("role") ?? "sales_manager") as Role),
+    branchId: String(formData.get("branchId") ?? "") || session.user.branchId,
+  });
+  revalidatePath("/admin/users");
+  revalidatePath("/team");
+}
+
+export async function addBranchAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "settings", "edit")) return;
+  const name = String(formData.get("name") ?? "").trim();
+  const city = String(formData.get("city") ?? "").trim();
+  if (!name || !city) return;
+  db.addBranch(session.tenant.id, name, city);
+  revalidatePath("/admin/portal");
+}
+
+/* ── каналы продаж ───────────────────────────────────────────── */
+
+export async function toggleChannelAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "crmSettings", "edit")) return;
+  db.toggleChannel(String(formData.get("channelId") ?? ""));
+  revalidatePath("/admin/channels");
+  revalidatePath("/admin");
+}
+
+/* ── задачи ──────────────────────────────────────────────────── */
+
+export async function addTaskAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "tasks", "create")) return;
+
+  const title = String(formData.get("title") ?? "").trim();
+  const dueAt = String(formData.get("dueAt") ?? "").trim();
+  if (!title || !dueAt) return;
+
+  const priority = String(formData.get("priority") ?? "normal");
+  db.addTask({
+    tenantId: session.tenant.id,
+    title,
+    description: String(formData.get("description") ?? "").trim(),
+    assigneeId: String(formData.get("assigneeId") ?? "") || session.user.id,
+    creatorId: session.user.id,
+    dueAt,
+    priority: priority === "low" || priority === "high" ? priority : "normal",
+  });
+  revalidatePath("/tasks");
+  revalidatePath("/deadlines");
+  revalidatePath("/");
+}
+
+/* ── документы ───────────────────────────────────────────────── */
+
+/**
+ * Запрос документа у студента. Загрузки файла в системе пока нет — есть
+ * запрос: пункт досье встаёт в статус «запрошен» и попадает в историю контакта.
+ */
+export async function requestDocumentAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "documents", "create")) return;
+
+  const studentId = String(formData.get("studentId") ?? "");
+  const key = String(formData.get("kind") ?? "");
+  const item = DOCUMENT_CHECKLIST.find((x) => checklistKey(x.kind) === key);
+  if (!studentId || !item) return;
+
+  db.requestDocument({
+    tenantId: session.tenant.id,
+    studentId,
+    kind: item.kind,
+    needsApostille: item.needsApostille,
+    note: String(formData.get("note") ?? ""),
+    authorId: session.user.id,
+  });
+  revalidatePath("/documents");
+  revalidatePath(`/crm/contacts/${studentId}`);
+}
+
+/** Куратор проверил документ или вернул его на доработку. */
+export async function setDocumentStatusAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "documents", "edit")) return;
+
+  const id = String(formData.get("documentId") ?? "");
+  const status = String(formData.get("status") ?? "") as StudentDocument["status"];
+  if (!["requested", "uploaded", "verified", "rejected"].includes(status)) return;
+
+  const result = db.setDocumentStatus(id, status, session.user.id);
+  revalidatePath("/documents");
+  if (result.ok) revalidatePath(`/crm/contacts/${result.doc.studentId}`);
 }
 
 /* ── Права доступа ───────────────────────────────────────────── */

@@ -3,7 +3,6 @@ import { moduleGate } from "@/components/guard";
 import { IconPlus } from "@/components/icons";
 import { SectionFilter } from "@/components/SectionFilter";
 import { Avatar, Chip, EmptyState, PageHeader, StatusDot } from "@/components/ui";
-import { DEPARTMENTS } from "@/lib/data/org";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
 import { age, formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
@@ -12,7 +11,7 @@ import { scopedContacts, scopedDeals, scopedTasks, scopedTeam } from "@/lib/quer
 import { allow, ROLES } from "@/lib/rbac";
 import { simplePresets, teamFields } from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
-import { departmentOf, openSession, sessionMinutes } from "@/lib/store";
+import { departmentOf, departmentsOf, openSession, sessionMinutes } from "@/lib/store";
 import { S } from "@/lib/strings";
 import type { User } from "@/lib/types";
 
@@ -43,7 +42,7 @@ export default async function TeamPage({
   const deals = scopedDeals(session);
   const tasks = scopedTasks(session);
   const branches = new Map(session.tenant.branches.map((b) => [b.id, b]));
-  const departments = new Map(DEPARTMENTS.map((d) => [d.id, d]));
+  const departments = new Map(departmentsOf(session.tenant.id).map((d) => [d.id, d]));
 
   return (
     <>

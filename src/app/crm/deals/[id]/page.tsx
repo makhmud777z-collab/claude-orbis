@@ -6,7 +6,6 @@ import { Timeline } from "@/components/Timeline";
 import { moduleGate } from "@/components/guard";
 import { Avatar, Field, PageHeader, Progress, StatusDot } from "@/components/ui";
 import { boardStages } from "@/lib/crm";
-import { documentsOfStudent, dossierProgress } from "@/lib/data/documents";
 import { userById } from "@/lib/data/users";
 import { programById, universityById } from "@/lib/data/universities";
 import { formatters } from "@/lib/format";
@@ -17,7 +16,7 @@ import {
 import { scopedContacts, scopedDeals, scopedTasks } from "@/lib/queries";
 import { allow } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
-import { pipelineById, stageOf } from "@/lib/store";
+import { documentsOfStudent, dossierProgress, pipelineById, stageOf } from "@/lib/store";
 import { S } from "@/lib/strings";
 import { timelineItems } from "@/lib/timeline-view";
 

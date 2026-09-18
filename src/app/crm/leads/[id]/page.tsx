@@ -8,7 +8,6 @@ import { moduleGate } from "@/components/guard";
 import { IconArrowUpRight } from "@/components/icons";
 import { Chip, PageHeader, StatusDot } from "@/components/ui";
 import { boardStages } from "@/lib/crm";
-import { channelById } from "@/lib/data/channels";
 import { userById } from "@/lib/data/users";
 import { formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
@@ -16,7 +15,7 @@ import { SOURCE_LABEL } from "@/lib/labels";
 import { scopedLeads } from "@/lib/queries";
 import { allow } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
-import { defaultPipeline, stageOf } from "@/lib/store";
+import { channelById, defaultPipeline, stageOf } from "@/lib/store";
 import { S } from "@/lib/strings";
 import { timelineItems } from "@/lib/timeline-view";
 

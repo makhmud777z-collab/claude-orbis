@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { switchLocale, switchTheme } from "@/app/actions";
-import { IconBell, IconChevron, IconLock, IconMail, IconMoon, IconSearch, IconSun } from "./icons";
+import { IconChevron, IconLock, IconMoon, IconSearch, IconSun } from "./icons";
+import { Notifications, type NoticeItem } from "./Notifications";
 import { Avatar } from "./ui";
 import { MobileNav } from "./MobileNav";
 import { WorkdayPanel, WorkdayPill, type WorkdayState } from "./Workday";
@@ -29,6 +30,7 @@ export function Topbar({
   workday,
   theme,
   canAdmin,
+  notices,
 }: {
   user: User;
   roleLabel: Loc;
@@ -39,6 +41,8 @@ export function Topbar({
   theme: Theme;
   /** ссылка в закрытый раздел видна только тому, у кого есть право */
   canAdmin: boolean;
+  /** то, что требует внимания сегодня: просроченные сроки и задачи */
+  notices: NoticeItem[];
 }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -118,16 +122,7 @@ export function Topbar({
 
       <WorkdayPill workday={workday} locale={locale} />
 
-      <button className="btn-icon" aria-label={t(S.common.mail)}>
-        <IconMail size={17} />
-      </button>
-      <button className="btn-icon relative" aria-label={t(S.common.notifications)}>
-        <IconBell size={17} />
-        <span
-          className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full"
-          style={{ background: "var(--color-status-new)" }}
-        />
-      </button>
+      <Notifications items={notices} locale={locale} />
 
       <div className="mx-1 h-5 w-px bg-hairline" />
 

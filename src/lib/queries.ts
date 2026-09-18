@@ -1,4 +1,4 @@
-import { documentsOfTenant } from "./data/documents";
+import { documentsOfTenant } from "./store";
 import { isActiveLead } from "./data/leads";
 import { usersOfTenant } from "./data/users";
 import { daysUntil } from "./format";
@@ -140,4 +140,26 @@ export function scopedDeadlines(session: Session): Deadline[] {
   }
 
   return items.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+
+/**
+ * Что требует внимания сегодня: просроченные сроки и задачи впереди,
+ * ближайшая неделя следом. Это не лента событий — лента рассказывает,
+ * что уже произошло, а уведомления говорят, что сейчас не сделано.
+ */
+export function noticesFor(session: Session) {
+  const own = scopedDeadlines(session).filter((d) => d.ownerId === session.user.id);
+  return own
+    .filter((d) => daysUntil(d.date) <= 7)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 12)
+    .map((d) => ({
+      id: d.id,
+      date: d.date,
+      title: d.title,
+      kind: d.kind,
+      relation: d.relation,
+      overdue: daysUntil(d.date) < 0,
+    }));
 }

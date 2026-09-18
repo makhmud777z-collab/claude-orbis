@@ -10,6 +10,3 @@ export const CHANNELS: Channel[] = [
   { id: "ch_ax_tg", tenantId: "t_agencyx", kind: "telegram", title: "Agency X Bot", handle: "@agencyx_bot", status: "pending", connectedAt: null, leadsPerMonth: 0 },
   { id: "ch_hb_ig", tenantId: "t_hanbridge", kind: "instagram", title: "Hanbridge", handle: "@hanbridge.kg", status: "connected", connectedAt: "2026-09-01", leadsPerMonth: 9 },
 ];
-
-export const channelsOfTenant = (tenantId: string) => CHANNELS.filter((c) => c.tenantId === tenantId);
-export const channelById = (id: string | null) => (id ? CHANNELS.find((c) => c.id === id) : undefined);

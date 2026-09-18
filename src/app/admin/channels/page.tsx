@@ -1,3 +1,4 @@
+import { toggleChannelAction } from "@/app/actions";
 import { moduleGate } from "@/components/guard";
 import { IconInstagram, IconMail, IconPhone, IconTelegram } from "@/components/icons";
 import { Banner, Chip, PageHeader, StatusDot } from "@/components/ui";
@@ -110,11 +111,14 @@ export default async function ChannelsPage() {
               </div>
 
               {canEdit ? (
-                <button className="btn btn-secondary btn-sm mt-4 w-full justify-center">
-                  {channel.status === "connected"
-                    ? t(S.channels.disconnect)
-                    : t(S.channels.connect)}
-                </button>
+                <form action={toggleChannelAction} className="mt-4">
+                  <input type="hidden" name="channelId" value={channel.id} />
+                  <button className="btn btn-secondary btn-sm w-full justify-center">
+                    {channel.status === "connected"
+                      ? t(S.channels.disconnect)
+                      : t(S.channels.connect)}
+                  </button>
+                </form>
               ) : null}
             </article>
           );

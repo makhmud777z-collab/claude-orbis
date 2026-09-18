@@ -1,12 +1,13 @@
 import { moduleGate } from "@/components/guard";
 import { DocumentsExplorer, type DossierFolder } from "@/components/DocumentsExplorer";
 import { SectionFilter } from "@/components/SectionFilter";
-import { IconPlus } from "@/components/icons";
+import { RequestDocumentDialog } from "@/components/RequestDocumentDialog";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { userById } from "@/lib/data/users";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
 import { translator, type Translate } from "@/lib/i18n";
 import { allow } from "@/lib/rbac";
+import { checklistKey, DOCUMENT_CHECKLIST } from "@/lib/labels";
 import { documentFields, simplePresets } from "@/lib/section-filters";
 import { S } from "@/lib/strings";
 import { scopedDocuments, scopedContacts, scopedTeam } from "@/lib/queries";
@@ -68,6 +69,27 @@ export default async function DocumentsPage({
 
   const problems = folders.reduce((n, f) => n + f.problems, 0);
 
+  const canCreate = allow(session.tenant.id, session.role, "documents", "create");
+  const canEdit = allow(session.tenant.id, session.role, "documents", "edit");
+  // Диалог запроса работает по всей базе контактов, а не только по тем,
+  // у кого досье уже заведено: запросить документ можно и у нового студента.
+  const studentOptions = [...contacts.values()].map((s) => ({
+    value: s.id,
+    label: s.fullName,
+    hint: s.phone,
+  }));
+  const kindOptions = DOCUMENT_CHECKLIST.map((item) => ({
+    value: checklistKey(item.kind),
+    label: t(item.kind),
+  }));
+  // Уже заведённые пункты по каждому студенту — чтобы не предлагать дубли.
+  // Считаем по всем документам, а не по отфильтрованным: фильтр раздела
+  // прячет пункты, но в досье они остаются.
+  const existingKinds: Record<string, string[]> = {};
+  for (const doc of allDocs) {
+    (existingKinds[doc.studentId] ??= []).push(checklistKey(doc.kind));
+  }
+
   return (
     <>
       <PageHeader
@@ -88,10 +110,13 @@ export default async function DocumentsPage({
           </>
         }
         actions={
-          allow(session.tenant.id, session.role, "documents", "create") ? (
-            <button className="btn btn-primary btn-sm">
-              <IconPlus size={15} /> {t(S.documents.upload)}
-            </button>
+          canCreate ? (
+            <RequestDocumentDialog
+              locale={session.locale}
+              students={studentOptions}
+              kinds={kindOptions}
+              existing={existingKinds}
+            />
           ) : null
         }
       />
@@ -106,7 +131,16 @@ export default async function DocumentsPage({
       />
 
       {folders.length ? (
-        <DocumentsExplorer folders={folders} locale={session.locale} />
+        <DocumentsExplorer
+          folders={folders}
+          locale={session.locale}
+          canEdit={canEdit}
+          request={
+            canCreate
+              ? { students: studentOptions, kinds: kindOptions, existing: existingKinds }
+              : null
+          }
+        />
       ) : (
         <EmptyState title={t(FILTER_TEXT.nothing)} />
       )}

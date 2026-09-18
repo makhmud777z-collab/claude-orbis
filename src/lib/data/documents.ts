@@ -65,19 +65,3 @@ export const DOCUMENTS: StudentDocument[] = STUDENTS.flatMap((student) => {
     } satisfies StudentDocument;
   });
 });
-
-export function documentsOfTenant(tenantId: string) {
-  return DOCUMENTS.filter((d) => d.tenantId === tenantId);
-}
-
-export function documentsOfStudent(studentId: string) {
-  return DOCUMENTS.filter((d) => d.studentId === studentId);
-}
-
-/** Готовность досье студента в процентах (проверено / всего). */
-export function dossierProgress(studentId: string) {
-  const docs = documentsOfStudent(studentId);
-  if (!docs.length) return { done: 0, total: 0, percent: 0 };
-  const done = docs.filter((d) => d.status === "verified").length;
-  return { done, total: docs.length, percent: Math.round((done / docs.length) * 100) };
-}

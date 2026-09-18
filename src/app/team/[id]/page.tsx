@@ -5,14 +5,20 @@ import { IconMail, IconPhone } from "@/components/icons";
 import { EditableFields } from "@/components/EditableFields";
 import { Timeline } from "@/components/Timeline";
 import { Avatar, Chip, Field, PageHeader, SectionTitle, StatusDot } from "@/components/ui";
-import { DEPARTMENTS } from "@/lib/data/org";
 import { age, formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
 import { CITY_LABEL, ref, TASK_STATUS } from "@/lib/labels";
 import { scopedContacts, scopedDeals, scopedTasks, scopedTeam } from "@/lib/queries";
 import { allow, roleDef } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
-import { departmentOf, pipelineById, sessionMinutes, sessionsOf, stageOf } from "@/lib/store";
+import {
+  departmentById,
+  departmentOf,
+  pipelineById,
+  sessionMinutes,
+  sessionsOf,
+  stageOf,
+} from "@/lib/store";
 import { P, S } from "@/lib/strings";
 import { timelineItems } from "@/lib/timeline-view";
 
@@ -29,7 +35,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
 
   const f = formatters(session.locale);
   const role = roleDef(user.role);
-  const department = DEPARTMENTS.find((d) => d.id === departmentOf(user.id));
+  const department = departmentById(departmentOf(user.id) ?? "");
   const branch = session.tenant.branches.find((b) => b.id === user.branchId);
   const canEdit = allow(session.tenant.id, session.role, "team", "edit");
 

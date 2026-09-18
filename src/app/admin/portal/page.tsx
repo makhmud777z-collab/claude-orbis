@@ -1,4 +1,5 @@
 import { moduleGate } from "@/components/guard";
+import { AddBranchDialog } from "@/components/AddBranchDialog";
 import { DomainCard } from "@/components/DomainCard";
 import { setPasscodeAction } from "@/app/actions";
 import {
@@ -56,13 +57,6 @@ export default async function SettingsPage() {
               {tenant.seatsUsed} / {tenant.seatsLimit} {t(S.settings.seats)}
             </span>
           </>
-        }
-        actions={
-          allow(session.tenant.id, session.role, "settings", "edit") ? (
-            <button className="btn btn-primary btn-sm">
-              {t(S.settings.saveChanges)}
-            </button>
-          ) : null
         }
       />
 
@@ -157,9 +151,9 @@ export default async function SettingsPage() {
             <div className="mt-4">
               <Progress percent={(tenant.seatsUsed / tenant.seatsLimit) * 100} />
             </div>
-            <button className="btn btn-secondary btn-sm mt-5 w-full">
-              {t(S.settings.addSeats)}
-            </button>
+            <p className="t-micro mt-4 leading-relaxed text-ink-faint">
+              {t(S.settings.seatsHint)}
+            </p>
           </div>
 
           <div className="card p-5">
@@ -173,9 +167,9 @@ export default async function SettingsPage() {
                 value={t(ref(BRANCH_LABEL, b.name))}
               />
             ))}
-            <button className="btn btn-secondary btn-sm mt-4 w-full">
-              {t(S.settings.addBranch)}
-            </button>
+            {allow(session.tenant.id, session.role, "settings", "edit") ? (
+              <AddBranchDialog locale={session.locale} />
+            ) : null}
           </div>
         </div>
       </div>

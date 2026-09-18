@@ -90,6 +90,5 @@ export const WORK_SESSIONS: WorkSession[] = [
   { id: "ws_12", tenantId: "t_seoulway", userId: "u_bekzod", date: "2026-09-14", startedAt: "2026-09-14T09:05:00", endedAt: "2026-09-14T19:30:00", breakMinutes: 35, onBreakSince: null },
 ];
 
-export const departmentsOfTenant = (tenantId: string) => DEPARTMENTS.filter((d) => d.tenantId === tenantId);
 export const projectsOfTenant = (tenantId: string) => PROJECTS.filter((p) => p.tenantId === tenantId);
 export const templatesOfTenant = (tenantId: string) => TASK_TEMPLATES.filter((t) => t.tenantId === tenantId);

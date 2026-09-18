@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { SectionFilter } from "@/components/SectionFilter";
+import { InviteDialog } from "@/components/InviteDialog";
 import { moduleGate } from "@/components/guard";
 import { UsersAdmin, type AdminUserRow } from "@/components/UsersAdmin";
-import { IconPlus } from "@/components/icons";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
 import { formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
-import { CITY_LABEL, ref } from "@/lib/labels";
+import { BRANCH_LABEL, CITY_LABEL, ref } from "@/lib/labels";
 import { scopedTeam } from "@/lib/queries";
 import { allow, ROLES, roleDef } from "@/lib/rbac";
 import { simplePresets, teamFields } from "@/lib/section-filters";
@@ -83,9 +83,15 @@ export default async function AdminUsersPage({
         }
         actions={
           allow(session.tenant.id, session.role, "admin", "create") ? (
-            <button className="btn btn-primary btn-sm">
-              <IconPlus size={15} /> {t(S.admin.invite)}
-            </button>
+            <InviteDialog
+              locale={session.locale}
+              defaultBranchId={session.user.branchId}
+              roles={ROLES.map((r) => ({ value: r.key, label: t(r.label), hint: t(r.description) }))}
+              branches={session.tenant.branches.map((b) => ({
+                value: b.id,
+                label: `${t(ref(BRANCH_LABEL, b.name))} · ${t(ref(CITY_LABEL, b.city))}`,
+              }))}
+            />
           ) : null
         }
       />

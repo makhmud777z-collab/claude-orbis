@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { SectionFilter } from "@/components/SectionFilter";
 import { TasksBoard, type TaskCard } from "@/components/TasksBoard";
+import { NewTaskDialog } from "@/components/NewTaskDialog";
 import { moduleGate } from "@/components/guard";
-import { IconPlus } from "@/components/icons";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { studentById } from "@/lib/data/students";
 import { userById } from "@/lib/data/users";
@@ -77,9 +77,12 @@ export default async function TasksPage({
         }
         actions={
           allow(session.tenant.id, session.role, "tasks", "create") ? (
-            <button className="btn btn-primary btn-sm">
-              <IconPlus size={15} /> {t(S.tasks.create)}
-            </button>
+            <NewTaskDialog
+              locale={session.locale}
+              defaultAssigneeId={session.user.id}
+              defaultDue={TODAY_ISO}
+              people={team.map((u) => ({ value: u.id, label: u.name, hint: u.title }))}
+            />
           ) : null
         }
       />

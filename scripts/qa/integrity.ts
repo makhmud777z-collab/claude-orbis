@@ -16,6 +16,8 @@ import { TASKS } from "../../src/lib/data/tasks";
 import { UNIVERSITIES } from "../../src/lib/data/universities";
 import { USERS } from "../../src/lib/data/users";
 import { TENANTS } from "../../src/lib/tenants";
+import { readdirSync, readFileSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 
 const problems: string[] = [];
 const fail = (msg: string) => problems.push(msg);
@@ -271,6 +273,39 @@ for (const l of LEADS) {
   const channel = CHANNELS.find((c) => c.id === l.channelId);
   if (channel && channel.tenantId !== l.tenantId)
     fail(`lead ${l.id}: канал из другого агентства`);
+}
+
+/* ── единственный источник правды ────────────────────────────── */
+
+/**
+ * Коллекции, которые правит хранилище. Читать их напрямую из src/lib/data
+ * нельзя никому, кроме самого хранилища: страница показала бы данные до
+ * правки — добавленный отдел не появился бы в фильтре, отключённый канал
+ * остался бы подключённым. Ошибка молчаливая, поэтому ловим её здесь.
+ */
+const LIVE_SOURCES = ["documents", "channels", "org"];
+
+const srcRoot = resolve(import.meta.dirname, "../../src");
+for (const file of walk(srcRoot)) {
+  const rel = relative(srcRoot, file);
+  if (rel === "lib/store.ts" || rel.startsWith("lib/data/")) continue;
+  const text = readFileSync(file, "utf8");
+  for (const match of text.matchAll(/from "(?:@\/lib|\.{1,2}(?:\/\.\.)*)\/data\/(\w+)"/g)) {
+    const mod = match[1];
+    if (!LIVE_SOURCES.includes(mod)) continue;
+    // Сиды (DOCUMENTS, CHANNELS, DEPARTMENTS) читает только хранилище;
+    // остальным нужны его функции.
+    const line = text.slice(0, match.index).split("\n").length;
+    fail(`${rel}:${line}: данные из data/${mod} читаются мимо хранилища`);
+  }
+}
+
+function* walk(dir: string): Generator<string> {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) yield* walk(full);
+    else if (/\.tsx?$/.test(entry.name)) yield full;
+  }
 }
 
 console.log(

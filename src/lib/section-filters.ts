@@ -1,6 +1,5 @@
-import { channelsOf } from "./store";
+import { channelsOf, departmentsOf } from "./store";
 import { userById } from "./data/users";
-import { DEPARTMENTS } from "./data/org";
 import { UNIVERSITIES } from "./data/universities";
 import { STALE_DAYS } from "./format";
 import { loc, type Translate } from "./i18n";
@@ -140,7 +139,7 @@ export function teamFields(session: Session, t: Translate): FilterField[] {
       opt("suspended", t(loc("Заблокирован", "Bloklangan")), { color: "var(--color-status-hold)" }),
     ], base: true },
     { key: "departmentId", label: loc("Подразделение", "Bo‘lim"), kind: "select",
-      options: DEPARTMENTS.filter((d) => d.tenantId === session.tenant.id).map((d) => opt(d.id, t(d.name))) },
+      options: departmentsOf(session.tenant.id).map((d) => opt(d.id, t(d.name))) },
     { key: "joinedAt", label: loc("Принят на работу", "Ishga qabul"), kind: "date", range: true },
   ];
 }

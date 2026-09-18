@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { setDocumentStatusAction } from "@/app/actions";
+import { RequestDocumentDialog, type DocKindOption } from "./RequestDocumentDialog";
 import { IconDocuments } from "./icons";
 import { Avatar, Chip, Progress, StatusDot } from "./ui";
 import { DOCUMENT_STATUS } from "@/lib/labels";
@@ -38,9 +40,17 @@ export interface DossierFolder {
 export function DocumentsExplorer({
   folders,
   locale,
+  canEdit,
+  request,
 }: {
   folders: DossierFolder[];
   locale: Locale;
+  canEdit: boolean;
+  request: {
+    students: { value: string; label: string; hint?: string }[];
+    kinds: DocKindOption[];
+    existing: Record<string, string[]>;
+  } | null;
 }) {
   const t = translator(locale);
   const f = formatters(locale);
@@ -125,16 +135,25 @@ export function DocumentsExplorer({
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              {/* Две кнопки рядом на 390px не помещаются: переносим их,
+                  а не выталкиваем карточку за экран. */}
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <Link
                   href={`/crm/contacts/${open.studentId}`}
                   className="btn btn-secondary btn-sm"
                 >
                   {t(S.applications.studentCard)}
                 </Link>
-                <button className="btn btn-primary btn-sm">
-                  {t(S.documents.uploadFile)}
-                </button>
+                {request ? (
+                  <RequestDocumentDialog
+                    locale={locale}
+                    students={request.students}
+                    kinds={request.kinds}
+                    existing={request.existing}
+                    defaultStudentId={open.studentId}
+                    label={t(S.documents.requestFor)}
+                  />
+                ) : null}
               </div>
             </div>
 
@@ -160,6 +179,7 @@ export function DocumentsExplorer({
                     <span className="t-caption w-24 text-right text-ink-muted">
                       {t(st.label)}
                     </span>
+                    {canEdit ? <DocActions id={d.id} status={d.status} locale={locale} /> : null}
                   </div>
                 );
               })}
@@ -168,5 +188,48 @@ export function DocumentsExplorer({
         ) : null}
       </div>
     </>
+  );
+}
+
+/**
+ * Проверка пункта досье. Раньше строка была только витриной: статус приходил
+ * из данных и поменять его было нечем — хотя именно это куратор и делает,
+ * когда студент присылает документ.
+ */
+function DocActions({
+  id,
+  status,
+  locale,
+}: {
+  id: string;
+  status: DocumentStatus;
+  locale: Locale;
+}) {
+  const t = translator(locale);
+  const steps: { to: DocumentStatus; label: string }[] =
+    status === "requested" || status === "missing"
+      ? [{ to: "uploaded", label: t(S.documents.markReceived) }]
+      : status === "uploaded" || status === "expiring"
+        ? [
+            { to: "verified", label: t(S.documents.markVerified) },
+            { to: "rejected", label: t(S.documents.markRejected) },
+          ]
+        : status === "rejected"
+          ? [{ to: "uploaded", label: t(S.documents.markReceived) }]
+          : [];
+
+  if (!steps.length) return null;
+  return (
+    <div className="flex flex-none items-center gap-1.5">
+      {steps.map((step) => (
+        <form key={step.to} action={setDocumentStatusAction}>
+          <input type="hidden" name="documentId" value={id} />
+          <input type="hidden" name="status" value={step.to} />
+          <button type="submit" className="btn btn-secondary btn-xs">
+            {step.label}
+          </button>
+        </form>
+      ))}
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { SectionFilter } from "@/components/SectionFilter";
 import { moduleGate } from "@/components/guard";
-import { IconExport } from "@/components/icons";
+import { IconCalendar } from "@/components/icons";
 import { Avatar, EmptyState, PageHeader, SectionTitle, StatusDot } from "@/components/ui";
 import { userById } from "@/lib/data/users";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
@@ -68,7 +68,7 @@ export default async function DeadlinesPage({
         }
         actions={
           <Link href="/calendar" className="btn btn-secondary btn-sm">
-            <IconExport size={15} /> {t(S.deadlines.toCalendar)}
+            <IconCalendar size={15} /> {t(S.deadlines.toCalendar)}
           </Link>
         }
       />

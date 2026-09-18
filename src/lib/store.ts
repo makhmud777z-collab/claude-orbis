@@ -1,4 +1,5 @@
 import { CHANNELS } from "./data/channels";
+import { DOCUMENTS } from "./data/documents";
 import { DEALS } from "./data/deals";
 import { LEADS, digits, isActiveLead } from "./data/leads";
 import { EVENTS } from "./data/events";
@@ -8,11 +9,12 @@ import { STUDENTS } from "./data/students";
 import { TASKS } from "./data/tasks";
 import { TIMELINE } from "./data/timeline";
 import { USERS } from "./data/users";
+import { TENANTS } from "./tenants";
 import { loc, type Loc } from "./i18n";
 import type { Action, Module } from "./rbac";
 import type {
-  CalendarEvent, Deal, Department, EventKind, Lead, Pipeline, Project, Role, Stage,
-  Student, Task, TimelineEvent, User, WorkSession,
+  CalendarEvent, Channel, Deal, Department, EventKind, Lead, Pipeline, Project, Role, Stage,
+  Student, StudentDocument, Task, TimelineEvent, User, WorkSession,
 } from "./types";
 
 /**
@@ -46,6 +48,8 @@ interface State {
   filters: Record<string, SavedFilter[]>;
   /** код входа в «Администрирование», если агентство его сменило */
   passcodes: Record<string, string>;
+  channels: Channel[];
+  documents: StudentDocument[];
   seq: number;
   version: number;
 }
@@ -55,7 +59,7 @@ interface State {
  * кода, и новое поле оказалось бы undefined — поэтому состояние с чужой
  * версией пересоздаётся целиком.
  */
-const STATE_VERSION = 4;
+const STATE_VERSION = 6;
 
 const globalStore = globalThis as unknown as { __orbisStore?: State };
 
@@ -76,6 +80,8 @@ function createState(): State {
     cardFields: {},
     filters: {},
     passcodes: {},
+    channels: CHANNELS.map((x) => ({ ...x })),
+    documents: DOCUMENTS.map((x) => ({ ...x })),
     seq: 1000,
     version: STATE_VERSION,
   };
@@ -231,7 +237,27 @@ export function removeEvent(id: string) {
   state.events = state.events.filter((e) => e.id !== id);
 }
 export type { EventKind };
-export const channelsOf = (tenantId: string) => CHANNELS.filter((c) => c.tenantId === tenantId);
+export const channelsOf = (tenantId: string) =>
+  state.channels.filter((c) => c.tenantId === tenantId);
+export const channelById = (id: string | null) =>
+  id ? state.channels.find((c) => c.id === id) : undefined;
+
+/**
+ * Подключение канала. Настоящая интеграция появится вместе с обменом
+ * сообщениями; пока переключается состояние — и этого достаточно, чтобы
+ * канал перестал считаться источником лидов.
+ */
+export function toggleChannel(channelId: string) {
+  const channel = state.channels.find((c) => c.id === channelId);
+  if (!channel) return;
+  if (channel.status === "connected") {
+    channel.status = "off";
+    channel.connectedAt = null;
+  } else {
+    channel.status = "connected";
+    channel.connectedAt = today();
+  }
+}
 
 /* ── права ───────────────────────────────────────────────────── */
 export const permissionOverrides = (tenantId: string) => state.permissions[tenantId] ?? {};
@@ -700,6 +726,198 @@ const FIELD_LABEL: Record<string, Loc> = {
   intake: loc("набор", "qabul"),
   priority: loc("приоритет", "ustuvorlik"),
 };
+
+/* ── пользователи и филиалы ──────────────────────────────────── */
+
+/**
+ * Приглашение сотрудника. В демо человек появляется сразу со статусом
+ * «приглашён»; в бою на этом месте письмо со ссылкой на регистрацию,
+ * но карточка заводится так же и тогда же.
+ */
+export function inviteUser(input: {
+  tenantId: string;
+  name: string;
+  email: string;
+  title: string;
+  role: Role;
+  branchId: string;
+}) {
+  const user: User = {
+    id: nextId("u"),
+    tenantId: input.tenantId,
+    name: input.name,
+    role: input.role,
+    email: input.email,
+    phone: "",
+    phone2: null,
+    birthDate: "1990-01-01",
+    branchId: input.branchId,
+    title: input.title,
+    status: "invited",
+    lastActiveAt: stamp(),
+    joinedAt: today(),
+  };
+  USERS.push(user);
+  return user;
+}
+
+/** Новый филиал агентства: город и название в списке настроек портала. */
+export function addBranch(tenantId: string, name: string, city: string) {
+  const tenant = TENANTS.find((x) => x.id === tenantId);
+  if (!tenant) return null;
+  const branch = { id: nextId("b"), name, city };
+  tenant.branches.push(branch);
+  return branch;
+}
+
+/* ── задачи ──────────────────────────────────────────────────── */
+
+/** Новая задача от руководителя сотруднику: та же модель, что и в сидах. */
+export function addTask(input: {
+  tenantId: string;
+  title: string;
+  description: string;
+  assigneeId: string;
+  creatorId: string;
+  dueAt: string;
+  priority: Task["priority"];
+}) {
+  const task: Task = {
+    id: nextId("t"),
+    tenantId: input.tenantId,
+    projectId: null,
+    title: input.title,
+    description: input.description,
+    assigneeId: input.assigneeId,
+    creatorId: input.creatorId,
+    status: "todo",
+    priority: input.priority,
+    dueAt: input.dueAt,
+    createdAt: today(),
+    relation: null,
+  };
+  state.tasks.push(task);
+  return task;
+}
+
+/* ── документы ───────────────────────────────────────────────── */
+
+export function documentsOfTenant(tenantId: string) {
+  return state.documents.filter((d) => d.tenantId === tenantId);
+}
+
+export function documentsOfStudent(studentId: string) {
+  return state.documents.filter((d) => d.studentId === studentId);
+}
+
+/** Готовность досье: сколько пунктов чек-листа уже проверено. */
+export function dossierProgress(studentId: string) {
+  const docs = documentsOfStudent(studentId);
+  if (!docs.length) return { done: 0, total: 0, percent: 0 };
+  const done = docs.filter((d) => d.status === "verified").length;
+  return { done, total: docs.length, percent: Math.round((done / docs.length) * 100) };
+}
+
+export function documentById(id: string) {
+  return state.documents.find((d) => d.id === id);
+}
+
+/**
+ * Запрос документа у студента.
+ *
+ * Файлового хранилища ещё нет, и «Загрузить» в интерфейсе было бы обманом.
+ * Зато запрос — настоящий шаг работы куратора: пункт досье появляется в
+ * статусе «запрошен», попадает в фильтр «требуют внимания» и в историю
+ * контакта. Когда появится S3, к этому же пункту добавится файл.
+ */
+export function requestDocument(input: {
+  tenantId: string;
+  studentId: string;
+  kind: Loc;
+  needsApostille: boolean;
+  note: string;
+  authorId: string;
+}) {
+  const student = state.students.find((s) => s.id === input.studentId);
+  if (!student) return { ok: false as const, reason: "not_found" as const };
+
+  // Повторный запрос того же пункта не плодит дубли: досье — чек-лист,
+  // а не журнал, и второй «Загранпаспорт» в нём только мешает.
+  const existing = state.documents.find(
+    (d) => d.studentId === input.studentId && d.kind.ru === input.kind.ru,
+  );
+  if (existing) {
+    if (existing.status === "missing" || existing.status === "rejected") {
+      existing.status = "requested";
+      existing.updatedAt = today();
+      logDocument(existing, input.authorId, DOC_LOG.requested, input.note);
+      return { ok: true as const, doc: existing, repeated: true as const };
+    }
+    return { ok: false as const, reason: "exists" as const, doc: existing };
+  }
+
+  const doc: StudentDocument = {
+    id: nextId("d"),
+    tenantId: input.tenantId,
+    studentId: input.studentId,
+    dealId: state.deals.find((x) => x.studentId === input.studentId)?.id ?? null,
+    kind: input.kind,
+    fileName: null,
+    sizeKb: null,
+    status: "requested",
+    version: 1,
+    expiresAt: null,
+    uploadedById: null,
+    updatedAt: today(),
+    needsApostille: input.needsApostille,
+  };
+  state.documents.push(doc);
+  logDocument(doc, input.authorId, DOC_LOG.requested, input.note);
+  return { ok: true as const, doc, repeated: false as const };
+}
+
+/** Проверка пункта досье: куратор подтверждает или возвращает документ. */
+export function setDocumentStatus(
+  id: string,
+  status: StudentDocument["status"],
+  actorId: string,
+) {
+  const doc = documentById(id);
+  if (!doc || doc.status === status) return { ok: false as const };
+
+  // Возврат — это новая версия документа: студент присылает исправленный файл.
+  if (status === "rejected") doc.version += 1;
+  doc.status = status;
+  doc.updatedAt = today();
+  if (status === "verified") doc.uploadedById = doc.uploadedById ?? actorId;
+
+  logDocument(doc, actorId, DOC_LOG[status] ?? DOC_LOG.requested, null);
+  return { ok: true as const, doc };
+}
+
+const DOC_LOG: Record<string, Loc> = {
+  requested: loc("Документ запрошен", "Hujjat so‘raldi"),
+  verified: loc("Документ проверен", "Hujjat tekshirildi"),
+  rejected: loc("Документ возвращён на доработку", "Hujjat qayta ishlashga qaytarildi"),
+  uploaded: loc("Документ получен", "Hujjat qabul qilindi"),
+  expiring: loc("Срок документа истекает", "Hujjat muddati tugayapti"),
+  missing: loc("Документ снят с ожидания", "Hujjat kutishdan olindi"),
+};
+
+function logDocument(doc: StudentDocument, authorId: string, title: Loc, note: string | null) {
+  addTimeline({
+    tenantId: doc.tenantId,
+    entity: "contact",
+    entityId: doc.studentId,
+    kind: "document",
+    title: loc(`${title.ru}: ${doc.kind.ru}`, `${title.uz}: ${doc.kind.uz}`),
+    body: note?.trim() || null,
+    authorId,
+    source: null,
+    dueAt: null,
+    done: null,
+  });
+}
 
 /* ── сотрудники ──────────────────────────────────────────────── */
 

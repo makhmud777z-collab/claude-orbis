@@ -13,7 +13,6 @@ import {
 } from "@/components/ui";
 import { EditableFields } from "@/components/EditableFields";
 import { Timeline } from "@/components/Timeline";
-import { documentsOfStudent, dossierProgress } from "@/lib/data/documents";
 import { UNIVERSITIES, universityById } from "@/lib/data/universities";
 import { userById } from "@/lib/data/users";
 import { age, formatters } from "@/lib/format";
@@ -33,7 +32,7 @@ import { matchStudent, verdictDot, verdictLabel } from "@/lib/matching";
 import { scopedContacts, scopedDeals, scopedTasks } from "@/lib/queries";
 import { allow } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
-import { pipelineById, stageOf } from "@/lib/store";
+import { documentsOfStudent, dossierProgress, pipelineById, stageOf } from "@/lib/store";
 import { S } from "@/lib/strings";
 import { timelineItems } from "@/lib/timeline-view";
 

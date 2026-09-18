@@ -1,4 +1,4 @@
-import { IconExport } from "@/components/icons";
+import { ExportButton } from "@/components/ExportButton";
 import { SectionFilter } from "@/components/SectionFilter";
 import { moduleGate } from "@/components/guard";
 import {
@@ -79,9 +79,24 @@ export default async function FinancePage({
           </>
         }
         actions={
-          <button className="btn btn-secondary btn-sm">
-            <IconExport size={15} /> {t(S.finance.exportRegistry)}
-          </button>
+          <ExportButton
+            locale={session.locale}
+            label={t(S.finance.exportRegistry)}
+            filename="orbis-dogovory"
+            headers={[
+              t(S.applications.student), t(S.applications.university), t(S.finance.colStage),
+              t(S.applications.contract), t(S.applications.paid), t(S.finance.colRest),
+            ]}
+            rows={apps.map((a) => {
+              const stage = stageOf(pipelineById(a.pipelineId), a.stage);
+              return [
+                studentById(a.studentId)?.fullName ?? "",
+                universityById(a.universityId)?.name ?? "",
+                stage ? t(stage.label) : a.stage,
+                a.contractValue, a.paid, a.contractValue - a.paid,
+              ];
+            })}
+          />
         }
       />
 

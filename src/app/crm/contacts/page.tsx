@@ -1,13 +1,13 @@
 import { ContactsTable, type ContactRow } from "@/components/ContactsTable";
+import { ExportButton } from "@/components/ExportButton";
 import { SectionFilter } from "@/components/SectionFilter";
 import { moduleGate } from "@/components/guard";
-import { IconExport } from "@/components/icons";
 import { EmptyState, PageHeader } from "@/components/ui";
-import { dossierProgress } from "@/lib/data/documents";
+import { dossierProgress } from "@/lib/store";
 import { userById } from "@/lib/data/users";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
 import { translator } from "@/lib/i18n";
-import { BRANCH_LABEL, CITY_LABEL, ref } from "@/lib/labels";
+import { BRANCH_LABEL, CITY_LABEL, STUDENT_STATUS, ref } from "@/lib/labels";
 import { scopedContacts, scopedDeals, scopedTeam } from "@/lib/queries";
 import { allow } from "@/lib/rbac";
 import { contactFields, contactPresets } from "@/lib/section-filters";
@@ -66,9 +66,19 @@ export default async function ContactsPage({
         }
         actions={
           allow(session.tenant.id, session.role, "contacts", "export") ? (
-            <button className="btn btn-secondary btn-sm">
-              <IconExport size={15} /> {t(S.common.export)}
-            </button>
+            <ExportButton
+              locale={session.locale}
+              filename="orbis-kontakty"
+              headers={[
+                t(S.crm.contact), t(S.team.phoneWork), "Email", t(S.students.colCity),
+                "TOPIK", t(S.students.colBudget), t(S.crm.owner), t(S.students.colStatus),
+              ]}
+              rows={rows.map((c) => [
+                c.fullName, c.phone, c.email, t(ref(CITY_LABEL, c.city)),
+                c.profile.topik || "", c.profile.budgetPerYear,
+                userById(c.ownerId)?.name ?? "", t(STUDENT_STATUS[c.status].label),
+              ])}
+            />
           ) : null
         }
       />

@@ -7,6 +7,10 @@ import { openModules } from "@/components/guard";
 import { navFor } from "@/components/nav";
 import { homeHref } from "@/lib/edition";
 import { roleLabel } from "@/lib/rbac";
+import { formatters } from "@/lib/format";
+import { translator } from "@/lib/i18n";
+import { DEADLINE_KIND } from "@/lib/labels";
+import { noticesFor } from "@/lib/queries";
 import { getSession } from "@/lib/session";
 import { breakSeconds, openSession, sessionSeconds } from "@/lib/store";
 import { ROOT_DOMAIN } from "@/lib/tenants";
@@ -22,6 +26,13 @@ export const metadata: Metadata = {
   description:
     "Портал для консалтинговых агентств: CRM, документы, задачи и проекты, сотрудники и подбор корейских вузов.",
 };
+
+/** Куда ведёт уведомление: к сделке, контакту или в список сроков. */
+function deadlineHref(relation: { type: string; id: string } | null): string {
+  if (relation?.type === "deal") return `/crm/deals/${relation.id}`;
+  if (relation?.type === "student") return `/crm/contacts/${relation.id}`;
+  return "/deadlines";
+}
 
 export default async function RootLayout({
   children,
@@ -39,6 +50,8 @@ export default async function RootLayout({
     : (navFor(new Set(modules))[0]?.href ?? "/universities");
 
   const work = openSession(session.user.id);
+  const t = translator(session.locale);
+  const f = formatters(session.locale);
 
   return (
     <html lang={session.locale} data-theme={session.theme} className={inter.variable}>
@@ -58,6 +71,14 @@ export default async function RootLayout({
               user={session.user}
               roleLabel={roleLabel(session.role)}
               canAdmin={modules.includes("admin")}
+              notices={noticesFor(session).map((n) => ({
+                id: n.id,
+                href: deadlineHref(n.relation),
+                title: t(n.title),
+                hint: `${t(DEADLINE_KIND[n.kind].label)} · ${f.relativeDeadline(n.date)}`,
+                color: DEADLINE_KIND[n.kind].dot,
+                overdue: n.overdue,
+              }))}
               locale={session.locale}
               modules={modules}
               home={home}
