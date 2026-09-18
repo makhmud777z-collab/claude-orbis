@@ -28,7 +28,7 @@ import { getSession } from "@/lib/session";
 import { NO_STUDENT } from "@/lib/shortlist";
 import { shortlistFor } from "@/lib/shortlist.server";
 import { toggleShortlist } from "@/app/actions";
-import { S } from "@/lib/strings";
+import { P, S } from "@/lib/strings";
 
 export async function generateStaticParams() {
   return UNIVERSITIES.map((u) => ({ id: u.id }));
@@ -228,7 +228,7 @@ export default async function UniversityPage({
               label={t(S.universities.gradWithin)}
               value={
                 uni.requirements.graduationWithinYears
-                  ? `${t(S.universities.yearsUpTo)} ${uni.requirements.graduationWithinYears} ${t(S.universities.years)}`
+                  ? `${t(S.universities.yearsUpTo)} ${f.plural(uni.requirements.graduationWithinYears, P.years)}`
                   : t(S.universities.notLimited)
               }
             />

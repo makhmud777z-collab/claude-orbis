@@ -6,7 +6,8 @@ import { scopedTeam } from "@/lib/queries";
 import { allow } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
 import { departmentOf, departmentsOf } from "@/lib/store";
-import { S } from "@/lib/strings";
+import { formatters } from "@/lib/format";
+import { P, S } from "@/lib/strings";
 
 /**
  * Структура компании: дерево подразделений и панель выбранного отдела.
@@ -16,6 +17,7 @@ import { S } from "@/lib/strings";
 export default async function StructurePage() {
   const session = await getSession();
   const t = translator(session.locale);
+  const f = formatters(session.locale);
   const gate = moduleGate(session, "structure", t(S.structure.title));
   if (gate) return gate;
 
@@ -51,7 +53,7 @@ export default async function StructurePage() {
         title={t(S.structure.title)}
         meta={
           <>
-            <span>{departments.length} {t(S.structure.departments)}</span>
+            <span>{f.plural(departments.length, P.departments)}</span>
             <span className="text-ink-faint">·</span>
             <span>{t(S.structure.subtitle)}</span>
           </>

@@ -63,8 +63,8 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
             <span>·</span>
             <Chip active>{t(role.label)}</Chip>
             <span>
-              {branch ? t(ref(CITY_LABEL, branch.city)) : "—"} · {age(user.birthDate)}{" "}
-              {t(S.students.age)}
+              {branch ? t(ref(CITY_LABEL, branch.city)) : "—"} ·{" "}
+              {f.plural(age(user.birthDate), P.years)}
             </span>
           </>
         }

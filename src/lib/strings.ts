@@ -18,6 +18,17 @@ export const P = {
   pipelines: { ru: ["воронка", "воронки", "воронок"] as [string, string, string], uz: ["voronka", "voronka", "voronka"] as [string, string, string] },
   days: { ru: ["день", "дня", "дней"] as [string, string, string], uz: ["kun", "kun", "kun"] as [string, string, string] },
   cards: { ru: ["карточка", "карточки", "карточек"] as [string, string, string], uz: ["karta", "karta", "karta"] as [string, string, string] },
+  departments: { ru: ["отдел", "отдела", "отделов"] as [string, string, string], uz: ["bo‘lim", "bo‘lim", "bo‘lim"] as [string, string, string] },
+  modules: { ru: ["модуль", "модуля", "модулей"] as [string, string, string], uz: ["modul", "modul", "modul"] as [string, string, string] },
+  people: { ru: ["человек", "человека", "человек"] as [string, string, string], uz: ["kishi", "kishi", "kishi"] as [string, string, string] },
+  contracts: { ru: ["договор", "договора", "договоров"] as [string, string, string], uz: ["shartnoma", "shartnoma", "shartnoma"] as [string, string, string] },
+  documents: { ru: ["документ", "документа", "документов"] as [string, string, string], uz: ["hujjat", "hujjat", "hujjat"] as [string, string, string] },
+  folders: { ru: ["папка", "папки", "папок"] as [string, string, string], uz: ["papka", "papka", "papka"] as [string, string, string] },
+  deadlines: { ru: ["дедлайн", "дедлайна", "дедлайнов"] as [string, string, string], uz: ["muddat", "muddat", "muddat"] as [string, string, string] },
+  timelineEvents: { ru: ["событие", "события", "событий"] as [string, string, string], uz: ["hodisa", "hodisa", "hodisa"] as [string, string, string] },
+  programs: { ru: ["программа", "программы", "программ"] as [string, string, string], uz: ["dastur", "dastur", "dastur"] as [string, string, string] },
+  years: { ru: ["год", "года", "лет"] as [string, string, string], uz: ["yosh", "yosh", "yosh"] as [string, string, string] },
+  universities: { ru: ["вуз", "вуза", "вузов"] as [string, string, string], uz: ["universitet", "universitet", "universitet"] as [string, string, string] },
 };
 
 /** Строки интерфейса. Пользовательский контент (заметки, задачи) не переводится. */
@@ -96,8 +107,8 @@ export const S = {
   dashboard: {
     greeting: loc("Добрый день", "Xayrli kun"),
     date: loc("16 сентября 2026, среда", "2026-yil 16-sentabr, chorshanba"),
-    activeApps: loc("сделок в работе", "ishdagi bitim"),
-    weekDeadlines: loc("дедлайнов на неделе", "shu haftadagi muddat"),
+    activeApps: loc("в работе", "ishda"),
+    weekDeadlines: loc("на неделе", "shu haftada"),
     newApplication: loc("Новая сделка", "Yangi bitim"),
     tileStudents: loc("Контакты в работе", "Ishdagi kontaktlar"),
     tileStudentsHint: loc("всего в базе", "bazada jami"),
@@ -181,7 +192,6 @@ export const S = {
     recommended: loc("Рекомендованные вузы", "Tavsiya etilgan universitetlar"),
     allUniversities: loc("Все вузы", "Barcha universitetlar"),
     relatedTasks: loc("Связанные задачи", "Bog‘liq vazifalar"),
-    age: loc("лет", "yosh"),
     source: loc("источник", "manba"),
     fileMissing: loc("файл не загружен", "fayl yuklanmagan"),
     needsApostille: loc("нужен апостиль", "apostil kerak"),
@@ -229,8 +239,7 @@ export const S = {
 
   documents: {
     title: loc("Документы", "Hujjatlar"),
-    folders: loc("папок студентов", "talaba papkasi"),
-    documents: loc("документов", "hujjat"),
+    ofStudents: loc("студентов", "talabalar"),
     needAttention: loc("требуют внимания", "e’tibor talab qiladi"),
     upload: loc("Загрузить документ", "Hujjat yuklash"),
     uploadFile: loc("Загрузить файл", "Fayl yuklash"),
@@ -285,7 +294,6 @@ export const S = {
 
   deadlines: {
     title: loc("Дедлайны", "Muddatlar"),
-    events: loc("событий", "hodisa"),
     overdue: loc("просрочено", "kechikkan"),
     subtitle: loc(
       "собираются автоматически из заявок, документов и задач — вручную ничего не дублируется",
@@ -346,7 +354,6 @@ export const S = {
     tuitionPerYear: loc("Обучение в год", "Yillik o‘qish"),
     dorm: loc("Общежитие", "Yotoqxona"),
     requirements: loc("Требования", "Talablar"),
-    morePrograms: loc("программ", "dastur"),
     noResults: loc("Под эти условия вузов нет", "Bu shartlarga mos universitet yo‘q"),
     noResultsHint: loc(
       "Снимите часть фильтров — обычно первым мешает бюджет или уровень TOPIK.",
@@ -369,7 +376,6 @@ export const S = {
     gradWithin: loc("Срок после выпуска", "Bitirgandan keyingi muddat"),
     notLimited: loc("не ограничен", "cheklanmagan"),
     yearsUpTo: loc("до", "gacha"),
-    years: loc("лет", "yil"),
     admissionFee: loc("Вступительный взнос", "Ariza to‘lovi"),
     scholarshipUpTo: loc("Грант", "Grant"),
     visaStatus: loc("Визовый статус", "Viza maqomi"),
@@ -418,7 +424,7 @@ export const S = {
 
   finance: {
     title: loc("Финансы", "Moliya"),
-    contractsInWork: loc("договоров в работе", "ishdagi shartnoma"),
+    inWork: loc("в работе", "ishda"),
     subtitle: loc(
       "суммы договоров с семьями в сумах; стоимость обучения в вузе считается отдельно",
       "oilalar bilan shartnoma summalari so‘mda; universitet o‘qish narxi alohida hisoblanadi",
@@ -451,9 +457,7 @@ export const S = {
     hiredAt: loc("Принят на работу", "Ishga qabul qilingan"),
     department: loc("Подразделение", "Bo‘lim"),
     workdayToday: loc("Рабочий день сегодня", "Bugungi ish kuni"),
-    dealsShort: loc("сделки", "bitim"),
     title: loc("Сотрудники", "Xodimlar"),
-    people: loc("человек", "kishi"),
     seats: loc("мест по тарифу", "tarif bo‘yicha o‘rin"),
     of: loc("из", "dan"),
     subtitle: loc(
@@ -468,9 +472,7 @@ export const S = {
     active: loc("активен", "faol"),
     invited: loc("приглашён", "taklif qilingan"),
     suspended: loc("заблокирован", "bloklangan"),
-    studentsShort: loc("студентов", "talaba"),
     applicationsShort: loc("заявок", "ariza"),
-    tasksShort: loc("задач", "vazifa"),
     inSystemSince: loc("в системе с", "tizimda"),
     lastSeen: loc("был", "oxirgi marta"),
     matrix: loc("Матрица прав", "Huquqlar matritsasi"),
@@ -513,7 +515,6 @@ export const S = {
       "qat’iy: mos ijarachisiz so‘rov birorta yozuvni ko‘rmaydi",
     ),
     rolesTitle: loc("Роли и доступы", "Rollar va huquqlar"),
-    modules: loc("модулей", "modul"),
     integrations: loc("Интеграции", "Integratsiyalar"),
     stage2: loc("этап 2", "2-bosqich"),
     agency: loc("Агентство", "Agentlik"),
@@ -585,7 +586,6 @@ export const S = {
     checkDuplicate: loc("Проверить дубль", "Dublikatni tekshirish"),
     phone: loc("Телефон", "Telefon"),
     createdFromLead: loc("Создан из лида", "Liddan yaratilgan"),
-    dealsShort: loc("сделок", "bitim"),
     contactsTitle: loc("Контакты", "Kontaktlar"),
     contactsSubtitle: loc(
       "один человек — одна карточка: повторные обращения падают в её историю",
@@ -671,7 +671,7 @@ export const S = {
     off: loc("Отключён", "O‘chirilgan"),
     connect: loc("Подключить", "Ulash"),
     disconnect: loc("Отключить", "O‘chirish"),
-    leadsPerMonth: loc("лидов в месяц", "oyiga lid"),
+    perMonth: loc("в месяц", "oyiga"),
     instagram: loc("Instagram Direct", "Instagram Direct"),
     telegram: loc("Telegram-бот", "Telegram-bot"),
     email: loc("Почта агентства", "Agentlik pochtasi"),
@@ -726,7 +726,6 @@ export const S = {
     noHead: loc("Руководитель не назначен", "Rahbar tayinlanmagan"),
     setHead: loc("Назначить руководителя", "Rahbar tayinlash"),
     subordinates: loc("Подчинённые", "Bo‘ysunuvchilar"),
-    departments: loc("отделов", "bo‘lim"),
     noChildren: loc("нет отделов в подчинении", "bo‘ysunuvchi bo‘limlar yo‘q"),
     totalEmployees: loc("Всего сотрудников", "Jami xodimlar"),
     inDepartment: loc("В отделе", "Bo‘limda"),

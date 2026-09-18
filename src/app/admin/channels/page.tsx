@@ -7,7 +7,7 @@ import { translator, type Loc } from "@/lib/i18n";
 import { allow } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
 import { channelsOf } from "@/lib/store";
-import { S } from "@/lib/strings";
+import { P, S } from "@/lib/strings";
 import type { Channel } from "@/lib/types";
 
 const KIND_LABEL: Record<Channel["kind"], Loc> = {
@@ -64,7 +64,7 @@ export default async function ChannelsPage() {
             <span>{t(S.channels.subtitle)}</span>
             <span>·</span>
             <span className="t-num">
-              {total} {t(S.channels.leadsPerMonth)}
+              {f.plural(total, P.leads)} {t(S.channels.perMonth)}
             </span>
           </>
         }
@@ -106,8 +106,10 @@ export default async function ChannelsPage() {
 
               <div className="t-micro mt-3 text-ink-faint">
                 {channel.connectedAt ? f.date(channel.connectedAt) : t(S.common.notSet)} ·{" "}
-                <span className="t-num">{channel.leadsPerMonth}</span>{" "}
-                {t(S.channels.leadsPerMonth)}
+                <span className="t-num">
+                  {f.plural(channel.leadsPerMonth, P.leads)}
+                </span>{" "}
+                {t(S.channels.perMonth)}
               </div>
 
               {canEdit ? (

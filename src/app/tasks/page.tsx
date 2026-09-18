@@ -68,7 +68,7 @@ export default async function TasksPage({
         meta={
           <>
             <span>
-              {cards.filter((c) => c.status !== "done").length} {t(S.tasks.inProgress)}
+              {all.filter((task) => task.status !== "done").length} {t(S.tasks.inProgress)}
             </span>
             <span className="text-ink-faint">·</span>
             <Link href="/tasks/projects" className="hover:text-ink">{t(S.projects.title)}</Link>

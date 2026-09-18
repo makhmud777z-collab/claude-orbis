@@ -10,7 +10,8 @@ import { Modal, Select, Tooltip } from "./controls";
 import { IconChevron, IconClose, IconPencil, IconPlus, IconSearch, IconTrash } from "./icons";
 import { Avatar } from "./ui";
 import { translator, type Locale } from "@/lib/i18n";
-import { S } from "@/lib/strings";
+import { formatters } from "@/lib/format";
+import { P, S } from "@/lib/strings";
 
 export interface StructurePerson {
   id: string;
@@ -56,6 +57,7 @@ export function CompanyStructure({
   companyMark: string;
 }) {
   const t = translator(locale);
+  const f = formatters(locale);
   const byId = new Map(people.map((p) => [p.id, p]));
   const roots = nodes.filter((n) => !n.parentId);
 
@@ -209,7 +211,7 @@ export function CompanyStructure({
               className="t-micro flex items-center justify-center gap-1 border-t border-hairline-soft py-1.5"
               style={{ background: "var(--color-surface-2)", color: "var(--color-accent)" }}
             >
-              {children.length} {t(S.structure.departments)}
+              {f.plural(children.length, P.departments)}
               <span style={{ display: "inline-flex", transform: `rotate(${isOpen ? 180 : 0}deg)` }}>
                 <IconChevron size={11} />
               </span>

@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "qa": "npx tsx scripts/qa/integrity.ts && node scripts/qa/i18n.mjs && node scripts/qa/crawl.mjs && node scripts/qa/roles.mjs && node scripts/qa/flows.mjs && node scripts/qa/layout.mjs && node scripts/qa/spacing.mjs && node scripts/qa/controls.mjs && node scripts/qa/mobile-nav.mjs"
+    "qa": "npx tsx scripts/qa/integrity.ts && node scripts/qa/i18n.mjs && node scripts/qa/crawl.mjs && node scripts/qa/roles.mjs && node scripts/qa/flows.mjs && node scripts/qa/layout.mjs && node scripts/qa/spacing.mjs && node scripts/qa/controls.mjs && node scripts/qa/plural.mjs && node scripts/qa/mobile-nav.mjs"
   },
   "dependencies": {
     "next": "^16.3.5",

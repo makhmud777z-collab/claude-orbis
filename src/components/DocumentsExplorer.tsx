@@ -9,7 +9,7 @@ import { Avatar, Chip, Progress, StatusDot } from "./ui";
 import { DOCUMENT_STATUS } from "@/lib/labels";
 import { formatters } from "@/lib/format";
 import { translator, type Loc, type Locale } from "@/lib/i18n";
-import { S } from "@/lib/strings";
+import { P, S } from "@/lib/strings";
 import type { DocumentStatus } from "@/lib/types";
 
 export interface DossierFolder {
@@ -77,7 +77,7 @@ export function DocumentsExplorer({
                 <div className="min-w-0 flex-1">
                   <div className="t-body-sm truncate">{folder.studentName}</div>
                   <div className="t-micro truncate text-ink-faint">
-                    {folder.total} {t(S.documents.documents)} · {t(S.common.curator)}{" "}
+                    {f.plural(folder.total, P.documents)} · {t(S.common.curator)}{" "}
                     {folder.ownerName}
                   </div>
                 </div>

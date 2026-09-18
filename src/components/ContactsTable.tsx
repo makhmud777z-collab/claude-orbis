@@ -3,7 +3,7 @@ import { Avatar, Chip, StatusDot } from "./ui";
 import { formatters } from "@/lib/format";
 import { translator, type Locale } from "@/lib/i18n";
 import { CITY_LABEL, DEGREE_LABEL, FIELD_LABEL, ref, SOURCE_LABEL, STUDENT_STATUS } from "@/lib/labels";
-import { S } from "@/lib/strings";
+import { P, S } from "@/lib/strings";
 import type { Student } from "@/lib/types";
 
 export interface ContactRow extends Student {
@@ -102,7 +102,7 @@ export function ContactsTable({ rows, locale }: { rows: ContactRow[]; locale: Lo
                   <td className="px-4 py-3.5">
                     <div className="t-caption t-num">{s.dossierPercent}%</div>
                     <div className="t-micro whitespace-nowrap text-ink-faint">
-                      {s.dealsCount} {t(S.crm.dealsShort)}
+                      {f.plural(s.dealsCount, P.deals)}
                     </div>
                   </td>
                   <td className="px-4 py-3.5">

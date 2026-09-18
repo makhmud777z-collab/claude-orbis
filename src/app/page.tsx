@@ -27,7 +27,7 @@ import { hasModule, homeHref } from "@/lib/edition";
 import { allow } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
 import { defaultPipeline } from "@/lib/store";
-import { S } from "@/lib/strings";
+import { P, S } from "@/lib/strings";
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -91,8 +91,8 @@ export default async function DashboardPage() {
             <span>{t(S.dashboard.date)}</span>
             <span className="text-ink-faint">·</span>
             <span>
-              {inPipeline.length} {t(S.dashboard.activeApps)} · {soon.length}{" "}
-              {t(S.dashboard.weekDeadlines)}
+              {f.plural(inPipeline.length, P.deals)} {t(S.dashboard.activeApps)} ·{" "}
+              {f.plural(soon.length, P.deadlines)} {t(S.dashboard.weekDeadlines)}
             </span>
           </>
         }

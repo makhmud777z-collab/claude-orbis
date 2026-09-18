@@ -4,7 +4,7 @@ import { IconPlus } from "@/components/icons";
 import { SectionFilter } from "@/components/SectionFilter";
 import { Avatar, Chip, EmptyState, PageHeader, StatusDot } from "@/components/ui";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
-import { age, formatters } from "@/lib/format";
+import { age, formatters, type Formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
 import { CITY_LABEL, ref } from "@/lib/labels";
 import { scopedContacts, scopedDeals, scopedTasks, scopedTeam } from "@/lib/queries";
@@ -12,7 +12,7 @@ import { allow, ROLES } from "@/lib/rbac";
 import { simplePresets, teamFields } from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
 import { departmentOf, departmentsOf, openSession, sessionMinutes } from "@/lib/store";
-import { S } from "@/lib/strings";
+import { P, S } from "@/lib/strings";
 import type { User } from "@/lib/types";
 
 /**
@@ -51,7 +51,7 @@ export default async function TeamPage({
         meta={
           <>
             <span>
-              {all.length} {t(S.team.people)} · {session.tenant.seatsUsed} {t(S.team.of)}{" "}
+              {f.plural(all.length, P.people)} · {session.tenant.seatsUsed} {t(S.team.of)}{" "}
               {session.tenant.seatsLimit} {t(S.team.seats)}
             </span>
             <span className="text-ink-faint">·</span>
@@ -134,15 +134,18 @@ export default async function TeamPage({
 
               <div className="mt-4 grid grid-cols-3 gap-2 border-t border-hairline-soft pt-4">
                 <Stat
-                  label={t(S.team.studentsShort)}
+                  f={f}
+                  forms={P.contacts}
                   value={contacts.filter((s) => s.ownerId === u.id).length}
                 />
                 <Stat
-                  label={t(S.team.dealsShort)}
+                  f={f}
+                  forms={P.deals}
                   value={deals.filter((d) => d.ownerId === u.id).length}
                 />
                 <Stat
-                  label={t(S.team.tasksShort)}
+                  f={f}
+                  forms={P.tasks}
                   value={tasks.filter((x) => x.assigneeId === u.id && x.status !== "done").length}
                 />
               </div>
@@ -151,7 +154,7 @@ export default async function TeamPage({
                 {branches.get(u.branchId)
                   ? t(ref(CITY_LABEL, branches.get(u.branchId)!.city))
                   : "—"}{" "}
-                · {age(u.birthDate)} {t(S.students.age)} · {t(S.team.inSystemSince)}{" "}
+                · {f.plural(age(u.birthDate), P.years)} · {t(S.team.inSystemSince)}{" "}
                 {f.date(u.joinedAt)}
                 {work ? (
                   <>
@@ -184,11 +187,25 @@ function teamRow(u: User): FilterRow {
   };
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+/**
+ * Мини-счётчик в карточке сотрудника. Подпись согласуется с числом:
+ * «1 сделка», «2 сделки», «5 сделок» — иначе под цифрой стояло «сделки»
+ * при любом значении, включая ноль.
+ */
+function Stat({
+  f,
+  forms,
+  value,
+}: {
+  f: Formatters;
+  forms: Parameters<Formatters["plural"]>[1];
+  value: number;
+}) {
+  const [count, ...word] = f.plural(value, forms).split(" ");
   return (
     <div>
-      <div className="t-num text-[18px] font-medium tracking-[-0.6px]">{value}</div>
-      <div className="t-micro text-ink-faint">{label}</div>
+      <div className="t-num text-[18px] font-medium tracking-[-0.6px]">{count}</div>
+      <div className="t-micro text-ink-faint">{word.join(" ")}</div>
     </div>
   );
 }

@@ -51,7 +51,10 @@ export default async function DealsPage({
   const all = scopedDeals(session).filter((d) => d.pipelineId === pipeline?.id);
   const deals = all.filter((d) => matchesFilter(dealRow(d, contacts.get(d.studentId)), fields, values, query));
   const view = readView(params);
-  const total = deals.reduce((sum, d) => sum + d.contractValue, 0);
+  // В шапке — вся воронка, а не текущий срез: сколько показано из скольких,
+  // говорит сам фильтр («0 / 22»), и дублировать его цифрой «0 сделок» значит
+  // показывать пустой раздел там, где данные есть.
+  const total = all.reduce((sum, d) => sum + d.contractValue, 0);
 
   return (
     <>
@@ -59,7 +62,7 @@ export default async function DealsPage({
         title={t(S.crm.deals)}
         meta={
           <>
-            <span>{f.plural(deals.length, P.deals)}</span>
+            <span>{f.plural(all.length, P.deals)}</span>
             <span>·</span>
             <span className="t-num">{f.som(total, { compact: true })}</span>
             <span>·</span>

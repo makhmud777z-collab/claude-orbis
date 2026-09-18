@@ -33,7 +33,7 @@ import { scopedContacts, scopedDeals, scopedTasks } from "@/lib/queries";
 import { allow } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
 import { documentsOfStudent, dossierProgress, pipelineById, stageOf } from "@/lib/store";
-import { S } from "@/lib/strings";
+import { P, S } from "@/lib/strings";
 import { timelineItems } from "@/lib/timeline-view";
 
 /**
@@ -92,7 +92,7 @@ export default async function ContactPage({
               {t(status.label)}
             </span>
             <span>
-              {student.latinName} · {age(student.birthDate)} {t(S.students.age)} ·{" "}
+              {student.latinName} · {f.plural(age(student.birthDate), P.years)} ·{" "}
               {t(ref(CITY_LABEL, student.city))}
             </span>
             <span className="text-ink-faint">·</span>

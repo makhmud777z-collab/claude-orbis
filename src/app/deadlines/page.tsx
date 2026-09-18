@@ -11,7 +11,7 @@ import { DEADLINE_KIND } from "@/lib/labels";
 import { scopedDeadlines, scopedTeam } from "@/lib/queries";
 import { deadlineFields, simplePresets } from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
-import { S } from "@/lib/strings";
+import { P, S } from "@/lib/strings";
 import type { Deadline } from "@/lib/types";
 
 const GROUPS: { key: string; title: Loc; test: (d: number) => boolean }[] = [
@@ -40,7 +40,7 @@ export default async function DeadlinesPage({
 
   const all = scopedDeadlines(session);
   const deadlines = all.filter((d) => matchesFilter(deadlineRow(d, t(d.title)), fields, values, query));
-  const overdue = deadlines.filter((d) => daysUntil(d.date) < 0).length;
+  const overdue = all.filter((d) => daysUntil(d.date) < 0).length;
 
   const href = (d: Deadline) =>
     d.relation?.type === "deal"
@@ -56,7 +56,7 @@ export default async function DeadlinesPage({
         meta={
           <>
             <span>
-              {all.length} {t(S.deadlines.events)}
+              {f.plural(all.length, P.timelineEvents)}
             </span>
             <span className="text-ink-faint">·</span>
             <span>

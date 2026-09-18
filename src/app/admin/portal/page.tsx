@@ -15,7 +15,7 @@ import { formatters } from "@/lib/format";
 import { translator, LOCALES, type Loc } from "@/lib/i18n";
 import { BRANCH_LABEL, CITY_LABEL, ref } from "@/lib/labels";
 import { allow, ROLES } from "@/lib/rbac";
-import { S } from "@/lib/strings";
+import { P, S } from "@/lib/strings";
 import { getSession } from "@/lib/session";
 import { ROOT_DOMAIN } from "@/lib/tenants";
 
@@ -90,7 +90,7 @@ export default async function SettingsPage() {
                     )}
                   </Chip>
                   <span className="t-micro w-28 text-right text-ink-faint">
-                    {Object.keys(r.permissions).length} {t(S.settings.modules)}
+                    {f.plural(Object.keys(r.permissions).length, P.modules)}
                   </span>
                 </div>
               ))}

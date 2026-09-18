@@ -5,11 +5,12 @@ import { RequestDocumentDialog } from "@/components/RequestDocumentDialog";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { userById } from "@/lib/data/users";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
+import { formatters } from "@/lib/format";
 import { translator, type Translate } from "@/lib/i18n";
 import { allow } from "@/lib/rbac";
 import { checklistKey, DOCUMENT_CHECKLIST } from "@/lib/labels";
 import { documentFields, simplePresets } from "@/lib/section-filters";
-import { S } from "@/lib/strings";
+import { P, S } from "@/lib/strings";
 import { scopedDocuments, scopedContacts, scopedTeam } from "@/lib/queries";
 import { getSession } from "@/lib/session";
 import type { Student, StudentDocument } from "@/lib/types";
@@ -22,6 +23,7 @@ export default async function DocumentsPage({
   const session = await getSession();
   const params = await searchParams;
   const t = translator(session.locale);
+  const f = formatters(session.locale);
   const gate = moduleGate(session, "documents", t(S.nav.documents));
   if (gate) return gate;
 
@@ -67,7 +69,13 @@ export default async function DocumentsPage({
     .filter((f) => f.total > 0)
     .sort((a, b) => b.problems - a.problems);
 
-  const problems = folders.reduce((n, f) => n + f.problems, 0);
+  // Шапка описывает раздел целиком: сколько досье и документов у агентства
+  // и сколько из них требуют внимания. Сколько показано из скольких — задача
+  // строки фильтра, иначе под срезом раздел выглядит пустым.
+  const allFolderIds = new Set(allDocs.map((d) => d.studentId));
+  const problems = allDocs.filter((d) =>
+    ["missing", "rejected", "expiring"].includes(d.status),
+  ).length;
 
   const canCreate = allow(session.tenant.id, session.role, "documents", "create");
   const canEdit = allow(session.tenant.id, session.role, "documents", "edit");
@@ -97,11 +105,11 @@ export default async function DocumentsPage({
         meta={
           <>
             <span>
-              {folders.length} {t(S.documents.folders)}
+              {f.plural(allFolderIds.size, P.folders)} {t(S.documents.ofStudents)}
             </span>
             <span className="text-ink-faint">·</span>
             <span>
-              {docs.length} {t(S.documents.documents)}
+              {f.plural(allDocs.length, P.documents)}
             </span>
             <span className="text-ink-faint">·</span>
             <span>

@@ -14,7 +14,7 @@ import {
   OWNERSHIP_LABEL,
   ref,
 } from "@/lib/labels";
-import { S } from "@/lib/strings";
+import { P, S } from "@/lib/strings";
 import { toggleShortlist } from "@/app/actions";
 import { hasEnglishTrack, nextDeadline } from "@/lib/data/universities";
 import { NO_STUDENT, SHORTLIST_LIMIT, type ShortlistMap } from "@/lib/shortlist";
@@ -356,7 +356,7 @@ export function CatalogExplorer({
                 ))}
                 {programs.length > 4 ? (
                   <Chip>
-                    +{programs.length - 4} {t(S.universities.morePrograms)}
+                    +{f.plural(programs.length - 4, P.programs)}
                   </Chip>
                 ) : null}
               </div>
