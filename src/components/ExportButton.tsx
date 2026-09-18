@@ -1,6 +1,7 @@
 "use client";
 
 import { IconExport } from "./icons";
+import { TODAY_ISO } from "@/lib/format";
 import { translator, type Locale } from "@/lib/i18n";
 import { S } from "@/lib/strings";
 
@@ -39,9 +40,16 @@ export function ExportButton({
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${filename}-${new Date().toISOString().slice(0, 10)}.csv`;
+    // Дата файла — сегодняшний день системы, а не часы машины: во всём
+    // интерфейсе «сегодня» одно и то же число.
+    link.download = `${filename}-${TODAY_ISO}.csv`;
+    // Ссылка должна побывать в документе, иначе Firefox проглатывает клик,
+    // а ссылку освобождаем следующим тиком: синхронный revoke успевает
+    // отменить уже начавшуюся загрузку в Safari.
+    document.body.append(link);
     link.click();
-    URL.revokeObjectURL(url);
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   };
 
   return (

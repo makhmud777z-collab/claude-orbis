@@ -90,12 +90,15 @@ export default async function DocumentsPage({
     value: checklistKey(item.kind),
     label: t(item.kind),
   }));
-  // Уже заведённые пункты по каждому студенту — чтобы не предлагать дубли.
+  // Какие пункты запрашивать уже незачем. «Нет файла» и «возвращён» —
+  // как раз то, что куратор и просит у студента, поэтому они остаются в
+  // списке; скрываем только то, что уже в работе или проверено.
   // Считаем по всем документам, а не по отфильтрованным: фильтр раздела
   // прячет пункты, но в досье они остаются.
-  const existingKinds: Record<string, string[]> = {};
+  const settled: Record<string, string[]> = {};
   for (const doc of allDocs) {
-    (existingKinds[doc.studentId] ??= []).push(checklistKey(doc.kind));
+    if (doc.status === "missing" || doc.status === "rejected") continue;
+    (settled[doc.studentId] ??= []).push(checklistKey(doc.kind));
   }
 
   return (
@@ -123,7 +126,7 @@ export default async function DocumentsPage({
               locale={session.locale}
               students={studentOptions}
               kinds={kindOptions}
-              existing={existingKinds}
+              existing={settled}
             />
           ) : null
         }
@@ -145,7 +148,7 @@ export default async function DocumentsPage({
           canEdit={canEdit}
           request={
             canCreate
-              ? { students: studentOptions, kinds: kindOptions, existing: existingKinds }
+              ? { students: studentOptions, kinds: kindOptions, existing: settled }
               : null
           }
         />

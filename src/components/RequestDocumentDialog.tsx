@@ -23,7 +23,7 @@ export function RequestDocumentDialog({
   locale,
   students,
   kinds,
-  /** уже заведённые пункты по студенту: studentId → ключи типов */
+  /** пункты, которые запрашивать незачем: studentId → ключи типов */
   existing,
   defaultStudentId,
   label,
@@ -39,8 +39,7 @@ export function RequestDocumentDialog({
 }) {
   const t = translator(locale);
 
-  // Досье заводится по чек-листу, и у большинства студентов все пункты уже
-  // есть. Открывать диалог на студенте, которому нечего запросить, — значит
+  // Открывать диалог на студенте, которому нечего запросить, — значит
   // показывать заблокированную форму: по умолчанию берём того, у кого
   // свободные пункты остались.
   const firstFree = useMemo(() => {
@@ -56,8 +55,9 @@ export function RequestDocumentDialog({
   const [studentId, setStudentId] = useState(defaultStudentId ?? firstFree);
   const [kind, setKind] = useState("");
 
-  // Пункты, которые в досье уже есть, предлагать незачем: повторный запрос
-  // ничего не добавит, а список только длиннее.
+  // Пункт, который уже в работе или проверен, предлагать незачем: повторный
+  // запрос ничего не добавит, а список только длиннее. «Нет файла» и
+  // «возвращён» остаются — их и просят у студента.
   const free = useMemo(() => {
     const taken = new Set(existing[studentId] ?? []);
     return kinds.filter((k) => !taken.has(k.value));

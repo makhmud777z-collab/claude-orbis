@@ -179,7 +179,14 @@ export function DocumentsExplorer({
                     <span className="t-caption w-24 text-right text-ink-muted">
                       {t(st.label)}
                     </span>
-                    {canEdit ? <DocActions id={d.id} status={d.status} locale={locale} /> : null}
+                    {/* Место под кнопки занято всегда: иначе колонка статуса
+                        гуляла бы по строке — там, где действий нет, статус
+                        уезжал вправо, а рядом со строкой с кнопками стоял левее. */}
+                    {canEdit ? (
+                      <div className="flex w-[184px] flex-none justify-end">
+                        <DocActions id={d.id} status={d.status} locale={locale} />
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
@@ -220,7 +227,7 @@ function DocActions({
 
   if (!steps.length) return null;
   return (
-    <div className="flex flex-none items-center gap-1.5">
+    <div className="flex items-center gap-1.5">
       {steps.map((step) => (
         <form key={step.to} action={setDocumentStatusAction}>
           <input type="hidden" name="documentId" value={id} />
