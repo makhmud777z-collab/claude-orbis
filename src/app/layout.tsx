@@ -10,6 +10,7 @@ import { roleLabel } from "@/lib/rbac";
 import { formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
 import { DEADLINE_KIND } from "@/lib/labels";
+import { userById } from "@/lib/data/users";
 import { noticesFor } from "@/lib/queries";
 import { getSession } from "@/lib/session";
 import { breakSeconds, openSession, sessionSeconds } from "@/lib/store";
@@ -75,7 +76,7 @@ export default async function RootLayout({
                 id: n.id,
                 href: deadlineHref(n.relation),
                 title: t(n.title),
-                hint: `${t(DEADLINE_KIND[n.kind].label)} · ${f.relativeDeadline(n.date)}`,
+                hint: `${n.mine ? t(DEADLINE_KIND[n.kind].label) : (userById(n.ownerId)?.name ?? "—")} · ${f.relativeDeadline(n.date)}`,
                 color: DEADLINE_KIND[n.kind].dot,
                 overdue: n.overdue,
               }))}

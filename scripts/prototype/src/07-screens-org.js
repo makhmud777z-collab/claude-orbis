@@ -309,7 +309,7 @@ function screenAdminUsers() {
     ${head(t(loc("Пользователи", "Foydalanuvchilar")),
       `<span>${tenant().seatsUsed} ${t(loc("из", "dan"))} ${tenant().seatsLimit} ${t(loc("мест по тарифу", "tarif bo‘yicha o‘rin"))}</span><span class="faint">·</span>
        <a href="#" data-go="permissions">${t(loc("Права доступа", "Kirish huquqlari"))}</a>`,
-      canEdit ? `<button class="btn btn-primary">${icon("plus", 15)} ${t(loc("Пригласить", "Taklif qilish"))}</button>` : "")}
+      canEdit ? `<button class="btn btn-primary" data-act="invite">${icon("plus", 15)} ${t(loc("Пригласить", "Taklif qilish"))}</button>` : "")}
     <div class="card scroll-x">
       <table style="min-width:900px">
         <thead><tr>${[loc("Сотрудник", "Xodim"), loc("Роль", "Rol"), loc("Зона видимости", "Ko‘rish doirasi"),
@@ -410,7 +410,7 @@ function screenAdminLock() {
 function screenAdmin() {
   if (!S.adminUnlocked) return screenAdminLock();
   const pipelines = [...pipelinesOf("lead"), ...pipelinesOf("deal")];
-  const channels = D.channels.filter((c) => c.tenantId === S.tenant);
+  const channels = channelsOf();
   const groups = [
     { label: loc("CRM", "CRM"), icon: "board", items: [
       { go: "pipelines", title: loc("Воронки", "Voronkalar"),

@@ -18,9 +18,8 @@ function screenDashboard() {
     ${head(`${t(loc("Добрый день", "Xayrli kun"))}, ${user().name.split(" ")[0]}`,
       `<span>${esc(tenant().name)}</span><span class="faint">·</span>
        <span>${t(loc("16 сентября 2026, среда", "2026-yil 16-sentabr, chorshanba"))}</span><span class="faint">·</span>
-       <span>${pipeline.length} ${t(loc("сделок в работе", "ishdagi bitim"))} · ${soon.length} ${t(loc("дедлайнов на неделе", "shu haftadagi muddat"))}</span>`,
-      `<button class="btn btn-secondary">${icon("export", 15)} ${t(loc("Экспорт", "Eksport"))}</button>
-       <button class="btn btn-primary" data-go="leads">${icon("plus", 15)} ${t(loc("Новый лид", "Yangi lid"))}</button>`)}
+       <span>${plural(pipeline.length, ["сделка", "сделки", "сделок"], "bitim")} ${t(loc("в работе", "ishda"))} · ${plural(soon.length, ["дедлайн", "дедлайна", "дедлайнов"], "muddat")} ${t(loc("на неделе", "shu haftada"))}</span>`,
+      `<button class="btn btn-primary" data-go="leads">${icon("plus", 15)} ${t(loc("Новый лид", "Yangi lid"))}</button>`)}
 
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr))">
       ${tile(t(loc("Контакты в работе", "Ishdagi kontaktlar")), String(active), `${t(loc("всего в базе", "bazada jami"))} ${contacts.length}`, "var(--accent)")}
@@ -123,8 +122,8 @@ function screenLeads() {
   const leads = all.filter((l) => matchesFilter(leadRow(l), fields, st.values, st.q));
   return `
     ${head(t(loc("Лиды", "Lidlar")),
-      `<span>${plural(leads.length, ["лид", "лида", "лидов"], "lid")}</span><span class="faint">·</span>
-       <span>${leads.filter(isActiveLead).length} ${t(loc("в работе", "ishda"))}</span><span class="faint">·</span>
+      `<span>${plural(all.length, ["лид", "лида", "лидов"], "lid")}</span><span class="faint">·</span>
+       <span>${all.filter(isActiveLead).length} ${t(loc("в работе", "ishda"))}</span><span class="faint">·</span>
        <span>${esc(scopeLabel())}</span>`,
       `${viewSwitch()}
        ${pipelinePicker(pipeline)}
@@ -216,10 +215,12 @@ function screenDeals() {
   const fields = dealFields();
   const st = filterState("deals");
   const deals = all.filter((d) => matchesFilter(dealRow(d), fields, st.values, st.q));
-  const total = deals.reduce((n, d) => n + d.contractValue, 0);
+  // В шапке — вся воронка, а не текущий срез: сколько показано из скольких,
+  // говорит сама строка фильтра.
+  const total = all.reduce((n, d) => n + d.contractValue, 0);
   return `
     ${head(t(loc("Сделки", "Bitimlar")),
-      `<span>${plural(deals.length, ["сделка", "сделки", "сделок"], "bitim")}</span><span class="faint">·</span>
+      `<span>${plural(all.length, ["сделка", "сделки", "сделок"], "bitim")}</span><span class="faint">·</span>
        <span class="num">${esc(som(total, true))}</span><span class="faint">·</span>
        <span>${esc(scopeLabel())}</span>`,
       `${viewSwitch()}
@@ -332,9 +333,11 @@ function screenContacts() {
 
   return `
     ${head(t(loc("Контакты", "Kontaktlar")),
-      `<span>${plural(rows.length, ["контакт", "контакта", "контактов"], "kontakt")}</span><span class="faint">·</span>
+      `<span>${plural(all.length, ["контакт", "контакта", "контактов"], "kontakt")}</span><span class="faint">·</span>
        <span>${t(loc("один человек — одна карточка: повторные обращения падают в её историю", "bir odam — bitta karta"))}</span>`,
-      allow(user().role, "contacts", "export") ? `<button class="btn btn-secondary">${icon("export", 15)} ${t(loc("Экспорт", "Eksport"))}</button>` : "")}
+      allow(user().role, "contacts", "export")
+        ? `<button class="btn btn-secondary" data-act="csv.contacts">${icon("export", 15)} ${t(loc("Экспорт", "Eksport"))}</button>`
+        : "")}
 
     ${smartFilter("contacts", fields, contactPresets(), { shown: rows.length, total: all.length })}
 
@@ -369,7 +372,7 @@ function screenContacts() {
               <td><span style="display:flex;gap:8px;align-items:center">${avatar(userById(s.ownerId)?.name ?? "—", 22)}<span class="t-caption nowrap">${esc(userById(s.ownerId)?.name ?? "—")}</span></span></td>
               <td>
                 <div class="t-caption num">${dos.percent}%</div>
-                <div class="t-micro faint nowrap">${deals.filter((d) => d.studentId === s.id).length} ${t(loc("сделок", "bitim"))}</div>
+                <div class="t-micro faint nowrap">${plural(deals.filter((d) => d.studentId === s.id).length, ["сделка", "сделки", "сделок"], "bitim")}</div>
               </td>
               <td><span class="chip">${dot(st.dot)}${esc(t(st.label))}</span></td>
             </tr>`;
@@ -536,7 +539,7 @@ const CHANNEL_ICON = {
 };
 
 function screenChannels() {
-  const channels = D.channels.filter((c) => c.tenantId === S.tenant);
+  const channels = channelsOf();
   const STATUS = {
     connected: { label: loc("Подключён", "Ulangan"), dot: "var(--deal)" },
     pending: { label: loc("Ожидает подключения", "Ulanish kutilmoqda"), dot: "var(--progress)" },
@@ -545,7 +548,7 @@ function screenChannels() {
   return `
     ${head(t(loc("Каналы продаж", "Sotuv kanallari")),
       `<span>${t(loc("откуда приходят обращения: каждое новое попадает в лиды", "murojaatlar qayerdan keladi"))}</span><span class="faint">·</span>
-       <span class="num">${channels.reduce((n, c) => n + c.leadsPerMonth, 0)} ${t(loc("лидов в месяц", "oyiga lid"))}</span>`)}
+       <span class="num">${plural(channels.reduce((n, c) => n + c.leadsPerMonth, 0), ["лид", "лида", "лидов"], "lid")} ${t(loc("в месяц", "oyiga"))}</span>`)}
     <div class="banner" style="margin-bottom:20px">
       ${dot("var(--progress)")}
       <span class="t-caption">${t(loc(
@@ -568,9 +571,9 @@ function screenChannels() {
           </div>
           <div class="t-micro faint" style="margin-top:10px">
             ${esc(c.connectedAt ? fmtDate(c.connectedAt) : t(loc("не подключён", "ulanmagan")))} ·
-            <span class="num">${c.leadsPerMonth}</span> ${t(loc("лидов в месяц", "oyiga lid"))}
+            <span class="num">${plural(c.leadsPerMonth, ["лид", "лида", "лидов"], "lid")}</span> ${t(loc("в месяц", "oyiga"))}
           </div>
-          <button class="btn btn-secondary" style="width:100%;margin-top:14px">
+          <button class="btn btn-secondary" style="width:100%;margin-top:14px" data-act="channel" data-value="${esc(c.id)}">
             ${c.status === "connected" ? t(loc("Отключить", "O‘chirish")) : t(loc("Подключить", "Ulash"))}
           </button>
         </article>`;

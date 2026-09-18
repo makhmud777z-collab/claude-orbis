@@ -207,7 +207,7 @@ function screenDocuments() {
   const fields = documentFields();
   const st = filterState("documents");
   const folders = scopedContacts().map((s) => {
-    const items = D.documents.filter((d) => d.studentId === s.id);
+    const items = documentsOf(s.id);
     const verified = items.filter((d) => d.status === "verified").length;
     const problems = items.filter((d) => ["missing", "rejected", "expiring"].includes(d.status)).length;
     return { s, items, verified, problems, percent: items.length ? Math.round((verified / items.length) * 100) : 0 };
@@ -218,10 +218,12 @@ function screenDocuments() {
 
   return `
     ${head(t(loc("Документы", "Hujjatlar")),
-      `<span>${folders.length} ${t(loc("папок студентов", "talaba papkasi"))}</span><span class="faint">·</span>
-       <span>${folders.reduce((n, f) => n + f.items.length, 0)} ${t(loc("документов", "hujjat"))}</span><span class="faint">·</span>
+      `<span>${plural(folders.length, ["папка", "папки", "папок"], "papka")} ${t(loc("студентов", "talabalar"))}</span><span class="faint">·</span>
+       <span>${plural(folders.reduce((n, f) => n + f.items.length, 0), ["документ", "документа", "документов"], "hujjat")}</span><span class="faint">·</span>
        <span>${folders.reduce((n, f) => n + f.problems, 0)} ${t(loc("требуют внимания", "e’tibor talab qiladi"))}</span>`,
-      `<button class="btn btn-primary">${icon("plus", 15)} ${t(loc("Загрузить документ", "Hujjat yuklash"))}</button>`)}
+      allow(user().role, "documents", "create")
+        ? `<button class="btn btn-primary" data-act="reqdoc">${icon("plus", 15)} ${t(loc("Запросить документ", "Hujjat so‘rash"))}</button>`
+        : "")}
 
     ${smartFilter("documents", fields, simplePresets(), { shown: visible.length, total: folders.length })}
 
@@ -233,7 +235,7 @@ function screenDocuments() {
               ${avatar(f.s.fullName, 30)}
               <span style="flex:1;min-width:0">
                 <span class="t-body-sm truncate" style="display:block">${esc(f.s.fullName)}</span>
-                <span class="t-micro faint truncate" style="display:block">${f.items.length} ${t(loc("документов", "hujjat"))} · ${esc(userById(f.s.ownerId)?.name ?? "")}</span>
+                <span class="t-micro faint truncate" style="display:block">${plural(f.items.length, ["документ", "документа", "документов"], "hujjat")} · ${esc(userById(f.s.ownerId)?.name ?? "")}</span>
               </span>
               ${f.problems ? `<span class="t-micro num" style="background:rgb(255 85 119 / .12);color:var(--risk);border-radius:999px;padding:2px 8px">${f.problems}</span>` : ""}
             </span>
@@ -255,7 +257,9 @@ function screenDocuments() {
           </span>
           <span style="display:flex;gap:8px">
             <button class="btn btn-secondary" data-go="contact/${open.s.id}">${t(loc("Карточка контакта", "Kontakt kartasi"))}</button>
-            <button class="btn btn-primary">${t(loc("Загрузить файл", "Fayl yuklash"))}</button>
+            ${allow(user().role, "documents", "create")
+              ? `<button class="btn btn-primary" data-act="reqdoc" data-value="${open.s.id}">${icon("plus", 15)} ${t(loc("Запросить у студента", "Talabadan so‘rash"))}</button>`
+              : ""}
           </span>
         </div>
         <div class="divide">
@@ -270,11 +274,32 @@ function screenDocuments() {
               ${d.needsApostille ? chip(t(loc("апостиль", "apostil"))) : ""}
               ${d.expiresAt ? chip(`${t(loc("до", "gacha"))} ${fmtShort(d.expiresAt)}`, "var(--progress)") : ""}
               <span class="t-caption muted nowrap" style="width:96px;text-align:right">${esc(t(st.label))}</span>
+              ${allow(user().role, "documents", "edit")
+                ? `<span style="display:flex;justify-content:flex-end;gap:6px;width:176px;flex:none">${docSteps(d)}</span>`
+                : ""}
             </div>`;
           }).join("")}
         </div>
       </div>` : `<div class="card" style="padding:56px;text-align:center" class="muted">${t(loc("Папок нет", "Papkalar yo‘q"))}</div>`}
     </div>`;
+}
+
+/**
+ * Проверка пункта досье: куратор подтверждает документ или возвращает его.
+ * Файлового хранилища нет, поэтому «загрузить» в прототипе не обещаем —
+ * обещаем то, что действительно делает человек.
+ */
+function docSteps(d) {
+  const steps =
+    d.status === "requested" || d.status === "missing"
+      ? [["uploaded", loc("Получен", "Qabul qilindi")]]
+      : d.status === "uploaded" || d.status === "expiring"
+        ? [["verified", loc("Проверен", "Tekshirildi")], ["rejected", loc("Вернуть", "Qaytarish")]]
+        : d.status === "rejected"
+          ? [["uploaded", loc("Получен", "Qabul qilindi")]]
+          : [];
+  return steps.map(([to, label]) =>
+    `<button class="btn btn-secondary btn-xs" data-act="docstatus" data-value="${d.id}:${to}">${t(label)}</button>`).join("");
 }
 
 const deadlineRow = (d) => ({ search: t(d.title), kind: d.kind, ownerId: d.ownerId });
@@ -346,7 +371,7 @@ function screenFinance() {
       `<span>${apps.length} ${t(loc("договоров в работе", "ishdagi shartnoma"))}</span><span class="faint">·</span>
        <span>${t(loc("суммы договоров с семьями в сумах", "oilalar bilan shartnoma summalari so‘mda"))}</span><span class="faint">·</span>
        <span>${t(loc("курс", "kurs"))}: 1$ = ${som(tenant().usdRate)}</span>`,
-      `<button class="btn btn-secondary">${icon("export", 15)} ${t(loc("Выгрузить реестр", "Reestrni yuklash"))}</button>`)}
+      `<button class="btn btn-secondary" data-act="csv.finance">${icon("export", 15)} ${t(loc("Выгрузить реестр", "Reestrni yuklash"))}</button>`)}
 
     ${smartFilter("finance", fields, simplePresets(), { shown: apps.length, total: withContract.length })}
 
@@ -378,7 +403,7 @@ function screenSettings() {
     ${head(t(loc("Настройки агентства", "Agentlik sozlamalari")),
       `<span>${esc(tn.name)}</span><span class="faint">·</span><span>${esc(t(plans[tn.plan]))}</span><span class="faint">·</span>
        <span>${tn.seatsUsed} / ${tn.seatsLimit} ${t(loc("мест", "o‘rin"))}</span>`,
-      `<button class="btn btn-primary">${t(loc("Сохранить изменения", "O‘zgarishlarni saqlash"))}</button>`)}
+      "")}
 
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr));align-items:start">
       <div class="card" style="padding:22px;min-width:0">

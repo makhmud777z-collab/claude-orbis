@@ -108,6 +108,60 @@ function renderRail() {
     </div>`}`;
 }
 
+/**
+ * Уведомления.
+ *
+ * Раньше в шапке висели конверт и колокольчик, которые ничего не открывали:
+ * за конвертом раздела нет вовсе, а колокольчик просто горел точкой. Конверт
+ * убран, колокольчик показывает то, что действительно требует внимания —
+ * свои сроки на неделю вперёд, просроченные первыми.
+ */
+function renderNotices() {
+  const all = scopedDeadlines();
+  const mine = all.filter((d) => d.ownerId === S.userId && daysUntil(d.date) <= 7);
+  // Руководителю своих сроков может не достаться вовсе — операционные дедлайны
+  // носят кураторы. Пустой колокольчик у владельца говорил бы, что всё спокойно,
+  // когда по агентству просрочено полдюжины сроков.
+  const foreign = scope() === "own" ? []
+    : all.filter((d) => d.ownerId !== S.userId && isPast(d.date));
+  const seen = new Set();
+  const own = [...mine, ...foreign]
+    .filter((d) => (seen.has(d.id) ? false : (seen.add(d.id), true)))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 12);
+  const overdue = own.filter((d) => isPast(d.date)).length;
+  const open = S.popover === "notices";
+  const href = (d) => (d.relation?.type === "deal" ? `deal/${d.relation.id}`
+    : d.relation?.type === "student" ? `contact/${d.relation.id}` : "tasks");
+
+  return `<span style="position:relative">
+    <button class="icon-btn" style="position:relative" data-pop="notices" aria-label="${t(loc("Уведомления", "Bildirishnomalar"))}">
+      ${icon("bell", 17)}
+      ${overdue ? `<span class="t-micro num" style="position:absolute;right:4px;top:4px;min-width:15px;height:15px;
+        display:flex;align-items:center;justify-content:center;border-radius:999px;padding:0 4px;
+        background:var(--risk);color:#fff;font-size:9px;font-weight:700">${overdue > 9 ? "9+" : overdue}</span>` : ""}
+    </button>
+    ${open ? `<span class="pop" style="top:46px;right:0;left:auto;width:330px;padding:0;max-height:60vh;overflow-y:auto">
+      <span style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--hairline-soft)">
+        <span class="t-caption">${t(loc("Уведомления", "Bildirishnomalar"))}</span>
+        <span class="t-micro num faint">${own.length}</span>
+      </span>
+      ${own.length ? own.map((d) => `<button data-go="${href(d)}" style="display:flex;gap:10px;align-items:flex-start;
+        width:100%;padding:11px 14px;border:0;border-bottom:1px solid var(--hairline-soft);background:none;
+        cursor:pointer;color:inherit;text-align:left">
+        ${dot(L.deadlineKind[d.kind]?.dot ?? "var(--accent)")}
+        <span style="flex:1;min-width:0">
+          <span class="t-caption" style="display:block">${esc(t(d.title))}</span>
+          <span class="t-micro" style="display:block;margin-top:2px;color:${isPast(d.date) ? "var(--risk)" : "var(--ink-faint)"}">
+            ${esc(d.ownerId === S.userId ? t(L.deadlineKind[d.kind]?.label ?? loc("", "")) : (userById(d.ownerId)?.name ?? "—"))} · ${esc(relDeadline(d.date))}
+          </span>
+        </span>
+      </button>`).join("")
+      : `<span class="t-caption faint" style="display:block;padding:28px 14px;text-align:center">${t(loc("Сроков на неделю нет", "Bu haftaga muddat yo‘q"))}</span>`}
+    </span>` : ""}
+  </span>`;
+}
+
 function renderTopbar() {
   const w = workOf(S.userId);
   const color = w ? (w.onBreak ? "var(--progress)" : "var(--deal)") : "var(--ink-faint)";
@@ -135,10 +189,7 @@ function renderTopbar() {
       </span>`
       : `<button class="workday" data-act="work" data-value="start">${icon("play", 13)} ${t(loc("Начать рабочий день", "Ish kunini boshlash"))}</button>`}
 
-    <button class="icon-btn">${icon("mail", 17)}</button>
-    <button class="icon-btn" style="position:relative">${icon("bell", 17)}
-      <span style="position:absolute;right:8px;top:8px;width:6px;height:6px;border-radius:999px;background:var(--new)"></span>
-    </button>
+    ${renderNotices()}
 
     <span style="width:1px;height:20px;background:var(--hairline);margin:0 4px"></span>
 
@@ -248,6 +299,61 @@ function renderModal() {
           </button>`;
         }).join("")}
       </div>`);
+  }
+  if (m.kind === "newtask") {
+    const people = scopedTeam();
+    return modal(t(loc("Новая задача", "Yangi vazifa")), `
+      <label><span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Название", "Nomi"))}</span>
+        <input class="field" id="task-title" autofocus style="margin-bottom:14px"></label>
+      <span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Исполнитель", "Ijrochi"))}</span>
+      <div style="margin-bottom:14px">${select("task.assignee", m.assignee ?? S.userId,
+        people.map((u) => ({ value: u.id, label: u.name, hint: u.title })), 300)}</div>
+      <label><span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Срок", "Muddat"))}</span>
+        <input class="field" id="task-due" type="date" value="${shiftDay(TODAY_ISO, 3)}"></label>`,
+      `<button class="btn btn-primary" data-act="task.save">${t(loc("Сохранить", "Saqlash"))}</button>`);
+  }
+  if (m.kind === "invite") {
+    return modal(t(loc("Пригласить сотрудника", "Xodimni taklif qilish")), `
+      <label><span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Имя", "Ism"))}</span>
+        <input class="field" id="invite-name" autofocus style="margin-bottom:14px"></label>
+      <label><span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Почта", "Pochta"))}</span>
+        <input class="field" id="invite-email" type="email" style="margin-bottom:14px"></label>
+      <span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Роль", "Rol"))}</span>
+      ${select("invite.role", m.role ?? "sales_manager",
+        D.roles.map((r) => ({ value: r.key, label: t(r.label) })), 300)}
+      <p class="t-micro faint" style="margin:14px 0 0;line-height:1.5">${t(loc(
+        "Сотрудник появится в списке со статусом «приглашён» и займёт место по тарифу.",
+        "Xodim ro‘yxatda «taklif qilingan» holatida paydo bo‘ladi va tarif o‘rnini egallaydi."))}</p>`,
+      `<button class="btn btn-primary" data-act="invite.save">${t(loc("Пригласить", "Taklif qilish"))}</button>`);
+  }
+  if (m.kind === "reqdoc") {
+    const people = scopedContacts();
+    const studentId = m.studentId ?? people[0]?.id ?? "";
+    // Пункт, который уже в работе или проверен, запрашивать незачем;
+    // «нет файла» и «возвращён» остаются — их и просят у студента.
+    const settled = new Set(
+      documentsOf(studentId)
+        .filter((d) => d.status !== "missing" && d.status !== "rejected")
+        .map((d) => d.kind.ru),
+    );
+    const free = D.checklist.filter((item) => !settled.has(item.kind.ru));
+    const kind = free.some((x) => x.kind.ru === m.kind_) ? m.kind_ : free[0]?.kind.ru;
+    return modal(t(loc("Запросить документ", "Hujjat so‘rash")), `
+      ${m.locked ? "" : `<span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Студент", "Talaba"))}</span>
+      <div style="margin-bottom:14px">${select("reqdoc.student", studentId,
+        people.map((s) => ({ value: s.id, label: s.fullName, hint: s.phone })), 300)}</div>`}
+      <span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Тип документа", "Hujjat turi"))}</span>
+      <div style="margin-bottom:14px">${free.length
+        ? select("reqdoc.kind", kind ?? "", free.map((x) => ({ value: x.kind.ru, label: t(x.kind) })), 300)
+        : `<span class="t-caption faint">${t(loc("Все пункты чек-листа уже в досье", "Chek-ro‘yxatning barcha bandlari dosyeda"))}</span>`}</div>
+      <label><span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Комментарий для истории", "Tarix uchun izoh"))}</span>
+        <textarea class="field" id="reqdoc-note" rows="2" style="resize:none"></textarea></label>
+      <p class="t-micro faint" style="margin:12px 0 0;line-height:1.5">${t(loc(
+        "Пункт появится в досье со статусом «запрошен» и попадёт в историю контакта. Файл прикрепится, когда подключим хранилище.",
+        "Band dosyeda «so‘ralgan» holatida paydo bo‘ladi va kontakt tarixiga tushadi. Fayl ombor ulangach biriktiriladi."))}</p>`,
+      free.length
+        ? `<button class="btn btn-primary" data-act="reqdoc.save">${t(loc("Запросить документ", "Hujjat so‘rash"))}</button>`
+        : "");
   }
   if (m.kind === "department") {
     const parents = allDepartments();
@@ -567,6 +673,110 @@ const ACTIONS = {
     S.stageExtra[m.pipelineId] = [...(S.stageExtra[m.pipelineId] ?? []),
       { key, label: { ru, uz }, color: m.color ?? "#0a6ed1", hint: { ru: "", uz: "" } }];
     S.modal = null;
+  },
+  /* ── задачи, каналы, приглашения ───────────────────────── */
+  newtask: () => { S.modal = { kind: "newtask" }; },
+  "task.assignee": (v) => { S.modal = { ...S.modal, assignee: v }; S.popover = null; },
+  "task.save": () => {
+    const title = document.getElementById("task-title")?.value.trim();
+    if (!title) return;
+    S.taskExtra.push({
+      id: "t_" + Math.random().toString(36).slice(2, 7), tenantId: S.tenant, projectId: null,
+      title, description: "", assigneeId: S.modal.assignee ?? S.userId, creatorId: S.userId,
+      status: "todo", priority: "normal",
+      dueAt: document.getElementById("task-due")?.value || shiftDay(TODAY_ISO, 3),
+      createdAt: TODAY_ISO, relation: null,
+    });
+    S.modal = null;
+  },
+  channel: (v) => {
+    const c = channelsOf().find((x) => x.id === v);
+    if (c) S.channelOff[v] = c.status !== "connected";
+  },
+  invite: () => { S.modal = { kind: "invite" }; },
+  "invite.role": (v) => { S.modal = { ...S.modal, role: v }; S.popover = null; },
+  "invite.save": () => {
+    const name = document.getElementById("invite-name")?.value.trim();
+    const email = document.getElementById("invite-email")?.value.trim();
+    if (!name || !email) return;
+    S.invited.push({
+      id: "u_" + Math.random().toString(36).slice(2, 7), tenantId: S.tenant, name, email,
+      role: S.modal.role ?? "sales_manager", phone: "", phone2: null, birthDate: "1998-01-01",
+      branchId: user().branchId, title: t(roleDef(S.modal.role ?? "sales_manager").label),
+      status: "invited", lastActiveAt: `${TODAY_ISO}T09:30:00`, joinedAt: TODAY_ISO,
+    });
+    S.modal = null;
+  },
+
+  /* ── выгрузка ──────────────────────────────────────────── */
+  "csv.contacts": () => {
+    const fields = contactFields();
+    const st = filterState("contacts");
+    const rows = scopedContacts().filter((s) => matchesFilter(contactRow(s), fields, st.values, st.q));
+    exportCsv("orbis-kontakty",
+      [t(loc("Имя", "Ism")), t(loc("Телефон", "Telefon")), t(loc("Почта", "Pochta")),
+       "TOPIK", t(loc("Куратор", "Kurator")), t(loc("Статус", "Holat"))],
+      rows.map((s) => [s.fullName, s.phone, s.email, s.profile.topik,
+        userById(s.ownerId)?.name ?? "", t(L.studentStatus[s.status]?.label ?? loc("", ""))]));
+  },
+
+  "csv.finance": () => {
+    const rows = scopedDeals().filter((d) => d.contractValue > 0);
+    exportCsv("orbis-dogovory",
+      [t(loc("Контакт", "Kontakt")), t(loc("Вуз", "Universitet")), t(loc("Стадия", "Bosqich")),
+       t(loc("Договор", "Shartnoma")), t(loc("Оплачено", "To‘langan")), t(loc("Остаток", "Qoldiq"))],
+      rows.map((d) => {
+        const stage = stagesOf(pipelineById(d.pipelineId)).find((x) => x.key === currentStage(d));
+        return [studentById(d.studentId)?.fullName ?? "", uniById(d.universityId)?.name ?? "",
+          stage ? t(stage.label) : currentStage(d), d.contractValue, d.paid, d.contractValue - d.paid];
+      }));
+  },
+
+  /* ── документы: запрос у студента и проверка пункта досье ── */
+  reqdoc: (v) => {
+    // Из папки студента запрашиваем у него же — выбор контакта не нужен.
+    const people = scopedContacts();
+    const first = people.find((s) =>
+      documentsOf(s.id).filter((d) => d.status !== "missing" && d.status !== "rejected").length
+        < D.checklist.length) ?? people[0];
+    S.modal = { kind: "reqdoc", studentId: v || first?.id, locked: !!v };
+  },
+  "reqdoc.student": (v) => { S.modal = { ...S.modal, studentId: v, kind_: undefined }; S.popover = null; },
+  "reqdoc.kind": (v) => { S.modal = { ...S.modal, kind_: v }; S.popover = null; },
+  "reqdoc.save": () => {
+    const m = S.modal;
+    const studentId = m.studentId;
+    const settled = new Set(
+      documentsOf(studentId)
+        .filter((d) => d.status !== "missing" && d.status !== "rejected")
+        .map((d) => d.kind.ru),
+    );
+    const free = D.checklist.filter((item) => !settled.has(item.kind.ru));
+    const item = free.find((x) => x.kind.ru === m.kind_) ?? free[0];
+    if (!item) { S.modal = null; return; }
+    const note = document.getElementById("reqdoc-note")?.value.trim() ?? "";
+
+    // Пункт «нет файла» или «возвращён» не дублируем — поднимаем его статус.
+    const existing = documentsOf(studentId).find((d) => d.kind.ru === item.kind.ru);
+    if (existing) S.docStatus[existing.id] = "requested";
+    else {
+      S.docExtra[studentId] = [...(S.docExtra[studentId] ?? []), {
+        id: "d_new_" + Math.random().toString(36).slice(2, 7),
+        tenantId: S.tenant, studentId, dealId: null, kind: item.kind,
+        fileName: null, sizeKb: null, status: "requested", version: 1,
+        expiresAt: null, uploadedById: null, updatedAt: TODAY_ISO,
+        needsApostille: item.needsApostille,
+      }];
+    }
+    addNote("contact", studentId, "document", {
+      ru: `Документ запрошен: ${item.kind.ru}`,
+      uz: `Hujjat so‘raldi: ${item.kind.uz}`,
+    }, note);
+    S.modal = null;
+  },
+  docstatus: (v) => {
+    const [id, status] = v.split(":");
+    S.docStatus[id] = status;
   },
   newpipeline: () => { S.modal = { kind: "newpipeline", entity: "deal" }; },
   pipelineentity: (v) => { S.modal = { ...S.modal, entity: v }; },

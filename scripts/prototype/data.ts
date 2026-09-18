@@ -21,7 +21,8 @@ import { TIMELINE } from "../../src/lib/data/timeline";
 import { UNIVERSITIES } from "../../src/lib/data/universities";
 import { USERS } from "../../src/lib/data/users";
 import {
-  BRANCH_LABEL, CITY_LABEL, DEADLINE_KIND, DEGREE_LABEL, DOCUMENT_STATUS, FIELD_LABEL,
+  BRANCH_LABEL, CITY_LABEL, DEADLINE_KIND, DEGREE_LABEL, DOCUMENT_CHECKLIST,
+  DOCUMENT_STATUS, FIELD_LABEL,
   INTAKE_LABEL, OWNERSHIP_LABEL, PRIORITY_LABEL, PROGRAM_LANGUAGE, REGION_LABEL,
   SOURCE_LABEL, STUDENT_STATUS, TASK_STATUS, VISA_GRADE_LABEL,
 } from "../../src/lib/labels";
@@ -45,6 +46,7 @@ const payload = {
   timeline: TIMELINE,
   tasks: TASKS,
   documents: DOCUMENTS,
+  checklist: DOCUMENT_CHECKLIST,
   universities: UNIVERSITIES,
   editions: EDITIONS,
   roles: ROLES,

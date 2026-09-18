@@ -246,7 +246,9 @@ export default async function DashboardPage() {
                   <span className="mt-1 h-3.5 w-3.5 flex-none rounded-[5px] border border-hairline" />
                   <div className="min-w-0 flex-1">
                     <div className="t-body-sm">{task.title}</div>
-                    <div className="t-micro mt-1 flex items-center gap-2 text-ink-faint">
+                    {/* Имя куратора и срок на телефоне в одну строку не встают:
+                        переносим, иначе строка выталкивает карточку за экран. */}
+                    <div className="t-micro mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-ink-faint">
                       <Avatar name={assignee?.name ?? "—"} size={18} />
                       {assignee?.name}
                       <span>·</span>

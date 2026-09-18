@@ -47,6 +47,11 @@ const S = {
   deptParent: {},      // departmentId → новый родитель после удаления
   deptHidden: [],      // удалённые подразделения
   view: "board",       // канбан или список в лидах и сделках
+  docStatus: {},       // documentId → новый статус после проверки
+  docExtra: {},        // studentId → запрошенные пункты досье
+  taskExtra: [],       // задачи, поставленные в прототипе
+  channelOff: {},      // channelId → подключён ли канал после переключения
+  invited: [],         // приглашённые сотрудники
 };
 try {
   const savedNav = localStorage.getItem("orbis-nav");
@@ -76,6 +81,15 @@ const leadById = (id) => D.leads.find((x) => x.id === id);
 const dealById = (id) => D.deals.find((x) => x.id === id);
 const uniById = (id) => D.universities.find((x) => x.id === id);
 const programById = (id) => D.universities.flatMap((u) => u.programs).find((p) => p.id === id);
+/**
+ * Каналы с учётом переключения в прототипе: подключить и отключить канал
+ * должно быть видно и в списке каналов, и в сводке администрирования.
+ */
+const channelsOf = () => D.channels.filter((c) => c.tenantId === S.tenant).map((c) => {
+  const on = S.channelOff[c.id];
+  if (on === undefined) return c;
+  return { ...c, status: on ? "connected" : "off", connectedAt: on ? TODAY_ISO : null };
+});
 const channelById = (id) => D.channels.find((c) => c.id === id);
 const scope = () => roleDef(user().role).scope;
 const digits = (phone) => String(phone ?? "").replace(/\D/g, "");
@@ -131,16 +145,25 @@ const scopedDeals = () => {
   const ids = new Set(scopedContacts().map((s) => s.id));
   return D.deals.filter((d) => d.tenantId === S.tenant && (ids.has(d.studentId) || d.ownerId === S.userId));
 };
-const scopedDocuments = () => {
-  const ids = new Set(scopedContacts().map((s) => s.id));
-  return D.documents.filter((d) => ids.has(d.studentId));
-};
+/**
+ * Документы студента с правками прототипа: запрошенные пункты и
+ * изменённые статусы. Через эту функцию читают все экраны — иначе
+ * запрос документа виден в одном месте и не виден в другом.
+ */
+const documentsOf = (studentId) => [
+  ...D.documents.filter((d) => d.studentId === studentId),
+  ...(S.docExtra[studentId] ?? []),
+].map((d) => (S.docStatus[d.id] ? { ...d, status: S.docStatus[d.id] } : d));
+
+const scopedDocuments = () => scopedContacts().flatMap((s) => documentsOf(s.id));
 const scopedTeam = () => {
-  const staff = D.users.filter((u) => u.tenantId === S.tenant);
+  // Приглашённые в прототипе — такие же сотрудники: иначе «Пригласить»
+  // отработала бы, а человек нигде не появился.
+  const staff = [...D.users, ...S.invited].filter((u) => u.tenantId === S.tenant);
   return scope() === "branch" ? staff.filter((u) => u.branchId === user().branchId) : staff;
 };
 const scopedTasks = () => {
-  const all = D.tasks.filter((x) => x.tenantId === S.tenant);
+  const all = [...D.tasks, ...S.taskExtra].filter((x) => x.tenantId === S.tenant);
   if (scope() === "tenant") return all;
   if (scope() === "branch") {
     const ids = new Set(scopedTeam().map((u) => u.id));
@@ -223,7 +246,7 @@ const clockText = (sec) => {
 
 /* ── дедлайны: считаются из сделок, документов и задач ───── */
 function dossier(studentId) {
-  const docs = D.documents.filter((d) => d.studentId === studentId);
+  const docs = documentsOf(studentId);
   const done = docs.filter((d) => d.status === "verified").length;
   return { done, total: docs.length, percent: docs.length ? Math.round((done / docs.length) * 100) : 0, docs };
 }

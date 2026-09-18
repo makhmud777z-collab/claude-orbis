@@ -17,7 +17,9 @@ function screenTasks() {
        <span>${list.filter((x) => x.status !== "done" && isPast(x.dueAt)).length} ${t(loc("просрочено", "kechikkan"))}</span><span class="faint">·</span>
        <a href="#" data-go="projects">${t(loc("Проекты", "Loyihalar"))}</a>
        <a href="#" data-go="taskreports">${t(loc("Отчёты", "Hisobotlar"))}</a>`,
-      allow(user().role, "tasks", "create") ? `<button class="btn btn-primary">${icon("plus", 15)} ${t(loc("Новая задача", "Yangi vazifa"))}</button>` : "")}
+      allow(user().role, "tasks", "create")
+        ? `<button class="btn btn-primary" data-act="newtask">${icon("plus", 15)} ${t(loc("Новая задача", "Yangi vazifa"))}</button>`
+        : "")}
 
     ${smartFilter("tasks", fields, taskPresets(), { shown: list.length, total: all.length })}
 
@@ -145,8 +147,10 @@ function screenTaskReports() {
 /* ── календарь ───────────────────────────────────────────── */
 const DOW = [loc("Пн", "Du"), loc("Вт", "Se"), loc("Ср", "Ch"), loc("Чт", "Pa"), loc("Пт", "Ju"), loc("Сб", "Sh"), loc("Вс", "Ya")];
 const HOUR_PX = 52;
-const DAY_START = 7;
-const DAY_END = 22;
+// Сетка дня — полные сутки, как в приложении: встреча в 6:30 и линия
+// текущего времени ночью должны находить своё место, а не пропадать.
+const DAY_START = 0;
+const DAY_END = 23;
 
 const itemColor = (x) => (x.source === "deadline" ? "var(--progress)" : EVENT_KIND[x.kind]?.color ?? "var(--accent)");
 
@@ -154,7 +158,6 @@ const itemColor = (x) => (x.source === "deadline" ? "var(--progress)" : EVENT_KI
 function nowLine() {
   const now = new Date();
   const minutes = now.getHours() * 60 + now.getMinutes();
-  if (minutes < DAY_START * 60 || minutes > DAY_END * 60) return "";
   const top = ((minutes - DAY_START * 60) / 60) * HOUR_PX;
   const label = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   return `<div class="now-line" data-now style="top:${top}px"><span class="now-badge">${label}</span></div>`;

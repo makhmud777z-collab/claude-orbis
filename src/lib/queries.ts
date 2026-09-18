@@ -149,9 +149,21 @@ export function scopedDeadlines(session: Session): Deadline[] {
  * что уже произошло, а уведомления говорят, что сейчас не сделано.
  */
 export function noticesFor(session: Session) {
-  const own = scopedDeadlines(session).filter((d) => d.ownerId === session.user.id);
-  return own
-    .filter((d) => daysUntil(d.date) <= 7)
+  const all = scopedDeadlines(session);
+  const own = all.filter((d) => d.ownerId === session.user.id && daysUntil(d.date) <= 7);
+
+  // Руководителю своих сроков может не достаться вовсе — операционные
+  // дедлайны носят кураторы. Пустой колокольчик у владельца агентства
+  // говорил бы, что всё спокойно, когда просрочено полдюжины сроков,
+  // поэтому в его зону видимости добавляется просроченное по агентству.
+  const foreignOverdue =
+    session.scope === "own"
+      ? []
+      : all.filter((d) => d.ownerId !== session.user.id && daysUntil(d.date) < 0);
+
+  const seen = new Set<string>();
+  return [...own, ...foreignOverdue]
+    .filter((d) => (seen.has(d.id) ? false : seen.add(d.id)))
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 12)
     .map((d) => ({
@@ -160,6 +172,9 @@ export function noticesFor(session: Session) {
       title: d.title,
       kind: d.kind,
       relation: d.relation,
+      ownerId: d.ownerId,
+      /** чужой просроченный срок подписывается ответственным */
+      mine: d.ownerId === session.user.id,
       overdue: daysUntil(d.date) < 0,
     }));
 }
