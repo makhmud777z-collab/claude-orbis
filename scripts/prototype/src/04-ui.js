@@ -89,30 +89,45 @@ const CARD_FIELDS = [
  * Доска: колонки — стадии воронки, карточку можно перетащить мышью.
  * Пустые поля на карточке не показываем: столбик прочерков ничего не сообщает.
  */
+/**
+ * Доска: колонки — стадии воронки, карточку можно перетащить мышью.
+ *
+ * Цвет стадии — акцент, а не заливка на весь блок: раньше колонка была
+ * пастельным пятном целиком и доска читалась как светофор, а не как
+ * рабочий инструмент. Теперь цвет живёт в трёх местах — тонкая полоса
+ * сверху колонки, точка с названием и полоска доли суммы, — а сама
+ * колонка и карточки остаются на нейтральной поверхности.
+ */
 function kanban(entity, stages, cards, opts = {}) {
   const fields = opts.fields ?? S.cardFields;
+  const totals = stages.map((stage) =>
+    cards.filter((c) => c.stage === stage.key).reduce((n, c) => n + (c.amount ?? 0), 0));
+  const maxTotal = Math.max(1, ...totals);
   return `
   <div class="t-micro faint" style="margin-bottom:12px">${t(loc("Перетащите карточку на другую стадию", "Kartani boshqa bosqichga torting"))}</div>
   <div class="scroll-x"><div class="kan">
-    ${stages.map((stage) => {
+    ${stages.map((stage, i) => {
       const list = cards.filter((c) => c.stage === stage.key);
-      const total = list.reduce((n, c) => n + (c.amount ?? 0), 0);
+      const total = totals[i];
+      const share = total ? Math.max(6, Math.round((total / maxTotal) * 100)) : 0;
       const over = S.over === stage.key;
       return `<section class="kan-col${over ? " over" : ""}" data-drop="${esc(stage.key)}" data-entity="${esc(entity)}"
-        style="border-color:${over ? stage.color : `color-mix(in srgb, ${stage.color} 22%, var(--hairline))`};
-               background:color-mix(in srgb, ${stage.color} ${over ? 9 : 4}%, var(--surface-2))">
-        <header class="kan-head" style="background:color-mix(in srgb, ${stage.color} 13%, var(--surface-1));
-          border-bottom-color:color-mix(in srgb, ${stage.color} 26%, transparent)">
+        style="--kan-accent:${stage.color}">
+        <div class="kan-topbar" style="background:${stage.color}"></div>
+        <header class="kan-head">
           <div style="display:flex;align-items:center;gap:8px">
             ${dot(stage.color)}
             <span class="t-caption truncate" style="flex:1;min-width:0;font-weight:600;color:${stage.color}">${esc(t(stage.label))}</span>
-            <span class="kan-count num" style="background:color-mix(in srgb, ${stage.color} 18%, transparent);color:${stage.color}">${list.length}</span>
+            <span class="kan-count num">${list.length}</span>
           </div>
-          ${opts.totals === false ? "" : `<div class="t-micro num muted" style="margin-top:4px;padding-left:14px">${total ? som(total, true) : "—"}</div>`}
+          ${opts.totals === false ? "" : `
+            <div class="t-micro num muted" style="margin-top:6px;padding-left:14px">${total ? som(total, true) : "—"}</div>
+            <div class="kan-share"><i style="width:${share}%;background:${stage.color}"></i></div>
+          `}
         </header>
         <div class="kan-body">
           ${list.map((c) => card(c, fields, entity)).join("") ||
-            `<div class="empty-col" style="border-color:color-mix(in srgb, ${stage.color} 28%, transparent)">${t(loc("Пусто", "Bo‘sh"))}</div>`}
+            `<div class="empty-col">${t(loc("Пусто", "Bo‘sh"))}</div>`}
         </div>
       </section>`;
     }).join("")}
@@ -123,20 +138,28 @@ function card(c, fields, entity) {
   const lines = fields
     .map((key) => c.lines.find((l) => l.key === key))
     .filter((l) => l && l.value && l.value !== "—");
+  // Сумма — главное число карточки сделки: у неё отдельная, более заметная
+  // строка внизу, а не наравне с телефоном и стадией досье.
+  const amountLine = lines.find((l) => l.key === "amount");
+  const metaLines = lines.filter((l) => l.key !== "amount");
+  const pad = c.flag ? "padding-left:8px" : "";
   return `<a class="card card-hover kan-card${S.drag === c.id ? " drag" : ""}" draggable="true"
       data-drag="${esc(c.id)}" data-entity="${esc(entity)}" href="#" data-go="${esc(c.go)}">
     ${c.flag ? `<span class="kan-flag" style="background:${c.flag}"></span>` : ""}
-    <span style="display:flex;gap:8px;align-items:flex-start">
+    <span style="display:flex;gap:10px;align-items:flex-start;${pad}">
       <span style="min-width:0;flex:1">
-        <span class="t-body-sm truncate" style="display:block">${esc(c.title)}</span>
-        <span class="t-micro faint truncate" style="display:block">${esc(c.subtitle)}</span>
+        <span class="t-body-sm truncate" style="display:block;font-weight:600">${esc(c.title)}</span>
+        <span class="t-micro faint truncate" style="display:block;margin-top:2px">${esc(c.subtitle)}</span>
       </span>
       ${avatar(c.ownerName, 22)}
     </span>
-    ${lines.length ? `<span style="display:block;margin-top:8px">${lines.map((l) => `
-      <span class="t-micro muted truncate" style="display:flex;gap:6px;align-items:center">
-        ${l.accent ? dot(l.accent) : ""}${esc(l.value)}
-      </span>`).join("")}</span>` : ""}
+    ${metaLines.length || amountLine ? `<span class="kan-meta" style="${pad}">
+      ${metaLines.map((l) => `
+        <span class="t-micro muted truncate" style="display:flex;gap:6px;align-items:center">
+          ${l.accent ? dot(l.accent) : ""}${esc(l.value)}
+        </span>`).join("")}
+      ${amountLine ? `<span class="t-num" style="display:block;text-align:right;font-size:13px;font-weight:600;${amountLine.accent ? `color:${amountLine.accent}` : ""}">${esc(amountLine.value)}</span>` : ""}
+    </span>` : ""}
   </a>`;
 }
 

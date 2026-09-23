@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
-import { moveCardAction, setCardFieldsAction } from "@/app/actions";
-import { IconMore } from "./icons";
+import { moveCardAction } from "@/app/actions";
 import { Avatar, StatusDot } from "./ui";
 import { translator, type Locale } from "@/lib/i18n";
 import { som } from "@/lib/format";
@@ -50,6 +49,12 @@ export interface FieldOption {
  * Перенос сразу уходит на сервер и попадает в историю карточки, а доска
  * не ждёт ответа: колонка перерисовывается оптимистично, иначе перетаскивание
  * ощущается как зависание.
+ *
+ * Цвет стадии — акцент, а не заливка: сплошная пастельная подложка на весь
+ * блок колонки превращала доску в светофор и спорила с карточками внутри.
+ * Здесь цвет живёт в трёх местах — тонкая полоса сверху колонки, точка
+ * с названием стадии и мини-индикатор доли суммы, — а сама колонка и
+ * карточки остаются на нейтральной поверхности, как и весь остальной портал.
  */
 export function Kanban({
   entity,
@@ -98,6 +103,16 @@ export function Kanban({
     });
   };
 
+  // Доля колонки в общей сумме воронки — самая нагруженная колонка задаёт
+  // 100% полоски, остальные показывают вес относительно неё.
+  const totalsByStage = stages.map(
+    (stage) =>
+      cards
+        .filter((c) => stageOf(c) === stage.key)
+        .reduce((sum, c) => sum + (c.amount ?? 0), 0),
+  );
+  const maxTotal = Math.max(1, ...totalsByStage);
+
   return (
     <>
       {canEdit ? (
@@ -105,10 +120,11 @@ export function Kanban({
       ) : null}
 
       <div className="-mx-5 overflow-x-auto px-5 pb-2 lg:-mx-8 lg:px-8">
-        <div className="flex min-w-max gap-3">
-          {stages.map((stage) => {
+        <div className="flex min-w-max gap-4">
+          {stages.map((stage, i) => {
             const list = cards.filter((c) => stageOf(c) === stage.key);
-            const total = list.reduce((sum, c) => sum + (c.amount ?? 0), 0);
+            const total = totalsByStage[i];
+            const share = total ? Math.max(6, Math.round((total / maxTotal) * 100)) : 0;
             const active = over === stage.key;
 
             return (
@@ -124,49 +140,55 @@ export function Kanban({
                   e.preventDefault();
                   drop(stage.key);
                 }}
-                className={`kan-col flex w-[272px] flex-none flex-col overflow-hidden rounded-[14px] border transition-[background-color,border-color,box-shadow] duration-150 ${active ? "is-over" : ""}`}
+                className="kan-col relative flex w-[280px] flex-none flex-col overflow-hidden rounded-[18px] border border-hairline bg-surface-2 transition-colors duration-150"
                 style={{
-                  borderColor: active
-                    ? stage.color
-                    : `color-mix(in srgb, ${stage.color} 22%, var(--color-hairline))`,
-                  // Колонка окрашена своим цветом, но едва-едва: доска должна
-                  // читаться с одного взгляда и не превращаться в светофор.
-                  background: `color-mix(in srgb, ${stage.color} ${active ? 9 : 4}%, var(--color-surface-2))`,
-                  boxShadow: active ? `0 0 0 2px color-mix(in srgb, ${stage.color} 35%, transparent)` : undefined,
+                  background: active
+                    ? `color-mix(in srgb, ${stage.color} 6%, var(--color-surface-2))`
+                    : undefined,
                 }}
               >
-                {/* Шапка колонки — плотная плашка цвета стадии: именно она
-                    даёт доске ритм, которого не хватало в чистом минимализме. */}
-                <header
-                  className="px-3 pb-2.5 pt-2.5"
-                  style={{
-                    background: `color-mix(in srgb, ${stage.color} 13%, var(--color-surface-1))`,
-                    borderBottom: `1px solid color-mix(in srgb, ${stage.color} 26%, transparent)`,
-                  }}
-                >
+                {/* Цвет стадии сверху — тонкая полоса вместо заливки всей колонки. */}
+                <div className="h-[3px] w-full flex-none" style={{ background: stage.color }} />
+
+                {active ? (
+                  <span
+                    aria-hidden
+                    className="kan-drop-ring pointer-events-none absolute inset-0 rounded-[18px]"
+                    style={{ boxShadow: `inset 0 0 0 2px ${stage.color}` }}
+                  />
+                ) : null}
+
+                {/* Шапка — нейтральная поверхность: цвет живёт только в точке,
+                    названии и полоске доли суммы, не в фоне блока. */}
+                <header className="flex-none border-b border-hairline-soft bg-surface-1 px-3.5 pb-3 pt-3">
                   <div className="flex items-center gap-2">
                     <StatusDot color={stage.color} />
-                    <span className="t-caption min-w-0 flex-1 truncate font-semibold" style={{ color: stage.color }}>
+                    <span
+                      className="t-caption min-w-0 flex-1 truncate font-semibold"
+                      style={{ color: stage.color }}
+                    >
                       {stage.label}
                     </span>
-                    <span
-                      className="t-micro t-num rounded-full px-1.5 py-0.5 font-semibold"
-                      style={{
-                        background: `color-mix(in srgb, ${stage.color} 18%, transparent)`,
-                        color: stage.color,
-                      }}
-                    >
+                    <span className="t-micro t-num rounded-full bg-surface-3 px-1.5 py-0.5 font-semibold text-ink-muted">
                       {list.length}
                     </span>
                   </div>
                   {showTotals ? (
-                    <div className="t-micro t-num mt-1 pl-3.5 text-ink-muted">
-                      {total ? som(total, { compact: true, locale }) : "—"}
-                    </div>
+                    <>
+                      <div className="t-micro t-num mt-1.5 pl-3.5 text-ink-muted">
+                        {total ? som(total, { compact: true, locale }) : "—"}
+                      </div>
+                      <div className="mt-2 h-[3px] overflow-hidden rounded-full bg-surface-3">
+                        <div
+                          className="h-full rounded-full transition-[width] duration-300"
+                          style={{ width: `${share}%`, background: stage.color, opacity: 0.6 }}
+                        />
+                      </div>
+                    </>
                   ) : null}
                 </header>
 
-                <div className="flex flex-col gap-2 p-2">
+                <div className="flex flex-1 flex-col gap-2.5 p-2.5">
                   {list.map((card) => (
                     <Card
                       key={card.id}
@@ -182,10 +204,7 @@ export function Kanban({
                     />
                   ))}
                   {!list.length ? (
-                    <div
-                      className="t-micro rounded-[10px] border border-dashed px-3 py-6 text-center text-ink-faint"
-                      style={{ borderColor: `color-mix(in srgb, ${stage.color} 28%, transparent)` }}
-                    >
+                    <div className="rounded-[12px] border border-dashed border-hairline px-3 py-7 text-center text-ink-faint t-micro">
                       {t(S.common.empty)}
                     </div>
                   ) : null}
@@ -195,7 +214,6 @@ export function Kanban({
           })}
         </div>
       </div>
-
     </>
   );
 }
@@ -221,6 +239,11 @@ function Card({
     .map((key) => card.lines.find((l) => l.key === key))
     .filter((l): l is CardLine => Boolean(l) && Boolean(l!.value) && l!.value !== "—");
 
+  // Сумма — главное число карточки сделки, поэтому у неё отдельная, более
+  // заметная строка внизу, а не наравне с телефоном и стадией досье.
+  const amountLine = lines.find((l) => l.key === "amount");
+  const metaLines = lines.filter((l) => l.key !== "amount");
+
   return (
     <Link
       href={card.href}
@@ -231,32 +254,43 @@ function Card({
         onDragStart();
       }}
       onDragEnd={onDragEnd}
-      className="card card-hover relative block px-3 py-2.5"
+      className="card card-hover relative block px-3.5 py-3"
       style={{ opacity: dragging ? 0.4 : 1, cursor: draggable ? "grab" : "pointer" }}
     >
       {card.flag ? (
         <span
-          className="absolute left-0 top-3 h-6 w-[2px] rounded-r-full"
+          className="absolute left-1.5 top-3.5 h-6 w-[3px] rounded-full"
           style={{ background: card.flag }}
         />
       ) : null}
 
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-2.5" style={{ paddingLeft: card.flag ? 8 : 0 }}>
         <span className="min-w-0 flex-1">
-          <span className="t-body-sm block truncate font-medium">{card.title}</span>
-          <span className="t-micro block truncate text-ink-faint">{card.subtitle}</span>
+          <span className="t-body-sm block truncate font-semibold">{card.title}</span>
+          <span className="t-micro mt-0.5 block truncate text-ink-faint">{card.subtitle}</span>
         </span>
         <Avatar name={card.ownerName} size={22} />
       </div>
 
-      {lines.length ? (
-        <div className="mt-2 space-y-1">
-          {lines.map((line) => (
+      {metaLines.length || amountLine ? (
+        <div
+          className="mt-2.5 space-y-1 border-t border-hairline-soft pt-2.5"
+          style={{ marginLeft: card.flag ? 8 : 0 }}
+        >
+          {metaLines.map((line) => (
             <div key={line.key} className="t-micro flex items-center gap-1.5 text-ink-muted">
               {line.accent ? <StatusDot color={line.accent} /> : null}
               <span className="truncate">{line.value}</span>
             </div>
           ))}
+          {amountLine ? (
+            <div
+              className="t-num pt-0.5 text-right text-[13px] font-semibold"
+              style={{ color: amountLine.accent ?? undefined }}
+            >
+              {amountLine.value}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </Link>

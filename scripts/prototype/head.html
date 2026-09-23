@@ -229,21 +229,33 @@
   .scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 49; }
 
   /* ── канбан ──────────────────────────────────────────────── */
-  .kan { display: flex; gap: 12px; min-width: max-content; padding-bottom: 8px; align-items: flex-start; }
-  /* Колонка окрашена своим цветом, но едва-едва: доска должна читаться
-     с одного взгляда и не превращаться в светофор. */
+  /* Цвет стадии — акцент (полоса сверху, точка, полоска доли суммы),
+     а не заливка всей колонки: сплошной пастельный блок на весь фон
+     превращал доску в светофор и спорил с карточками внутри. Колонка
+     и карточки остаются на нейтральной поверхности, как весь портал. */
+  .kan { display: flex; gap: 16px; min-width: max-content; padding-bottom: 8px; align-items: flex-start; }
   .kan-col {
-    width: 272px; flex: none; display: flex; flex-direction: column;
-    border: 1px solid var(--hairline); border-radius: 14px; overflow: hidden;
-    transition: border-color .14s ease, background-color .14s ease, box-shadow .14s ease;
+    width: 280px; flex: none; display: flex; flex-direction: column; position: relative;
+    background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 18px; overflow: hidden;
   }
-  .kan-col.over { animation: orbis-pulse .9s ease-in-out infinite; }
-  .kan-head { padding: 10px 12px; border-bottom: 1px solid var(--hairline-soft); }
-  .kan-body { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
-  .kan-count { border-radius: 999px; padding: 1px 7px; font-size: 11px; font-weight: 600; }
-  .kan-card { position: relative; display: block; padding: 10px 12px; cursor: grab; }
+  /* Кольцо-подсветка поверх содержимого: пульсирует только рамка,
+     а не вся колонка с карточками — иначе на секунду не видно, куда бросаешь. */
+  .kan-col.over::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit;
+    box-shadow: inset 0 0 0 2px var(--kan-accent, var(--accent));
+    animation: orbis-pulse .9s ease-in-out infinite; pointer-events: none;
+  }
+  .kan-topbar { height: 3px; flex: none; }
+  .kan-head { flex: none; background: var(--surface-1); border-bottom: 1px solid var(--hairline-soft); padding: 12px 14px 13px; }
+  .kan-body { display: flex; flex-direction: column; gap: 10px; padding: 10px; flex: 1; }
+  .kan-count { border-radius: 999px; padding: 2px 7px; font-size: 11px; font-weight: 600; background: var(--surface-3); color: var(--ink-muted); }
+  .kan-share { margin-top: 8px; height: 3px; border-radius: 999px; overflow: hidden; background: var(--surface-3); }
+  .kan-share > i { display: block; height: 100%; border-radius: 999px; opacity: .6; }
+  .kan-card { position: relative; display: block; padding: 12px 14px; cursor: grab; }
   .kan-card.drag { opacity: .4; }
-  .kan-flag { position: absolute; left: 0; top: 12px; width: 2px; height: 24px; border-radius: 0 999px 999px 0; }
+  .kan-meta { display: block; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hairline-soft); }
+  .kan-meta > * + * { margin-top: 4px; }
+  .kan-flag { position: absolute; left: 6px; top: 14px; width: 3px; height: 24px; border-radius: 999px; }
 
   /* ── полоса стадий в карточке ────────────────────────────── */
   .stages { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
