@@ -107,20 +107,43 @@ export function StatTile({
   value,
   hint,
   accent,
+  danger = false,
 }: {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
   accent?: string;
+  /**
+   * Плитка сообщает о потере: просрочка, отказ, недобор. Число обязано
+   * бросаться в глаза раньше, чем человек прочитает подпись под ним —
+   * поэтому не ещё один цветной чип, а сам счётчик красным и жирнее,
+   * плюс тонкая красная грань слева, различимая боковым зрением.
+   */
+  danger?: boolean;
 }) {
   return (
-    <div className="card card-hover p-5">
+    <div
+      className="card card-hover p-5"
+      style={danger ? { borderLeft: "3px solid var(--color-status-risk)" } : undefined}
+    >
       <div className="t-caption flex items-center gap-2 text-ink-muted">
         {accent ? <StatusDot color={accent} /> : null}
         {label}
       </div>
-      <div className="t-display-sm t-num mt-3">{value}</div>
-      {hint ? <div className="t-micro mt-1.5 text-ink-faint">{hint}</div> : null}
+      <div
+        className="t-display-sm t-num mt-3 font-semibold"
+        style={{ color: danger ? "var(--color-status-risk)" : undefined }}
+      >
+        {value}
+      </div>
+      {hint ? (
+        <div
+          className="t-micro mt-1.5"
+          style={{ color: danger ? "var(--color-status-risk)" : "var(--color-ink-faint)" }}
+        >
+          {hint}
+        </div>
+      ) : null}
     </div>
   );
 }

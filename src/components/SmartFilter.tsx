@@ -185,7 +185,7 @@ export function SmartFilter({
           type="button"
           onClick={() => setOpen((v) => !v)}
           className="field flex h-10 min-w-0 flex-1 items-center gap-2.5 text-left"
-          style={{ borderRadius: 100, maxWidth: 560, minWidth: 220 }}
+          style={{ borderRadius: 100, minWidth: 220 }}
           aria-expanded={open}
         >
           <span className="text-ink-faint">

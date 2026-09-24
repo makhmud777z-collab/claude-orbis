@@ -498,8 +498,15 @@ export async function unlockAdminAction(formData: FormData) {
     redirect(`/admin?e=1&next=${encodeURIComponent(back)}`);
   }
   const store = await cookies();
-  // без maxAge: замок закрывается вместе с браузером — так безопаснее
-  store.set(ADMIN_COOKIE, session.tenant.id, { path: "/", httpOnly: true, sameSite: "lax" });
+  // без maxAge: замок закрывается вместе с браузером — так безопаснее.
+  // secure — только в проде: на облачном хостинге это HTTPS, а на localhost
+  // без TLS такую куку браузер вообще не примет.
+  store.set(ADMIN_COOKIE, session.tenant.id, {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
   redirect(back);
 }
 

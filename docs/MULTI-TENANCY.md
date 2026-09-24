@@ -15,7 +15,7 @@ hanbridge.orbisystem.us     Hanbridge Consulting
 
 ## Как это работает в коде
 
-1. **Middleware** (`src/middleware.ts`) выполняется до рендера, читает `Host`
+1. **Proxy** (`src/proxy.ts`) выполняется до рендера, читает `Host`
    и определяет арендатора функцией `slugFromHost()`:
    - сначала таблица собственных доменов (`crm.agencyx.uz → agencyx`);
    - затем поддомен платформы (`agencyx.orbisystem.us → agencyx`);

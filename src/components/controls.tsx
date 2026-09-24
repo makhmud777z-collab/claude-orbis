@@ -277,11 +277,24 @@ export function Tooltip({ text, children }: { text: string; children: React.Reac
   );
 }
 
-/** Палитра стадии: готовые цвета и ввод HEX-кода вручную. */
+/**
+ * Палитра стадии: 50 цветов — десять оттенков по пять тонов, от светлого
+ * к глубокому, и отдельный ряд нейтральных серых. Стадий в воронке бывает
+ * много, и без системы палитра из полутора десятков цветов быстро
+ * заканчивается — вторая воронка неизбежно повторяет цвета первой.
+ * Ввод HEX-кода ниже остаётся для точного попадания в фирменный цвет.
+ */
 export const STAGE_PALETTE = [
-  "#ff7a3d", "#ff5577", "#d44df0", "#6a4cf5", "#0099ff", "#22c55e",
-  "#e0b341", "#8a8a8a", "#f97316", "#ec4899", "#a855f7", "#3b82f6",
-  "#06b6d4", "#10b981", "#84cc16", "#eab308", "#64748b", "#ffffff",
+  "#f87171", "#ef4444", "#dc2626", "#e11d48", "#be123c",
+  "#fb923c", "#ff7a3d", "#f97316", "#ea580c", "#c2410c",
+  "#f59e0b", "#e0b341", "#eab308", "#ca8a04", "#d97706",
+  "#4ade80", "#22c55e", "#16a34a", "#15803d", "#65a30d",
+  "#2dd4bf", "#14b8a6", "#10b981", "#0d9488", "#0f766e",
+  "#22d3ee", "#06b6d4", "#0ea5e9", "#0099ff", "#3b82f6",
+  "#6366f1", "#6a4cf5", "#7c3aed", "#8b5cf6", "#4f46e5",
+  "#a855f7", "#c026d3", "#d44df0", "#a21caf", "#9333ea",
+  "#f472b6", "#ec4899", "#db2777", "#ff5577", "#be185d",
+  "#94a3b8", "#64748b", "#8a8a8a", "#475569", "#334155",
 ];
 
 export function ColorPicker({
@@ -303,14 +316,14 @@ export function ColorPicker({
 
   return (
     <div>
-      <div className="grid grid-cols-9 gap-2">
+      <div className="grid grid-cols-10 gap-1.5">
         {STAGE_PALETTE.map((color) => (
           <button
             key={color}
             type="button"
             onClick={() => onChange(color)}
             aria-label={color}
-            className="h-6 w-6 rounded-full border transition-transform hover:scale-110"
+            className="h-5 w-5 rounded-full border transition-transform hover:scale-125"
             style={{
               background: color,
               borderColor: color.toLowerCase() === value.toLowerCase() ? "var(--color-ink)" : "transparent",

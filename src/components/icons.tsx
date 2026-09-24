@@ -81,6 +81,19 @@ export const IconDrag = (p: IconProps) => (
 export const IconTrash = (p: IconProps) => (
   <Icon {...p}><path d="M4 6.5h16" /><path d="M9.5 6.5V4.8A1.3 1.3 0 0 1 10.8 3.5h2.4a1.3 1.3 0 0 1 1.3 1.3v1.7" /><path d="M6.5 6.5 7.4 20a1.4 1.4 0 0 0 1.4 1.3h6.4a1.4 1.4 0 0 0 1.4-1.3l.9-13.5" /><path d="M10.5 10.5v6.5" /><path d="M13.5 10.5v6.5" /></Icon>
 );
+export const IconEye = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+    <circle cx="12" cy="12" r="3" />
+  </Icon>
+);
+export const IconEyeOff = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M9.9 5.2A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3 3.9M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7a10 10 0 0 0 4.2-.9" />
+    <path d="M9.5 9.5a3 3 0 0 0 4.2 4.2" />
+    <path d="M2 2l20 20" />
+  </Icon>
+);
 export const IconArrowUp = (p: IconProps) => (
   <Icon {...p}><path d="M12 19V5" /><path d="m6 11 6-6 6 6" /></Icon>
 );

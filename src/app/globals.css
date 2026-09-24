@@ -45,12 +45,6 @@
   --color-scrim: rgb(16 24 40 / 0.38);
   --grain-opacity: 0;
 
-  /* atmosphere (spotlight cards only — scarce by design) */
-  --color-gradient-violet: #6a4cf5;
-  --color-gradient-magenta: #d44df0;
-  --color-gradient-orange: #ff7a3d;
-  --color-gradient-coral: #ff5577;
-
   /* radius */
   --radius-xs: 4px;
   --radius-sm: 6px;
@@ -249,7 +243,8 @@
       background-color 140ms ease,
       border-color 140ms ease,
       box-shadow 140ms ease,
-      transform 140ms ease;
+      transform 140ms ease,
+      opacity 140ms ease;
   }
   .card-hover:hover {
     border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-hairline));
@@ -272,6 +267,15 @@
     border-bottom: 1px solid var(--color-hairline-soft);
     background: var(--color-surface-2);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  /* Строка таблицы отзывается на курсор так же, как карточка: иначе
+     плотные списки (финансы, права, сотрудники) выглядят нерабочими
+     полосами текста, хотя строки кликабельны или содержат действия. */
+  tbody tr {
+    transition: background-color 120ms ease;
+  }
+  tbody tr:hover {
+    background: var(--color-surface-2);
   }
 
   /* ── движение ─────────────────────────────────────────────── */
@@ -300,6 +304,14 @@
   @keyframes orbis-pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.55; }
+  }
+  @keyframes orbis-check {
+    from { opacity: 0; transform: scale(0.4); }
+    to { opacity: 1; transform: none; }
+  }
+  /* галочка в своём чекбоксе — она возникает, а не появляется рывком */
+  .check-in {
+    animation: orbis-check 140ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   /* выпадающие списки, календарь, панель фильтра */
@@ -513,17 +525,6 @@
     font-weight: 600;
   }
 
-  /* ── atmosphere (scarce: max one per view) ────────────────── */
-  .spotlight-violet {
-    background:
-      radial-gradient(120% 120% at 0% 0%, #8a6cff 0%, transparent 55%),
-      linear-gradient(135deg, #6a4cf5 0%, #d44df0 100%);
-  }
-  .spotlight-orange {
-    background:
-      radial-gradient(120% 120% at 100% 0%, #ffb36b 0%, transparent 55%),
-      linear-gradient(135deg, #ff7a3d 0%, #ff5577 100%);
-  }
 
   /* ── дерево структуры компании ───────────────────────────── */
   /*

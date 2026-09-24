@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { navFor } from "@/components/nav";
 import { openModules } from "@/components/guard";
-import { IconArrowUpRight, IconPlus } from "@/components/icons";
+import { IconArrowUpRight, IconPlus, IconUniversity } from "@/components/icons";
 import {
   Avatar,
   Chip,
@@ -13,7 +13,7 @@ import {
   StatusDot,
 } from "@/components/ui";
 import { userById } from "@/lib/data/users";
-import { formatters, isPast, isSoon } from "@/lib/format";
+import { daysUntil, formatters, isPast, isSoon } from "@/lib/format";
 import { translator } from "@/lib/i18n";
 import { DEADLINE_KIND } from "@/lib/labels";
 import {
@@ -62,6 +62,14 @@ export default async function DashboardPage() {
   const soon = deadlines.filter((d) => isSoon(d.date, 7));
   const contracted = inPipeline.reduce((sum, a) => sum + a.contractValue, 0);
   const collected = inPipeline.reduce((sum, a) => sum + a.paid, 0);
+
+  // Отказы воронка не показывает вовсе — финальные стадии из неё убраны
+  // намеренно, у графика свой смысл. Но то, что компания теряет, не может
+  // быть невидимым: считаем отдельно и выводим отдельной строкой.
+  const lostRecently = applications.filter(
+    (a) => a.stage === "lost" && -daysUntil(a.stageEnteredAt) <= 30,
+  );
+  const lostValue = lostRecently.reduce((sum, a) => sum + a.contractValue, 0);
 
   // Воронка на дашборде повторяет настройки воронки сделок: те же стадии и цвета.
   const pipeline = defaultPipeline(session.tenant.id, "deal");
@@ -126,7 +134,8 @@ export default async function DashboardPage() {
                 ? `${t(S.dashboard.tileNearest)} — ${f.shortDate(soon[0].date)}`
                 : t(S.dashboard.tileCalm)
           }
-          accent="var(--color-status-progress)"
+          accent={overdue.length ? "var(--color-status-risk)" : "var(--color-status-progress)"}
+          danger={overdue.length > 0}
         />
         <StatTile
           label={t(S.dashboard.tileContracted)}
@@ -135,6 +144,42 @@ export default async function DashboardPage() {
           accent="var(--color-status-deal)"
         />
       </div>
+
+      {/* Воронка нарочно не показывает финальные стадии — у графика свой смысл,
+          не список всех исходов. Но то, что компания теряет, не может
+          прятаться совсем: если за месяц были отказы, полоса стоит первой
+          после плиток, красная, с суммой — не ещё один спокойный факт. */}
+      {lostRecently.length ? (
+        <Link
+          href="/crm/deals?stage=lost"
+          className="card card-hover mt-4 flex flex-wrap items-center gap-3 px-5 py-3.5"
+          style={{
+            borderColor: "color-mix(in srgb, var(--color-status-risk) 35%, var(--color-hairline))",
+            background: "color-mix(in srgb, var(--color-status-risk) 6%, var(--color-surface-1))",
+          }}
+        >
+          <span
+            className="flex h-8 w-8 flex-none items-center justify-center rounded-full"
+            style={{
+              background: "color-mix(in srgb, var(--color-status-risk) 16%, transparent)",
+              color: "var(--color-status-risk)",
+            }}
+          >
+            <IconArrowUpRight size={14} style={{ transform: "rotate(135deg)" }} />
+          </span>
+          <span className="t-body-sm font-semibold" style={{ color: "var(--color-status-risk)" }}>
+            {f.plural(lostRecently.length, P.refusals)} {t(S.dashboard.lostPeriod)}
+          </span>
+          {lostValue ? (
+            <span className="t-caption t-num" style={{ color: "var(--color-status-risk)" }}>
+              {t(S.dashboard.lostValue)} {f.som(lostValue, { compact: true })}
+            </span>
+          ) : null}
+          <span className="t-caption ml-auto flex flex-none items-center gap-1" style={{ color: "var(--color-status-risk)" }}>
+            {t(S.dashboard.lostCta)} <IconArrowUpRight size={12} />
+          </span>
+        </Link>
+      ) : null}
 
       <section className="mt-9">
         <SectionTitle
@@ -192,9 +237,17 @@ export default async function DashboardPage() {
             {deadlines.slice(0, 6).map((d) => {
               const kind = DEADLINE_KIND[d.kind];
               const owner = userById(d.ownerId);
+              // Просрочка — не ещё один нейтральный факт в списке: это то,
+              // что уже стоило компании денег или доверия семьи, и должно
+              // читаться раньше, чем название и ответственный.
+              const overdue = isPast(d.date);
               return (
-                <div key={d.id} className="flex items-center gap-4 px-5 py-3.5">
-                  <StatusDot color={kind.dot} />
+                <div
+                  key={d.id}
+                  className="flex items-center gap-4 px-5 py-3.5"
+                  style={overdue ? { background: "color-mix(in srgb, var(--color-status-risk) 6%, transparent)" } : undefined}
+                >
+                  <StatusDot color={overdue ? "var(--color-status-risk)" : kind.dot} />
                   <div className="min-w-0 flex-1">
                     <div className="t-body-sm truncate">{t(d.title)}</div>
                     <div className="t-micro mt-0.5 text-ink-faint">
@@ -202,8 +255,16 @@ export default async function DashboardPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="t-caption t-num">{f.shortDate(d.date)}</div>
-                    <div className="t-micro text-ink-faint">
+                    <div className="t-caption t-num" style={{ color: overdue ? "var(--color-status-risk)" : undefined }}>
+                      {f.shortDate(d.date)}
+                    </div>
+                    <div
+                      className="t-micro"
+                      style={{
+                        color: overdue ? "var(--color-status-risk)" : "var(--color-ink-faint)",
+                        fontWeight: overdue ? 600 : undefined,
+                      }}
+                    >
                       {f.relativeDeadline(d.date)}
                     </div>
                   </div>
@@ -212,20 +273,32 @@ export default async function DashboardPage() {
             })}
           </div>
 
-          <div className="spotlight-violet mt-5 overflow-hidden rounded-[30px] px-8 py-8">
-            <div className="t-caption uppercase tracking-[0.1em] text-white/70">
-              {t(S.dashboard.spotlightEyebrow)}
-            </div>
-            <div className="mt-3 max-w-sm text-[24px] font-medium leading-[1.15] tracking-[-0.9px] text-white">
-              {t(S.dashboard.spotlightTitle)}
-            </div>
-            <Link
-              href="/universities"
-              className="btn mt-6 bg-white text-black hover:bg-white/90"
-            >
-              {t(S.dashboard.spotlightCta)} <IconArrowUpRight size={14} />
-            </Link>
-          </div>
+          {/* Раньше здесь стоял градиентный промо-баннер с белым текстом
+              поверх фиолетовой заливки — рекламный приём ради самого приёма:
+              каталог и так первым пунктом в меню. Карточка той же плотности,
+              что соседние блоки страницы, без декоративного фона под текст. */}
+          <Link
+            href="/universities"
+            className="card card-hover mt-5 flex items-center gap-4 p-5"
+          >
+            <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-surface-2 text-ink-muted">
+              <IconUniversity size={18} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="t-body-sm block">{t(S.dashboard.spotlightTitle)}</span>
+              <span className="t-micro mt-0.5 block text-ink-faint">
+                {t(S.dashboard.spotlightEyebrow)}
+              </span>
+            </span>
+            {/* Карточка целиком — ссылка, поэтому подпись «Открыть каталог»
+                рядом с текстом лишняя; на 390px ей и не хватало места. */}
+            <span className="hidden flex-none items-center gap-1 text-ink-muted sm:flex t-caption">
+              {t(S.dashboard.spotlightCta)} <IconArrowUpRight size={13} />
+            </span>
+            <span className="flex-none text-ink-faint sm:hidden">
+              <IconArrowUpRight size={15} />
+            </span>
+          </Link>
         </section>
 
         <section className="min-w-0">
@@ -241,9 +314,21 @@ export default async function DashboardPage() {
           <div className="card divide-y divide-hairline-soft">
             {myTasks.map((task) => {
               const assignee = userById(task.assigneeId);
+              // Просрочено и «скоро» — не одно и то же: красим в красный только
+              // то, что уже сорвалось, иначе всё подряд становится тревожным
+              // и красный перестаёт что-либо выделять.
+              const overdue = isPast(task.dueAt);
+              const soon = !overdue && isSoon(task.dueAt, 2);
               return (
-                <div key={task.id} className="flex items-start gap-3.5 px-5 py-3.5">
-                  <span className="mt-1 h-3.5 w-3.5 flex-none rounded-[5px] border border-hairline" />
+                <div
+                  key={task.id}
+                  className="flex items-start gap-3.5 px-5 py-3.5"
+                  style={overdue ? { background: "color-mix(in srgb, var(--color-status-risk) 6%, transparent)" } : undefined}
+                >
+                  <span
+                    className="mt-1 h-3.5 w-3.5 flex-none rounded-[5px] border"
+                    style={{ borderColor: overdue ? "var(--color-status-risk)" : "var(--color-hairline)" }}
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="t-body-sm">{task.title}</div>
                     {/* Имя куратора и срок на телефоне в одну строку не встают:
@@ -254,9 +339,12 @@ export default async function DashboardPage() {
                       <span>·</span>
                       <span
                         style={{
-                          color: isSoon(task.dueAt, 2) || isPast(task.dueAt)
+                          color: overdue
                             ? "var(--color-status-risk)"
-                            : undefined,
+                            : soon
+                              ? "var(--color-status-progress)"
+                              : undefined,
+                          fontWeight: overdue ? 600 : undefined,
                         }}
                       >
                         {f.relativeDeadline(task.dueAt)}

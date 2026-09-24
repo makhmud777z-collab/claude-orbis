@@ -22,11 +22,16 @@ const sectionTitle = (text, right) => `
   <div class="section-title" style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 14px">
     <h2 class="t-headline" style="min-width:0">${esc(text)}</h2>${right ?? ""}
   </div>`;
-const tile = (label, value, hint, color) => `
-  <div class="card card-hover" style="padding:18px">
+/**
+ * Плитка счётчика. `danger` — не ещё один цветной чип, а сам счётчик
+ * красным и жирнее, плюс тонкая грань слева: просрочка обязана бросаться
+ * в глаза раньше, чем человек прочитает подпись под ней.
+ */
+const tile = (label, value, hint, color, danger) => `
+  <div class="card card-hover" style="padding:18px${danger ? ";border-left:3px solid var(--risk)" : ""}">
     <div class="t-micro muted" style="display:flex;align-items:center;gap:8px">${color ? dot(color) : ""}${esc(label)}</div>
-    <div class="t-display-sm num" style="margin-top:10px">${esc(value)}</div>
-    ${hint ? `<div class="t-micro faint" style="margin-top:6px">${esc(hint)}</div>` : ""}
+    <div class="t-display-sm num" style="margin-top:10px;font-weight:600;${danger ? "color:var(--risk)" : ""}">${esc(value)}</div>
+    ${hint ? `<div class="t-micro" style="margin-top:6px;color:${danger ? "var(--risk)" : "var(--ink-faint)"}">${esc(hint)}</div>` : ""}
   </div>`;
 const kv = (label, value) =>
   `<div class="kv"><span class="t-caption muted">${esc(label)}</span><span class="t-body-sm" style="text-align:right">${value}</span></div>`;
@@ -66,10 +71,23 @@ function select(id, value, options, width) {
 const checkbox = (on) =>
   `<span class="check" style="border-color:${on ? "var(--accent)" : "var(--hairline)"};background:${on ? "var(--accent)" : "transparent"};color:#fff">${on ? icon("tick", 11) : ""}</span>`;
 
-/** Палитра стадии: готовые цвета плюс ручной HEX, как в настройках воронки. */
-const PALETTE = ["#ff7a3d", "#ff5577", "#d44df0", "#6a4cf5", "#0099ff", "#22c55e",
-  "#e0b341", "#8a8a8a", "#f97316", "#ec4899", "#a855f7", "#3b82f6",
-  "#06b6d4", "#10b981", "#84cc16", "#eab308", "#64748b", "#ffffff"];
+/**
+ * Палитра стадии: 50 цветов — десять оттенков по пять тонов, от светлого
+ * к глубокому, и отдельный ряд нейтральных серых. Тот же набор, что в
+ * продукте, плюс ручной HEX ниже для точного попадания в фирменный цвет.
+ */
+const PALETTE = [
+  "#f87171", "#ef4444", "#dc2626", "#e11d48", "#be123c",
+  "#fb923c", "#ff7a3d", "#f97316", "#ea580c", "#c2410c",
+  "#f59e0b", "#e0b341", "#eab308", "#ca8a04", "#d97706",
+  "#4ade80", "#22c55e", "#16a34a", "#15803d", "#65a30d",
+  "#2dd4bf", "#14b8a6", "#10b981", "#0d9488", "#0f766e",
+  "#22d3ee", "#06b6d4", "#0ea5e9", "#0099ff", "#3b82f6",
+  "#6366f1", "#6a4cf5", "#7c3aed", "#8b5cf6", "#4f46e5",
+  "#a855f7", "#c026d3", "#d44df0", "#a21caf", "#9333ea",
+  "#f472b6", "#ec4899", "#db2777", "#ff5577", "#be185d",
+  "#94a3b8", "#64748b", "#8a8a8a", "#475569", "#334155",
+];
 
 /* ── канбан ──────────────────────────────────────────────── */
 const CARD_FIELDS = [

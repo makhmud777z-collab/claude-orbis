@@ -13,6 +13,10 @@ function screenDashboard() {
   const board = stagesOf(defaultPipeline("deal")).filter((s) => !s.final);
   const max = Math.max(1, ...board.map((s) => deals.filter((d) => currentStage(d) === s.key).length));
   const myTasks = scopedTasks().filter((x) => x.status !== "done").sort((a, b) => a.dueAt.localeCompare(b.dueAt)).slice(0, 5);
+  // Воронка нарочно не показывает финальные стадии — у графика свой смысл.
+  // Но то, что компания теряет, не может быть невидимым.
+  const lostRecently = deals.filter((d) => currentStage(d) === "lost" && idleDaysOf(d.stageEnteredAt) <= 30);
+  const lostValue = lostRecently.reduce((n, d) => n + d.contractValue, 0);
 
   return `
     ${head(`${t(loc("Добрый день", "Xayrli kun"))}, ${user().name.split(" ")[0]}`,
@@ -26,10 +30,20 @@ function screenDashboard() {
       ${tile(t(loc("Сделки в воронке", "Voronkadagi bitimlar")), String(pipeline.length),
         `${deals.filter((d) => currentStage(d) === "offer").length} ${t(loc("с offer", "offer bilan"))} · ${deals.filter((d) => currentStage(d) === "visa").length} ${t(loc("на визе", "vizada"))}`, "var(--violet)")}
       ${tile(t(loc("Дедлайны ≤ 7 дней", "Muddatlar ≤ 7 kun")), String(soon.length),
-        overdue.length ? `${overdue.length} ${t(loc("просрочено", "kechikkan"))}` : soon[0] ? `${t(loc("ближайший", "eng yaqini"))} — ${fmtShort(soon[0].date)}` : t(loc("всё спокойно", "hammasi joyida")), "var(--progress)")}
+        overdue.length ? `${overdue.length} ${t(loc("просрочено", "kechikkan"))}` : soon[0] ? `${t(loc("ближайший", "eng yaqini"))} — ${fmtShort(soon[0].date)}` : t(loc("всё спокойно", "hammasi joyida")),
+        overdue.length ? "var(--risk)" : "var(--progress)", overdue.length > 0)}
       ${tile(t(loc("Законтрактовано", "Shartnomalar summasi")), som(contracted, true),
         `${t(loc("оплачено", "to‘langan"))} ${som(collected, true)} · ${Math.round((collected / Math.max(1, contracted)) * 100)}%`, "var(--deal)")}
     </div>
+
+    ${lostRecently.length ? `<a class="card card-hover" data-go="deals" style="margin-top:16px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px 18px;
+        border-color:color-mix(in srgb, var(--risk) 35%, var(--hairline));background:color-mix(in srgb, var(--risk) 6%, var(--surface-1))">
+      <span style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:999px;
+        background:color-mix(in srgb, var(--risk) 16%, transparent);color:var(--risk)">${icon("arrow", 14)}</span>
+      <span class="t-body-sm" style="font-weight:600;color:var(--risk)">${plural(lostRecently.length, ["отказ", "отказа", "отказов"], "rad javobi")} ${t(loc("за 30 дней", "so‘nggi 30 kunda"))}</span>
+      ${lostValue ? `<span class="t-caption num" style="color:var(--risk)">${t(loc("на сумму", "summasi"))} ${som(lostValue, true)}</span>` : ""}
+      <span class="t-caption" style="margin-left:auto;color:var(--risk)">${t(loc("Посмотреть", "Ko‘rish"))} ${icon("arrow", 12)}</span>
+    </a>` : ""}
 
     <section style="margin-top:34px">
       ${sectionTitle(t(loc("Воронка сделок", "Bitimlar voronkasi")),
@@ -53,44 +67,52 @@ function screenDashboard() {
         <div class="card divide">
           ${dls.slice(0, 6).map((d) => {
             const k = L.deadlineKind[d.kind];
-            return `<a class="row" href="#" data-go="${esc(d.go)}">
-              ${dot(k.dot)}
+            const late = isPast(d.date);
+            return `<a class="row" href="#" data-go="${esc(d.go)}" style="${late ? "background:color-mix(in srgb, var(--risk) 6%, transparent)" : ""}">
+              ${dot(late ? "var(--risk)" : k.dot)}
               <span style="flex:1;min-width:0">
                 <span class="t-body-sm truncate" style="display:block">${esc(t(d.title))}</span>
                 <span class="t-micro faint">${esc(t(k.label))} · ${esc(userById(d.ownerId)?.name ?? "—")}</span>
               </span>
               <span style="text-align:right">
-                <span class="t-caption num" style="display:block">${esc(fmtShort(d.date))}</span>
-                <span class="t-micro faint">${esc(relDeadline(d.date))}</span>
+                <span class="t-caption num" style="display:block;${late ? "color:var(--risk)" : ""}">${esc(fmtShort(d.date))}</span>
+                <span class="t-micro" style="color:${late ? "var(--risk)" : "var(--ink-faint)"};font-weight:${late ? 600 : 400}">${esc(relDeadline(d.date))}</span>
               </span>
             </a>`;
           }).join("")}
         </div>
 
-        <div class="spotlight" style="margin-top:18px">
-          <div class="t-caption" style="color:rgb(255 255 255 / .7);text-transform:uppercase;letter-spacing:.1em">${t(loc("Подбор вуза", "Universitet tanlash"))}</div>
-          <div style="font-size:23px;font-weight:500;line-height:1.15;letter-spacing:-.9px;margin-top:12px;max-width:340px">
-            ${t(loc("Соберите шорт-лист под профиль студента за пару минут", "Talaba profiliga qisqa ro‘yxatni bir necha daqiqada yig‘ing"))}
-          </div>
-          <button class="btn" style="background:#fff;color:#000;margin-top:20px" data-go="universities">${t(loc("Открыть каталог", "Katalogni ochish"))} ${icon("arrow", 14)}</button>
-        </div>
+        <a class="card card-hover" data-go="universities" style="margin-top:18px;display:flex;align-items:center;gap:14px;padding:18px">
+          <span style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:999px;background:var(--surface-2);color:var(--ink-muted);flex:none">
+            ${icon("bank", 18)}
+          </span>
+          <span style="flex:1;min-width:0">
+            <span class="t-body-sm" style="display:block">${t(loc("Соберите шорт-лист по TOPIK, бюджету, городу и направлению — за один проход по каталогу.", "TOPIK, byudjet, shahar va yo‘nalish bo‘yicha qisqa ro‘yxatni bir o‘tishda tuzing."))}</span>
+            <span class="t-micro faint" style="display:block;margin-top:2px">${t(loc("Подбор вузов", "Universitet tanlash"))}</span>
+          </span>
+          <span class="t-caption muted" style="flex:none;display:flex;align-items:center;gap:4px">${t(loc("Открыть каталог", "Katalogni ochish"))} ${icon("arrow", 13)}</span>
+        </a>
       </section>
 
       <section>
         ${sectionTitle(t(loc("Мои задачи", "Mening vazifalarim")),
           `<button class="t-caption muted" style="background:none;border:0;cursor:pointer" data-go="tasks">${t(loc("Все задачи", "Barcha vazifalar"))}</button>`)}
         <div class="card divide">
-          ${myTasks.map((task) => `<div class="row" style="align-items:flex-start">
+          ${myTasks.map((task) => {
+            const late = isPast(task.dueAt);
+            const near = !late && isSoon(task.dueAt, 2);
+            return `<div class="row" style="align-items:flex-start;${late ? "background:color-mix(in srgb, var(--risk) 6%, transparent)" : ""}">
             ${checkbox(false)}
             <span style="flex:1;min-width:0">
               <span class="t-body-sm" style="display:block">${esc(task.title)}</span>
               <span class="t-micro faint" style="display:flex;gap:8px;align-items:center;margin-top:5px">
                 ${avatar(userById(task.assigneeId)?.name ?? "—", 18)}${esc(userById(task.assigneeId)?.name ?? "—")}<span>·</span>
-                <span style="color:${isPast(task.dueAt) || isSoon(task.dueAt, 2) ? "var(--risk)" : "inherit"}">${esc(relDeadline(task.dueAt))}</span>
+                <span style="color:${late ? "var(--risk)" : near ? "var(--progress)" : "inherit"};font-weight:${late ? 600 : 400}">${esc(relDeadline(task.dueAt))}</span>
               </span>
             </span>
             ${task.priority === "high" ? chip(t(loc("важно", "muhim")), "var(--risk)") : ""}
-          </div>`).join("")}
+          </div>`;
+          }).join("")}
         </div>
 
         ${sectionTitle(t(loc("Лента агентства", "Agentlik lentasi")))}

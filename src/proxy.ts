@@ -6,7 +6,7 @@ import { slugFromHost } from "@/lib/tenants";
  * Порядок: собственный домен агентства → поддомен → cookie (демо-переключатель).
  * Результат кладётся в заголовок запроса, серверные компоненты читают его в layout.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const fromHost = slugFromHost(request.headers.get("host"));
   const fromCookie = request.cookies.get("orbis_tenant")?.value ?? null;
   const slug = fromHost ?? fromCookie ?? "";

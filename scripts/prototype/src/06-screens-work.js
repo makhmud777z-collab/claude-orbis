@@ -23,22 +23,36 @@ function screenTasks() {
 
     ${smartFilter("tasks", fields, taskPresets(), { shown: list.length, total: all.length })}
 
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr));align-items:start">
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr));align-items:start;gap:16px">
       ${TASK_ORDER.map((status) => {
         const meta = L.taskStatus[status];
         const col = list.filter((x) => x.status === status);
-        return `<section>
-          <div class="col-head">${dot(meta.dot)}<span class="t-caption" style="flex:1">${esc(t(meta.label))}</span><span class="t-micro num faint">${col.length}</span></div>
-          <div class="grid" style="gap:10px">
-            ${col.map((x) => `<article class="card card-hover" style="padding:14px">
-              <div class="t-body-sm">${esc(x.title)}</div>
-              <p class="t-micro muted" style="margin:6px 0 0;line-height:1.5">${esc(x.description)}</p>
-              <div class="t-micro faint" style="display:flex;gap:8px;align-items:center;margin-top:12px">
-                ${avatar(userById(x.assigneeId)?.name ?? "—", 20)}
-                <span class="truncate" style="flex:1;min-width:0">${esc(userById(x.assigneeId)?.name ?? "—")}</span>
-                <span class="nowrap" style="color:${x.status !== "done" && isPast(x.dueAt) ? "var(--risk)" : "inherit"}">${esc(fmtShort(x.dueAt))}</span>
-              </div>
-            </article>`).join("") || `<div class="empty-col">${t(loc("Пусто", "Bo‘sh"))}</div>`}
+        return `<section class="kan-col">
+          <div class="kan-topbar" style="background:${meta.dot}"></div>
+          <header class="kan-head">
+            <div style="display:flex;align-items:center;gap:8px">
+              ${dot(meta.dot)}
+              <span class="t-caption truncate" style="flex:1;min-width:0;font-weight:600;color:${meta.dot}">${esc(t(meta.label))}</span>
+              <span class="kan-count num">${col.length}</span>
+            </div>
+          </header>
+          <div class="kan-body">
+            ${col.map((x) => {
+              const overdue = x.status !== "done" && isPast(x.dueAt);
+              const flag = overdue ? "var(--risk)" : x.priority === "high" ? "var(--progress)" : null;
+              return `<article class="card card-hover" style="padding:12px 14px;position:relative">
+                ${flag ? `<span class="kan-flag" style="background:${flag}"></span>` : ""}
+                <div style="padding-left:${flag ? "8px" : "0"}">
+                  <div class="t-body-sm" style="font-weight:600">${esc(x.title)}</div>
+                  ${x.description ? `<p class="t-micro faint" style="margin:6px 0 0;line-height:1.5">${esc(x.description)}</p>` : ""}
+                  <div class="t-micro" style="display:flex;gap:8px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--hairline-soft)">
+                    ${avatar(userById(x.assigneeId)?.name ?? "—", 20)}
+                    <span class="truncate faint" style="flex:1;min-width:0">${esc(userById(x.assigneeId)?.name ?? "—")}</span>
+                    <span class="nowrap" style="color:${overdue ? "var(--risk)" : "var(--ink-faint)"};font-weight:${overdue ? 600 : 400}">${esc(fmtShort(x.dueAt))}</span>
+                  </div>
+                </div>
+              </article>`;
+            }).join("") || `<div class="empty-col">${t(loc("Пусто", "Bo‘sh"))}</div>`}
           </div>
         </section>`;
       }).join("")}

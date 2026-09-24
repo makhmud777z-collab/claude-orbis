@@ -29,6 +29,7 @@ export const P = {
   programs: { ru: ["программа", "программы", "программ"] as [string, string, string], uz: ["dastur", "dastur", "dastur"] as [string, string, string] },
   years: { ru: ["год", "года", "лет"] as [string, string, string], uz: ["yosh", "yosh", "yosh"] as [string, string, string] },
   universities: { ru: ["вуз", "вуза", "вузов"] as [string, string, string], uz: ["universitet", "universitet", "universitet"] as [string, string, string] },
+  refusals: { ru: ["отказ", "отказа", "отказов"] as [string, string, string], uz: ["rad javobi", "rad javobi", "rad javobi"] as [string, string, string] },
 };
 
 /** Строки интерфейса. Пользовательский контент (заметки, задачи) не переводится. */
@@ -48,6 +49,15 @@ export const S = {
     expand: loc("Развернуть меню", "Menyuni ochish"),
     pin: loc("Закрепить в меню", "Menyuga mahkamlash"),
     unpin: loc("Открепить", "Mahkamlashni bekor qilish"),
+    customize: loc("Настроить меню", "Menyuni sozlash"),
+    customizeTitle: loc("Разделы меню", "Menyu bo‘limlari"),
+    customizeHint: loc(
+      "Скройте лишнее и переставьте разделы стрелками — своё меню у каждого сотрудника.",
+      "Kerak bo‘lmaganini yashiring va bo‘limlarni o‘qlar bilan qayta joylashtiring — har bir xodimda o‘z menyusi.",
+    ),
+    hideSection: loc("Скрыть раздел", "Bo‘limni yashirish"),
+    showSection: loc("Показать раздел", "Bo‘limni ko‘rsatish"),
+    resetOrder: loc("Сбросить порядок", "Tartibni tiklash"),
   },
 
   common: {
@@ -71,6 +81,7 @@ export const S = {
     minutesShort: loc("мин", "daq"),
     hoursShort: loc("ч", "soat"),
     save: loc("Сохранить", "Saqlash"),
+    done: loc("Готово", "Tayyor"),
     empty: loc("Пусто", "Bo‘sh"),
     nothingFound: loc("Ничего не найдено — попробуйте снять фильтры.", "Hech narsa topilmadi — filtrlarni olib tashlang."),
     noTasks: loc("Задач нет.", "Vazifalar yo‘q."),
@@ -134,6 +145,9 @@ export const S = {
       "TOPIK, byudjet, shahar va yo‘nalish bo‘yicha qisqa ro‘yxatni bir o‘tishda tuzing.",
     ),
     spotlightCta: loc("Открыть каталог", "Katalogni ochish"),
+    lostPeriod: loc("за 30 дней", "so‘nggi 30 kunda"),
+    lostValue: loc("на сумму", "summasi"),
+    lostCta: loc("Посмотреть", "Ko‘rish"),
   },
 
   students: {

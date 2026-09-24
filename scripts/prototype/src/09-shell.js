@@ -380,7 +380,7 @@ function renderModal() {
           <input class="field" id="stage-new-uz"></label>
       </div>
       <span class="t-micro faint" style="display:block;margin-bottom:8px">${t(loc("Цвет", "Rang"))}</span>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:6px">
         ${PALETTE.map((c) => `<button class="swatch" data-act="stagecolor" data-value="${c}"
           style="background:${c};border-color:${(m.color ?? "") === c ? "var(--ink)" : "transparent"}"></button>`).join("")}
       </div>`,
@@ -427,7 +427,7 @@ function renderModal() {
         <input class="field" id="stage-uz" value="${esc(stage.label.uz)}">
       </label>
       <span class="t-micro faint" style="display:block;margin-bottom:8px">${t(loc("Цвет", "Rang"))}</span>
-      <div style="display:grid;grid-template-columns:repeat(9,1fr);gap:8px">
+      <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:6px">
         ${PALETTE.map((c) => `<button class="swatch" data-act="stagecolor" data-value="${esc(c)}"
           style="background:${c};border-color:${c.toLowerCase() === (m.color ?? stage.color).toLowerCase() ? "var(--ink)" : "transparent"};
           border-width:${c.toLowerCase() === (m.color ?? stage.color).toLowerCase() ? 2 : 1}px"></button>`).join("")}
