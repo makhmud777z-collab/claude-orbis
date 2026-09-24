@@ -896,6 +896,8 @@ export const S = {
       "подразделения, руководители, кто кому подчиняется",
       "bo‘limlar, rahbarlar, kim kimga bo‘ysunadi",
     ),
+    copyInviteLink: loc("Скопировать ссылку", "Havolani nusxalash"),
+    linkCopied: loc("Скопировано", "Nusxalandi"),
   },
 
   adminLock: {

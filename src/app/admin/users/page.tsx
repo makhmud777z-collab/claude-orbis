@@ -62,6 +62,7 @@ export default async function AdminUsersPage({
       branchLabel: branch ? t(ref(CITY_LABEL, branch.city)) : "—",
       joinedAt: f.date(u.joinedAt),
       isLastOwner: u.role === "owner" && owners.length === 1,
+      inviteUrl: u.inviteToken ? `/invite/${u.inviteToken}` : null,
     };
   });
 

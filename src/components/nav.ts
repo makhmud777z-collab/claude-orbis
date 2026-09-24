@@ -76,7 +76,6 @@ export const NAV: NavEntry[] = [
     icon: IconTeam, group: "admin", module: "team",
     children: [
       { href: "/team", label: loc("Сотрудники", "Xodimlar"), module: "team" },
-      { href: "/team/structure", label: loc("Структура компании", "Kompaniya tuzilmasi"), module: "structure" },
       { href: "/team/reports", label: loc("Отчётность", "Hisobot"), module: "staffReports" },
     ],
   },

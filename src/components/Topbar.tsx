@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { switchLocale, switchTheme } from "@/app/actions";
-import { IconChevron, IconLock, IconMoon, IconSearch, IconSun } from "./icons";
+import { logoutAction, switchLocale, switchTheme } from "@/app/actions";
+import { IconChevron, IconLock, IconLogout, IconMoon, IconSearch, IconSun } from "./icons";
 import { Notifications, type NoticeItem } from "./Notifications";
 import { Avatar } from "./ui";
 import { MobileNav } from "./MobileNav";
@@ -31,6 +31,7 @@ export function Topbar({
   theme,
   canAdmin,
   notices,
+  showLogout,
 }: {
   user: User;
   roleLabel: Loc;
@@ -43,6 +44,8 @@ export function Topbar({
   canAdmin: boolean;
   /** то, что требует внимания сегодня: просроченные сроки и задачи */
   notices: NoticeItem[];
+  /** выход виден только в реальном агентстве — в демо это некому показывать */
+  showLogout: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -194,6 +197,17 @@ export function Topbar({
               >
                 <IconLock size={14} /> {t(S.admin.title)}
               </Link>
+            ) : null}
+
+            {showLogout ? (
+              <form action={logoutAction}>
+                <button
+                  className="t-caption flex w-full items-center gap-2 rounded-[8px] px-2 py-2 text-ink-muted transition-colors hover:bg-surface-1 hover:text-ink"
+                  style={{ background: "none", border: 0, textAlign: "left", cursor: "pointer" }}
+                >
+                  <IconLogout size={14} /> {t({ ru: "Выйти", uz: "Chiqish" })}
+                </button>
+              </form>
             ) : null}
           </div>
         ) : null}

@@ -38,6 +38,12 @@ export interface Tenant {
   /** код входа в «Администрирование»: настройки портала закрыты от сотрудников */
   adminPasscode: string;
   createdAt: string;
+  /**
+   * "seed" (или не указано) — демо-агентство из моков: вход без пароля,
+   * переключатель ролей открыт всем. "signup" — реальное агентство,
+   * созданное через форму регистрации: без входа доступа в портал нет.
+   */
+  source?: "seed" | "signup";
 }
 
 export interface Branch {
@@ -74,6 +80,13 @@ export interface User {
   lastActiveAt: string;
   /** дата приёма на работу */
   joinedAt: string;
+  /** логин для входа в портал: свой у каждого сотрудника, уникален в рамках агентства */
+  username?: string;
+  /** хэш пароля (scrypt); пусто, пока сотрудник не принял приглашение */
+  passwordHash?: string | null;
+  /** одноразовая ссылка-приглашение: /invite/{token} */
+  inviteToken?: string | null;
+  inviteExpiresAt?: string | null;
 }
 
 /* ── Студенты ────────────────────────────────────────────────── */

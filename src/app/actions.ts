@@ -10,6 +10,9 @@ import type { CalendarEvent, Lead, Role, StudentDocument, TimelineEvent } from "
 import { checklistKey, DOCUMENT_CHECKLIST } from "@/lib/labels";
 import { ADMIN_COOKIE, adminUnlocked, passcodeMatches } from "@/lib/admin-lock";
 import { getSession } from "@/lib/session";
+import { signSession } from "@/lib/auth";
+import { acceptInvite, authenticate, createTenant, inviteEmployee } from "@/lib/onboarding";
+import { validateSlug } from "@/lib/tenants";
 import {
   NO_STUDENT,
   parseShortlist,
@@ -34,8 +37,76 @@ const TIMELINE_TITLE: Partial<Record<TimelineEvent["kind"], { ru: string; uz: st
 export async function switchUser(formData: FormData) {
   const userId = String(formData.get("userId") ?? "");
   const store = await cookies();
-  store.set("orbis_user", userId, { path: "/", maxAge: 60 * 60 * 24 * 30 });
+  store.set("orbis_user", signSession(userId), { path: "/", maxAge: 60 * 60 * 24 * 30 });
   revalidatePath("/", "layout");
+}
+
+/* ── регистрация агентства, приглашения, вход ───────────────────
+ * Реальный бэкенд поверх той же модели: новое агентство получает
+ * владельца с полными правами, владелец приглашает сотрудников с ролью
+ * по умолчанию, сотрудник входит под своим логином и паролем. Демо-
+ * агентства (переключатель выше) эта ветка не трогает.
+ */
+
+export async function signupAction(formData: FormData) {
+  const agencyName = String(formData.get("agencyName") ?? "").trim();
+  const slug = String(formData.get("slug") ?? "").trim().toLowerCase();
+  const adminName = String(formData.get("adminName") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+
+  const back = (e: string) =>
+    redirect(
+      `/signup?e=${e}&agencyName=${encodeURIComponent(agencyName)}&slug=${encodeURIComponent(slug)}&adminName=${encodeURIComponent(adminName)}&email=${encodeURIComponent(email)}`,
+    );
+
+  if (!agencyName || !adminName || !email) return back("fields");
+  if (password.length < 8) return back("password");
+  const slugCheck = validateSlug(slug);
+  if (!slugCheck.ok) return back("slug");
+
+  const { tenant, user } = createTenant({ agencyName, slug, adminName, email, password });
+
+  const store = await cookies();
+  store.set("orbis_tenant", tenant.slug, { path: "/", maxAge: 60 * 60 * 24 * 365 });
+  store.set("orbis_user", signSession(user.id), { path: "/", maxAge: 60 * 60 * 24 * 30 });
+  // Код входа в «Администрирование» — случайный (не «7777», как у демо) и
+  // больше нигде не показывается: без этого экрана владелец навсегда
+  // остаётся без доступа к своим же настройкам портала.
+  redirect(`/signup/welcome?code=${tenant.adminPasscode}`);
+}
+
+export async function loginAction(formData: FormData) {
+  const session = await getSession();
+  const username = String(formData.get("username") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+
+  const user = authenticate({ tenantId: session.tenant.id, username, password });
+  if (!user) redirect("/login?e=1");
+
+  const store = await cookies();
+  store.set("orbis_user", signSession(user.id), { path: "/", maxAge: 60 * 60 * 24 * 30 });
+  redirect("/");
+}
+
+export async function logoutAction() {
+  const store = await cookies();
+  store.delete("orbis_user");
+  redirect("/login");
+}
+
+export async function acceptInviteAction(formData: FormData) {
+  const token = String(formData.get("token") ?? "");
+  const password = String(formData.get("password") ?? "");
+  if (password.length < 8) redirect(`/invite/${token}?e=1`);
+
+  const result = acceptInvite(token, password);
+  if (!result) redirect(`/invite/${token}?e=1`);
+
+  const store = await cookies();
+  store.set("orbis_tenant", result.tenant.slug, { path: "/", maxAge: 60 * 60 * 24 * 365 });
+  store.set("orbis_user", signSession(result.user.id), { path: "/", maxAge: 60 * 60 * 24 * 30 });
+  redirect("/");
 }
 
 export async function switchLocale(formData: FormData) {
@@ -280,14 +351,18 @@ export async function inviteUserAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   if (!name || !email) return;
 
-  db.inviteUser({
+  const input = {
     tenantId: session.tenant.id,
     name,
     email,
     title: String(formData.get("title") ?? "").trim() || name,
     role: (String(formData.get("role") ?? "sales_manager") as Role),
     branchId: String(formData.get("branchId") ?? "") || session.user.branchId,
-  });
+  };
+  // Реальное агентство: сотрудник получает логин и ссылку-приглашение,
+  // запись переживает перезапуск сервера. Демо — как раньше, только в памяти.
+  if (session.tenant.source === "signup") inviteEmployee(input);
+  else db.inviteUser(input);
   revalidatePath("/admin/users");
   revalidatePath("/team");
 }

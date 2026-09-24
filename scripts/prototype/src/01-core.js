@@ -141,7 +141,6 @@ const NAV = [
     key: "team", href: "team", label: loc("Сотрудники", "Xodimlar"), group: "admin", icon: "people",
     children: [
       { m: "team", href: "team", label: loc("Сотрудники", "Xodimlar") },
-      { m: "structure", href: "structure", label: loc("Структура компании", "Kompaniya tuzilmasi") },
       { m: "staffReports", href: "staffreports", label: loc("Отчётность", "Hisobot") },
     ],
   },

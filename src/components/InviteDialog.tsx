@@ -25,7 +25,10 @@ export function InviteDialog({
 }) {
   const t = translator(locale);
   const [open, setOpen] = useState(false);
-  const [role, setRole] = useState(roles[0]?.value ?? "sales_manager");
+  // Владельца и директора приглашают по имени, не по кнопке «Пригласить» —
+  // роль по умолчанию должна быть рядовой, а не первой в списке (там владелец).
+  const defaultRole = roles.find((r) => r.value === "sales_manager")?.value ?? roles[0]?.value ?? "sales_manager";
+  const [role, setRole] = useState(defaultRole);
   const [branch, setBranch] = useState(defaultBranchId);
 
   return (

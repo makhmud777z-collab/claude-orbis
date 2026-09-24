@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { AdminLock } from "@/components/AdminLock";
 import { moduleGate } from "@/components/guard";
 import { adminUnlocked } from "@/lib/admin-lock";
@@ -18,7 +19,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (gate) return gate;
 
   if (!(await adminUnlocked(session.tenant.id))) {
-    return <AdminLock locale={session.locale} next="/admin" failed={false} />;
+    // Код вводится один раз на сессию — после него человек должен попасть
+    // туда, куда шёл (например /admin/users), а не всегда на /admin.
+    const pathname = (await headers()).get("x-orbis-pathname") || "/admin";
+    return <AdminLock locale={session.locale} next={pathname} failed={false} />;
   }
   return <>{children}</>;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { setUserRoleAction, setUserStatusAction } from "@/app/actions";
 import { Select } from "./controls";
 import { Avatar, StatusDot } from "./ui";
@@ -20,6 +20,8 @@ export interface AdminUserRow {
   branchLabel: string;
   joinedAt: string;
   isLastOwner: boolean;
+  /** ссылка на /invite/{token} для приглашённого сотрудника: почты нет, копирует админ */
+  inviteUrl?: string | null;
 }
 
 const STATUS_DOT: Record<AdminUserRow["status"], string> = {
@@ -102,6 +104,9 @@ export function UsersAdmin({
                           : S.team.suspended,
                     )}
                   </span>
+                  {row.status === "invited" && row.inviteUrl ? (
+                    <CopyInviteLink url={row.inviteUrl} locale={locale} />
+                  ) : null}
                 </td>
                 <td className="px-5 py-3.5">
                   <div className="t-caption t-num whitespace-nowrap">{row.joinedAt}</div>
@@ -125,6 +130,32 @@ export function UsersAdmin({
         </table>
       </div>
     </div>
+  );
+}
+
+/** Почты нет — ссылку на /invite/{token} админ копирует и отправляет сам. */
+function CopyInviteLink({ url, locale }: { url: string; locale: Locale }) {
+  const t = translator(locale);
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}${url}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      /* буфер обмена недоступен (нет разрешения/протокола) — молча не показываем «скопировано» */
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      className="t-micro mt-1.5 block text-accent underline-offset-2 hover:underline"
+    >
+      {copied ? t(S.admin.linkCopied) : t(S.admin.copyInviteLink)}
+    </button>
   );
 }
 

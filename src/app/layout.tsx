@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import "./globals.css";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
@@ -15,6 +17,12 @@ import { noticesFor } from "@/lib/queries";
 import { getSession } from "@/lib/session";
 import { breakSeconds, openSession, sessionSeconds } from "@/lib/store";
 import { ROOT_DOMAIN } from "@/lib/tenants";
+
+/** /login, /signup, /invite/* показываются без обвязки портала: там ещё нет
+ * ни сотрудника, ни его меню — раньше эти роуты просто не существовали. */
+function isPublicAuthPath(pathname: string): boolean {
+  return pathname === "/login" || pathname.startsWith("/signup") || pathname.startsWith("/invite/");
+}
 
 const inter = Inter({
   subsets: ["latin", "cyrillic"],
@@ -41,6 +49,23 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const session = await getSession();
+  const pathname = (await headers()).get("x-orbis-pathname") ?? "";
+
+  if (isPublicAuthPath(pathname)) {
+    return (
+      <html lang={session.locale} data-theme={session.theme} className={inter.variable}>
+        <body className="grain min-h-screen bg-canvas text-ink antialiased">{children}</body>
+      </html>
+    );
+  }
+
+  // Демо-агентство остаётся витриной без входа; реальное — нет: не
+  // подтверждённая подписью кука отправляет на экран входа, а не тихо
+  // подставляет владельца, как для демо.
+  if (session.tenant.source === "signup" && !session.authenticated) {
+    redirect("/login");
+  }
+
   const host = session.host || `${session.tenant.slug}.${ROOT_DOMAIN}`;
   // Навигация = права роли ∩ модули версии продукта.
   const modules = openModules(session);
@@ -71,6 +96,7 @@ export default async function RootLayout({
             <Topbar
               user={session.user}
               roleLabel={roleLabel(session.role)}
+              showLogout={session.tenant.source === "signup"}
               canAdmin={modules.includes("admin")}
               notices={noticesFor(session).map((n) => ({
                 id: n.id,

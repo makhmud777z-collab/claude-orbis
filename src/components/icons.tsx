@@ -69,6 +69,9 @@ export const IconLock = (p: IconProps) => (
 export const IconUnlock = (p: IconProps) => (
   <Icon {...p}><rect x="4" y="10.5" width="16" height="10.5" rx="2.4" /><path d="M8 10.5V7.5a4 4 0 0 1 7.5-2" /><path d="M12 15v2" /></Icon>
 );
+export const IconLogout = (p: IconProps) => (
+  <Icon {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></Icon>
+);
 export const IconPin = (p: IconProps) => (
   <Icon {...p}><path d="M14.5 3.5 20.5 9.5" /><path d="M16.5 5.5 12 10l-4.5 1.5L5 14l5 5 2.5-2.5L14 12l4.5-4.5" /><path d="m5 19-2.5 2.5" /></Icon>
 );

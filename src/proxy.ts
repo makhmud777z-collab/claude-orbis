@@ -14,6 +14,7 @@ export function proxy(request: NextRequest) {
   const headers = new Headers(request.headers);
   headers.set("x-orbis-tenant", slug);
   headers.set("x-orbis-host", request.headers.get("host") ?? "");
+  headers.set("x-orbis-pathname", request.nextUrl.pathname);
 
   return NextResponse.next({ request: { headers } });
 }
