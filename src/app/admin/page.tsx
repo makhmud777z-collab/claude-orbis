@@ -6,7 +6,7 @@ import {
 } from "@/components/icons";
 import { translator, type Loc } from "@/lib/i18n";
 import { getSession } from "@/lib/session";
-import { channelsOf, pipelinesOf } from "@/lib/store";
+import { channelsOf, departmentsOf, pipelinesOf } from "@/lib/store";
 import { S } from "@/lib/strings";
 
 interface Item {
@@ -27,6 +27,7 @@ export default async function AdminHome() {
 
   const pipelines = [...pipelinesOf(tenant.id, "lead"), ...pipelinesOf(tenant.id, "deal")];
   const channels = channelsOf(tenant.id);
+  const departments = departmentsOf(tenant.id);
 
   const groups: { label: Loc; icon: typeof IconSettings; items: Item[] }[] = [
     {
@@ -59,6 +60,7 @@ export default async function AdminHome() {
       items: [
         { href: "/admin/users", title: S.admin.users, hint: S.admin.seats, value: `${tenant.seatsUsed} / ${tenant.seatsLimit}` },
         { href: "/admin/permissions", title: S.admin.permissions, hint: S.admin.permissionsHint, value: "—" },
+        { href: "/team/structure", title: S.admin.structure, hint: S.admin.structureHint, value: String(departments.length) },
       ],
     },
     {

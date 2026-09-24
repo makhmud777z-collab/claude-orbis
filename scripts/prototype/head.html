@@ -296,7 +296,10 @@
   .filter-bar {
     display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
     background: var(--surface-1); border: 1px solid var(--hairline);
-    border-radius: 100px; padding: 6px 8px 6px 14px; box-shadow: var(--shadow-card), var(--edge-top);
+    /* 100px «пилюля» ломает форму, когда строка переносится на вторую
+       строку (узкий экран): скругление начинает съедать середину и
+       рисует блик-«линию» по кривой. 18px остаётся мягким на любой высоте. */
+    border-radius: 18px; padding: 6px 8px 6px 14px; box-shadow: var(--shadow-card);
   }
   /* Поле не сжимается до нечитаемого огрызка: «Поиск и ф…» — это ошибка,
      а не компактность. Если места мало, строка переносится. */

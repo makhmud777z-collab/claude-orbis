@@ -176,12 +176,6 @@ function renderTopbar() {
 
     <span style="flex:1"></span>
 
-    <span style="display:flex;gap:2px;background:var(--surface-1);border-radius:100px;padding:2px">
-      ${[["ru", "RU"], ["uz", "UZ"]].map(([key, short]) => `<button class="t-micro" data-act="locale" data-value="${key}"
-        style="border:0;border-radius:100px;padding:6px 10px;cursor:pointer;
-        background:${S.locale === key ? "var(--surface-2)" : "transparent"};color:${S.locale === key ? "var(--ink)" : "var(--ink-faint)"}">${short}</button>`).join("")}
-    </span>
-
     ${w ? `<span class="workday live" data-pop="profile">
         <span class="live-dot"></span>
         <span class="clock" data-clock>${esc(clockText(sessionSeconds(w)))}</span>
@@ -223,6 +217,12 @@ function renderTopbar() {
         <span style="display:flex;gap:6px;margin-bottom:16px">
           ${[["light", "sun", loc("Светлая", "Yorug‘")], ["dark", "moon", loc("Тёмная", "Qorong‘i")]].map(([key, ic, label]) =>
             `<button class="btn ${S.theme === key ? "btn-primary" : "btn-secondary"}" style="flex:1" data-act="theme" data-value="${key}">${icon(ic, 14)} ${esc(t(label))}</button>`).join("")}
+        </span>
+
+        <span class="t-micro faint" style="display:block;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">${t(loc("Язык портала", "Portal tili"))}</span>
+        <span style="display:flex;gap:6px;margin-bottom:16px">
+          ${[["ru", loc("Русский", "Ruscha")], ["uz", loc("Oʻzbekcha", "Oʻzbekcha")]].map(([key, label]) =>
+            `<button class="btn ${S.locale === key ? "btn-primary" : "btn-secondary"}" style="flex:1" data-act="locale" data-value="${key}">${esc(t(label))}</button>`).join("")}
         </span>
 
         ${allow(user().role, "admin") ? `<a class="t-caption" href="#" data-go="admin"
@@ -638,7 +638,7 @@ function moveCard(entity, id, stageKey) {
 
 const ACTIONS = {
   menu: () => { S.menu = !S.menu; },
-  locale: (v) => { S.locale = v; S.popover = null; },
+  locale: (v) => { S.locale = v; },
   // Разделы раскрываются независимо: открытый CRM не закрывается от того,
   // что человек открыл «Задачи».
   section: (v) => {

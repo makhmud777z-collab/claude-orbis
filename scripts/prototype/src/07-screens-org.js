@@ -426,6 +426,9 @@ function screenAdmin() {
         hint: loc("мест по тарифу", "tarif bo‘yicha o‘rin"), value: `${tenant().seatsUsed} / ${tenant().seatsLimit}` },
       { go: "permissions", title: loc("Права доступа", "Kirish huquqlari"),
         hint: loc("матрица ролей и разделов", "rollar va bo‘limlar matritsasi"), value: "—" },
+      { go: "structure", title: loc("Оргструктура", "Tashkiliy tuzilma"),
+        hint: loc("подразделения, руководители, кто кому подчиняется", "bo‘limlar, rahbarlar, kim kimga bo‘ysunadi"),
+        value: String(allDepartments().length) },
     ] },
     { label: loc("Портал", "Portal"), icon: "gear", items: [
       { go: "portal", title: loc("Настройки портала", "Portal sozlamalari"),

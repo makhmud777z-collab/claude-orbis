@@ -57,6 +57,8 @@ export const S = {
     ),
     hideSection: loc("Скрыть раздел", "Bo‘limni yashirish"),
     showSection: loc("Показать раздел", "Bo‘limni ko‘rsatish"),
+    hideItem: loc("Скрыть пункт", "Bandni yashirish"),
+    showItem: loc("Показать пункт", "Bandni ko‘rsatish"),
     resetOrder: loc("Сбросить порядок", "Tartibni tiklash"),
   },
 
@@ -889,6 +891,11 @@ export const S = {
     groupCrm: loc("CRM", "CRM"),
     groupPeople: loc("Люди и доступы", "Odamlar va huquqlar"),
     groupPortal: loc("Портал", "Portal"),
+    structure: loc("Оргструктура", "Tashkiliy tuzilma"),
+    structureHint: loc(
+      "подразделения, руководители, кто кому подчиняется",
+      "bo‘limlar, rahbarlar, kim kimga bo‘ysunadi",
+    ),
   },
 
   adminLock: {

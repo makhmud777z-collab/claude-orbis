@@ -189,6 +189,7 @@ export function Sidebar({
             }
             pinned={pinned}
             onPin={togglePin}
+            hidden={hidden}
           />
         ))}
       </nav>
@@ -263,46 +264,76 @@ function MenuCustomizer({
           const Icon = entry.icon;
           const isHidden = hidden.includes(entry.key);
           return (
-            <div
-              key={entry.key}
-              className="flex items-center gap-2 rounded-[10px] px-2 py-1.5"
-              style={{ opacity: isHidden ? 0.5 : 1 }}
-            >
-              <span className="flex h-7 w-7 flex-none items-center justify-center rounded-[8px] bg-surface-2 text-ink-muted">
-                <Icon size={14} />
-              </span>
-              <span className="t-caption min-w-0 flex-1 truncate">{t(entry.label)}</span>
-              <div className="flex flex-none items-center gap-0.5">
-                <button
-                  type="button"
-                  onClick={() => onMove(entry.key, -1)}
-                  disabled={i === 0}
-                  aria-label={t(S.common.moveUp)}
-                  className="btn-icon h-6 w-6 disabled:opacity-30"
-                >
-                  <IconChevron size={12} style={{ transform: "rotate(180deg)" }} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onMove(entry.key, 1)}
-                  disabled={i === entries.length - 1}
-                  aria-label={t(S.common.moveDown)}
-                  className="btn-icon h-6 w-6 disabled:opacity-30"
-                >
-                  <IconChevron size={12} />
-                </button>
-                <Tooltip text={t(isHidden ? S.nav.showSection : S.nav.hideSection)}>
+            <div key={entry.key}>
+              <div
+                className="flex items-center gap-2 rounded-[10px] px-2 py-1.5"
+                style={{ opacity: isHidden ? 0.5 : 1 }}
+              >
+                <span className="flex h-7 w-7 flex-none items-center justify-center rounded-[8px] bg-surface-2 text-ink-muted">
+                  <Icon size={14} />
+                </span>
+                <span className="t-caption min-w-0 flex-1 truncate">{t(entry.label)}</span>
+                <div className="flex flex-none items-center gap-0.5">
                   <button
                     type="button"
-                    onClick={() => onToggleHidden(entry.key)}
-                    aria-label={t(isHidden ? S.nav.showSection : S.nav.hideSection)}
-                    className="btn-icon h-6 w-6"
-                    style={isHidden ? { color: "var(--color-accent)" } : undefined}
+                    onClick={() => onMove(entry.key, -1)}
+                    disabled={i === 0}
+                    aria-label={t(S.common.moveUp)}
+                    className="btn-icon h-6 w-6 disabled:opacity-30"
                   >
-                    {isHidden ? <IconEyeOff size={13} /> : <IconEye size={13} />}
+                    <IconChevron size={12} style={{ transform: "rotate(180deg)" }} />
                   </button>
-                </Tooltip>
+                  <button
+                    type="button"
+                    onClick={() => onMove(entry.key, 1)}
+                    disabled={i === entries.length - 1}
+                    aria-label={t(S.common.moveDown)}
+                    className="btn-icon h-6 w-6 disabled:opacity-30"
+                  >
+                    <IconChevron size={12} />
+                  </button>
+                  <Tooltip text={t(isHidden ? S.nav.showSection : S.nav.hideSection)}>
+                    <button
+                      type="button"
+                      onClick={() => onToggleHidden(entry.key)}
+                      aria-label={t(isHidden ? S.nav.showSection : S.nav.hideSection)}
+                      className="btn-icon h-6 w-6"
+                      style={isHidden ? { color: "var(--color-accent)" } : undefined}
+                    >
+                      {isHidden ? <IconEyeOff size={13} /> : <IconEye size={13} />}
+                    </button>
+                  </Tooltip>
+                </div>
               </div>
+              {/* У раздела с подпунктами (напр. «Сотрудники» → «Отчётность») можно
+                  скрыть отдельный подпункт, не трогая весь раздел. */}
+              {entry.children && entry.children.length > 1 ? (
+                <div className="ml-9 space-y-0.5 border-l border-hairline-soft pl-2">
+                  {entry.children.map((child) => {
+                    const childHidden = hidden.includes(child.href);
+                    return (
+                      <div
+                        key={child.href}
+                        className="flex items-center gap-2 rounded-[8px] px-2 py-1"
+                        style={{ opacity: childHidden ? 0.5 : 1 }}
+                      >
+                        <span className="t-micro min-w-0 flex-1 truncate text-ink-faint">{t(child.label)}</span>
+                        <Tooltip text={t(childHidden ? S.nav.showItem : S.nav.hideItem)}>
+                          <button
+                            type="button"
+                            onClick={() => onToggleHidden(child.href)}
+                            aria-label={t(childHidden ? S.nav.showItem : S.nav.hideItem)}
+                            className="btn-icon h-6 w-6"
+                            style={childHidden ? { color: "var(--color-accent)" } : undefined}
+                          >
+                            {childHidden ? <IconEyeOff size={12} /> : <IconEye size={12} />}
+                          </button>
+                        </Tooltip>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
           );
         })}
@@ -395,6 +426,7 @@ function NavSection({
   onToggle,
   pinned,
   onPin,
+  hidden,
 }: {
   entry: NavEntry;
   pathname: string;
@@ -404,10 +436,11 @@ function NavSection({
   onToggle: () => void;
   pinned: string[];
   onPin: (href: string) => void;
+  hidden: string[];
 }) {
   const t = translator(locale);
   const Icon = entry.icon;
-  const children = entry.children ?? [];
+  const children = (entry.children ?? []).filter((c) => !hidden.includes(c.href));
   const inside = children.some((c) => isActiveHref(pathname, c.href));
   const active = isActiveHref(pathname, entry.href) || inside;
 
