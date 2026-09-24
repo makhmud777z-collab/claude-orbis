@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { signSession } from "./_sign.mjs";
 
 const BASE = process.env.QA_BASE_URL ?? "http://localhost:3000";
 
@@ -13,9 +14,10 @@ const EXPECT = {
     role: "Владелец",
     must: ["/", "/crm/leads", "/crm/deals", "/crm/contacts",
       "/tasks", "/tasks/projects", "/documents", "/deadlines", "/calendar", "/universities",
-      "/finance", "/team", "/team/structure", "/team/reports", "/admin"],
-    // настройки живут только внутри «Администрирования», отдельных пунктов нет
-    mustNot: ["/tasks/templates", "/crm/channels", "/crm/settings", "/crm/pipelines", "/settings"],
+      "/finance", "/team", "/team/reports", "/admin"],
+    // настройки живут только внутри «Администрирования», отдельных пунктов нет;
+    // «Структура компании» тоже переехала туда — в меню «Сотрудники» её больше нет
+    mustNot: ["/tasks/templates", "/crm/channels", "/crm/settings", "/crm/pipelines", "/settings", "/team/structure"],
   },
   u_dilnoza: {
     role: "Директор",
@@ -70,7 +72,7 @@ for (const [userId, exp] of Object.entries(EXPECT)) {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 1200 } });
   await ctx.addCookies([
     { name: "orbis_tenant", value: "seoulway", domain: "localhost", path: "/" },
-    { name: "orbis_user", value: userId, domain: "localhost", path: "/" },
+    { name: "orbis_user", value: signSession(userId), domain: "localhost", path: "/" },
     { name: "orbis_locale", value: "ru", domain: "localhost", path: "/" },
   ]);
   const page = await ctx.newPage();

@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { signSession } from "./_sign.mjs";
 
 const BASE = process.env.QA_BASE_URL ?? "http://localhost:3000";
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
@@ -196,7 +197,7 @@ await page.keyboard.press("Escape");
 const work = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
 await work.addCookies([
   { name: "orbis_tenant", value: "seoulway", domain: "localhost", path: "/" },
-  { name: "orbis_user", value: "u_dilnoza", domain: "localhost", path: "/" },
+  { name: "orbis_user", value: signSession("u_dilnoza"), domain: "localhost", path: "/" },
 ]);
 const workPage = await work.newPage();
 await workPage.goto(`${BASE}/`, { waitUntil: "networkidle" });
@@ -370,7 +371,7 @@ check(
 const own = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
 await own.addCookies([
   { name: "orbis_tenant", value: "seoulway", domain: "localhost", path: "/" },
-  { name: "orbis_user", value: "u_kamila", domain: "localhost", path: "/" },
+  { name: "orbis_user", value: signSession("u_kamila"), domain: "localhost", path: "/" },
 ]);
 const ownPage = await own.newPage();
 await ownPage.goto(`${BASE}/`, { waitUntil: "networkidle" });
