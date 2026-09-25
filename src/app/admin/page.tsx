@@ -6,7 +6,7 @@ import {
 } from "@/components/icons";
 import { translator, type Loc } from "@/lib/i18n";
 import { getSession } from "@/lib/session";
-import { channelsOf, departmentsOf, pipelinesOf } from "@/lib/store";
+import { channelsOf, customFieldsOf, departmentsOf, pipelinesOf } from "@/lib/store";
 import { S } from "@/lib/strings";
 
 interface Item {
@@ -51,6 +51,12 @@ export default async function AdminHome() {
           title: S.pipelines.cardView,
           hint: S.pipelines.cardViewHint,
           value: "—",
+        },
+        {
+          href: "/admin/fields",
+          title: S.customFields.title,
+          hint: S.customFields.hubHint,
+          value: String(customFieldsOf(tenant.id).length),
         },
       ],
     },

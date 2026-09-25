@@ -13,8 +13,8 @@ import { TENANTS } from "./tenants";
 import { loc, type Loc } from "./i18n";
 import type { Action, Module } from "./rbac";
 import type {
-  CalendarEvent, Channel, Deal, Department, EventKind, Lead, Pipeline, Project, Role, Stage,
-  Student, StudentDocument, Task, Tenant, TimelineEvent, User, WorkSession,
+  CalendarEvent, Channel, CustomField, Deal, Department, EventKind, Lead, Pipeline, Project, Role,
+  Stage, Student, StudentDocument, Task, Tenant, TimelineEvent, User, WorkSession,
 } from "./types";
 
 /**
@@ -48,6 +48,8 @@ interface State {
   filters: Record<string, SavedFilter[]>;
   /** код входа в «Администрирование», если агентство его сменило */
   passcodes: Record<string, string>;
+  /** значения пользовательских полей: studentId → (fieldId → значение) */
+  customValues: Record<string, Record<string, string>>;
   channels: Channel[];
   documents: StudentDocument[];
   seq: number;
@@ -59,7 +61,7 @@ interface State {
  * кода, и новое поле оказалось бы undefined — поэтому состояние с чужой
  * версией пересоздаётся целиком.
  */
-const STATE_VERSION = 6;
+const STATE_VERSION = 7;
 
 const globalStore = globalThis as unknown as { __orbisStore?: State };
 
@@ -80,6 +82,7 @@ function createState(): State {
     cardFields: {},
     filters: {},
     passcodes: {},
+    customValues: {},
     channels: CHANNELS.map((x) => ({ ...x })),
     documents: DOCUMENTS.map((x) => ({ ...x })),
     seq: 1000,
@@ -819,6 +822,67 @@ export function setUserAccess(userId: string, hiddenModules: string[]): User | n
   if (user.role === "owner") return user;
   user.restrictedModules = hiddenModules.length ? [...new Set(hiddenModules)] : undefined;
   return user;
+}
+
+/* ── пользовательские поля агентства ─────────────────────────── */
+
+/** Определения полей живут на арендаторе — свои у каждого агентства. */
+export const customFieldsOf = (tenantId: string): CustomField[] =>
+  TENANTS.find((x) => x.id === tenantId)?.customFields ?? [];
+
+/**
+ * Новое поле карточки контакта. Возвращаем арендатора, чтобы server action
+ * сохранил его в базу для реальных агентств (в store БД тащить нельзя).
+ */
+export function addCustomField(
+  tenantId: string,
+  input: { id: string; label: Loc; type: CustomField["type"]; options?: string[] },
+): Tenant | null {
+  const tenant = TENANTS.find((x) => x.id === tenantId);
+  if (!tenant) return null;
+  const field: CustomField = {
+    id: input.id,
+    label: input.label,
+    type: input.type,
+    options: input.type === "select" ? (input.options ?? []).filter(Boolean) : undefined,
+  };
+  tenant.customFields = [...(tenant.customFields ?? []), field];
+  return tenant;
+}
+
+export function updateCustomField(
+  tenantId: string,
+  fieldId: string,
+  patch: { label?: Loc; options?: string[] },
+): Tenant | null {
+  const tenant = TENANTS.find((x) => x.id === tenantId);
+  const field = tenant?.customFields?.find((f) => f.id === fieldId);
+  if (!tenant || !field) return null;
+  if (patch.label) field.label = patch.label;
+  if (patch.options && field.type === "select") field.options = patch.options.filter(Boolean);
+  return tenant;
+}
+
+export function removeCustomField(tenantId: string, fieldId: string): Tenant | null {
+  const tenant = TENANTS.find((x) => x.id === tenantId);
+  if (!tenant?.customFields) return tenant ?? null;
+  tenant.customFields = tenant.customFields.filter((f) => f.id !== fieldId);
+  // Значения удалённого поля больше не нужны — чистим, чтобы не копились.
+  for (const values of Object.values(state.customValues)) delete values[fieldId];
+  return tenant;
+}
+
+/** Значения полей у конкретного контакта. */
+export const customValuesOf = (studentId: string): Record<string, string> =>
+  state.customValues[studentId] ?? {};
+
+export function setCustomValues(studentId: string, values: Record<string, string>) {
+  const clean: Record<string, string> = {};
+  for (const [key, val] of Object.entries(values)) {
+    if (val && val.trim()) clean[key] = val.trim();
+  }
+  if (Object.keys(clean).length) state.customValues[studentId] = clean;
+  else delete state.customValues[studentId];
 }
 
 /* ── задачи ──────────────────────────────────────────────────── */

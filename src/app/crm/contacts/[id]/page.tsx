@@ -33,7 +33,10 @@ import { matchStudent, verdictDot, verdictLabel } from "@/lib/matching";
 import { scopedContacts, scopedDeals, scopedTasks } from "@/lib/queries";
 import { allow } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
-import { documentsOfStudent, dossierProgress, pipelineById, stageOf } from "@/lib/store";
+import {
+  customFieldsOf, customValuesOf, documentsOfStudent, dossierProgress, pipelineById, stageOf,
+} from "@/lib/store";
+import { CustomFieldsCard, type ContactCustomField } from "@/components/CustomFieldsCard";
 import { P, S } from "@/lib/strings";
 import { timelineItems } from "@/lib/timeline-view";
 
@@ -60,6 +63,16 @@ export default async function ContactPage({
 
   const canEdit = allow(session.tenant.id, session.role, "contacts", "edit");
   const owner = userById(student.ownerId);
+
+  // Пользовательские поля агентства + значения этого контакта.
+  const customValues = customValuesOf(student.id);
+  const customFields: ContactCustomField[] = customFieldsOf(session.tenant.id).map((cf) => ({
+    id: cf.id,
+    label: t(cf.label),
+    type: cf.type,
+    options: cf.options ?? [],
+    value: customValues[cf.id] ?? "",
+  }));
   const apps = scopedDeals(session).filter((d) => d.studentId === student.id);
   const docs = documentsOfStudent(student.id);
   const dossier = dossierProgress(student.id);
@@ -144,6 +157,13 @@ export default async function ContactPage({
                 display: student.passport ?? "—",
               },
             ]}
+          />
+
+          <CustomFieldsCard
+            studentId={student.id}
+            fields={customFields}
+            locale={session.locale}
+            canEdit={canEdit}
           />
 
           <div className="card p-5">

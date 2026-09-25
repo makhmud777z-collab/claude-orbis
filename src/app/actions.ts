@@ -10,7 +10,7 @@ import type { CalendarEvent, Lead, Role, StudentDocument, TimelineEvent } from "
 import { checklistKey, DOCUMENT_CHECKLIST } from "@/lib/labels";
 import { ADMIN_COOKIE, adminUnlocked, passcodeMatches } from "@/lib/admin-lock";
 import { getSession } from "@/lib/session";
-import { signSession } from "@/lib/auth";
+import { newId, signSession } from "@/lib/auth";
 import { saveTenant, saveUser } from "@/lib/db";
 import { acceptInvite, authenticate, createTenant, inviteEmployee } from "@/lib/onboarding";
 import { validateSlug } from "@/lib/tenants";
@@ -414,6 +414,62 @@ export async function updateAgencyAction(formData: FormData) {
 
   revalidatePath("/admin/portal");
   revalidatePath("/", "layout");
+}
+
+/* ── пользовательские поля агентства ─────────────────────────── */
+
+const CUSTOM_TYPES = new Set(["text", "number", "date", "select"]);
+
+/** Агентство заводит своё поле карточки контакта — без разработчика. */
+export async function addCustomFieldAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "admin", "edit")) return;
+
+  const ru = String(formData.get("labelRu") ?? "").trim();
+  const uz = String(formData.get("labelUz") ?? "").trim() || ru;
+  const typeRaw = String(formData.get("type") ?? "text");
+  if (!ru || !CUSTOM_TYPES.has(typeRaw)) return;
+  const type = typeRaw as "text" | "number" | "date" | "select";
+
+  // Варианты списка — по строке на вариант.
+  const options = String(formData.get("options") ?? "")
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const updated = db.addCustomField(session.tenant.id, {
+    id: newId("cf"),
+    label: loc(ru, uz),
+    type,
+    options,
+  });
+  if (updated?.source === "signup") saveTenant(updated);
+  revalidatePath("/admin/fields");
+  revalidatePath("/crm/contacts", "layout");
+}
+
+export async function removeCustomFieldAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "admin", "edit")) return;
+  const updated = db.removeCustomField(session.tenant.id, String(formData.get("fieldId") ?? ""));
+  if (updated?.source === "signup") saveTenant(updated);
+  revalidatePath("/admin/fields");
+  revalidatePath("/crm/contacts", "layout");
+}
+
+/** Значения пользовательских полей у одного контакта (name="cf_<fieldId>"). */
+export async function setCustomValuesAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "contacts", "edit")) return;
+  const studentId = String(formData.get("studentId") ?? "");
+  if (!studentId) return;
+
+  const values: Record<string, string> = {};
+  for (const field of db.customFieldsOf(session.tenant.id)) {
+    values[field.id] = String(formData.get(`cf_${field.id}`) ?? "");
+  }
+  db.setCustomValues(studentId, values);
+  revalidatePath(`/crm/contacts/${studentId}`);
 }
 
 /* ── каналы продаж ───────────────────────────────────────────── */

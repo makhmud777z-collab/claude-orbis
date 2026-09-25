@@ -903,6 +903,30 @@ export const S = {
     linkCopied: loc("Скопировано", "Nusxalandi"),
   },
 
+  customFields: {
+    title: loc("Пользовательские поля", "Maxsus maydonlar"),
+    subtitle: loc(
+      "Свои поля карточки контакта — заводите сами, без разработчика. Появятся в карточке каждого контакта.",
+      "Kontakt kartasining o‘z maydonlari — dasturchisiz o‘zingiz qo‘shasiz.",
+    ),
+    hubHint: loc("свои поля контактов", "kontaktlarning o‘z maydonlari"),
+    add: loc("Добавить поле", "Maydon qo‘shish"),
+    newField: loc("Новое поле", "Yangi maydon"),
+    nameRu: loc("Название", "Nomi"),
+    nameUz: loc("Название · UZ", "Nomi · UZ"),
+    type: loc("Тип", "Turi"),
+    typeText: loc("Текст", "Matn"),
+    typeNumber: loc("Число", "Raqam"),
+    typeDate: loc("Дата", "Sana"),
+    typeSelect: loc("Список", "Ro‘yxat"),
+    options: loc("Варианты списка", "Ro‘yxat variantlari"),
+    optionsHint: loc("По одному варианту в строке", "Har qatorda bitta variant"),
+    remove: loc("Удалить поле", "Maydonni o‘chirish"),
+    empty: loc("Пока нет своих полей. Добавьте первое — оно появится в каждой карточке контакта.", "Hozircha o‘z maydonlari yo‘q."),
+    cardTitle: loc("Доп. поля", "Qo‘shimcha maydonlar"),
+    manageHint: loc("Поля настраиваются в «Администрирование → Пользовательские поля».", "Maydonlar «Boshqaruv»da sozlanadi."),
+  },
+
   access: {
     title: loc("Доступ к разделам", "Bo‘limlarga kirish"),
     manage: loc("Настроить доступ", "Kirishni sozlash"),
