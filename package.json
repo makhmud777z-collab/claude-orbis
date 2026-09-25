@@ -11,6 +11,7 @@
     "qa": "npx tsx scripts/qa/integrity.ts && node scripts/qa/i18n.mjs && node scripts/qa/crawl.mjs && node scripts/qa/roles.mjs && node scripts/qa/flows.mjs && node scripts/qa/layout.mjs && node scripts/qa/spacing.mjs && node scripts/qa/controls.mjs && node scripts/qa/plural.mjs && node scripts/qa/mobile-nav.mjs"
   },
   "dependencies": {
+    "framer-motion": "^13.4.4",
     "next": "^16.3.5",
     "react": "19.1.1",
     "react-dom": "19.1.1"

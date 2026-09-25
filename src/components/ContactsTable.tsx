@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Avatar, Chip, StatusDot } from "./ui";
 import { formatters } from "@/lib/format";
 import { translator, type Locale } from "@/lib/i18n";
 import { CITY_LABEL, DEGREE_LABEL, FIELD_LABEL, ref, SOURCE_LABEL, STUDENT_STATUS } from "@/lib/labels";
 import { P, S } from "@/lib/strings";
 import type { Student } from "@/lib/types";
+import { containerVariants, itemVariants } from "@/lib/animations";
 
 export interface ContactRow extends Student {
   ownerName: string;
@@ -47,12 +49,13 @@ export function ContactsTable({ rows, locale }: { rows: ContactRow[]; locale: Lo
               ))}
             </tr>
           </thead>
-          <tbody>
+          <motion.tbody initial="hidden" animate="visible" variants={containerVariants}>
             {rows.map((s) => {
               const st = STUDENT_STATUS[s.status];
               return (
-                <tr
+                <motion.tr
                   key={s.id}
+                  variants={itemVariants}
                   className="border-b border-hairline-soft transition-colors last:border-b-0 hover:bg-surface-2"
                 >
                   <td className="px-4 py-3.5">
@@ -111,10 +114,10 @@ export function ContactsTable({ rows, locale }: { rows: ContactRow[]; locale: Lo
                       {t(st.label)}
                     </span>
                   </td>
-                </tr>
+                </motion.tr>
               );
             })}
-          </tbody>
+          </motion.tbody>
         </table>
       </div>
     </div>

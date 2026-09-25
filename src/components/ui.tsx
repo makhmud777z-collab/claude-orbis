@@ -1,7 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 import { initials } from "@/lib/format";
 import { IconChevronRight } from "./icons";
+import { slideDownVariants, slideUpVariants, fadeInVariants } from "@/lib/animations";
 
 /**
  * Обратный путь + хлебные крошки одним элементом.
@@ -21,7 +25,7 @@ export function Crumbs({
   current?: string;
 }) {
   return (
-    <nav className="t-caption mb-4 flex items-center gap-1.5 text-ink-faint">
+    <motion.nav className="t-caption mb-4 flex items-center gap-1.5 text-ink-faint" initial="hidden" animate="visible" variants={slideDownVariants}>
       <Link
         href={back}
         className="-ml-2 inline-flex items-center gap-1 rounded-full px-2 py-1 font-medium text-ink-muted transition-colors hover:bg-surface-1 hover:text-ink"
@@ -35,7 +39,7 @@ export function Crumbs({
           <span className="text-ink-muted">{current}</span>
         </>
       ) : null}
-    </nav>
+    </motion.nav>
   );
 }
 
@@ -49,7 +53,7 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 pb-6">
+    <motion.header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 pb-6" initial="hidden" animate="visible" variants={slideDownVariants}>
       <div className="min-w-0">
         <h1 className="t-display-md">{title}</h1>
         {meta ? (
@@ -59,7 +63,7 @@ export function PageHeader({
         ) : null}
       </div>
       {actions ? <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div> : null}
-    </header>
+    </motion.header>
   );
 }
 
@@ -193,10 +197,10 @@ export function SectionTitle({
 
 export function EmptyState({ title, hint }: { title: string; hint?: string }) {
   return (
-    <div className="card flex flex-col items-center justify-center px-6 py-16 text-center">
-      <div className="t-body-lg">{title}</div>
-      {hint ? <div className="t-caption mt-2 max-w-sm text-ink-muted">{hint}</div> : null}
-    </div>
+    <motion.div className="card flex flex-col items-center justify-center px-6 py-16 text-center" initial="hidden" animate="visible" variants={fadeInVariants}>
+      <motion.div className="t-body-lg" variants={slideUpVariants}>{title}</motion.div>
+      {hint ? <motion.div className="t-caption mt-2 max-w-sm text-ink-muted" variants={slideUpVariants}>{hint}</motion.div> : null}
+    </motion.div>
   );
 }
 

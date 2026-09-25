@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { useEffect, useState, useTransition } from "react";
 import { moveCardAction } from "@/app/actions";
 import { Avatar, StatusDot } from "./ui";
 import { translator, type Locale } from "@/lib/i18n";
 import { som } from "@/lib/format";
 import { S } from "@/lib/strings";
+import { scaleVariants, containerVariants, itemVariants } from "@/lib/animations";
 
 /** Одно поле на карточке: подпись нужна в настройках, значение — на доске. */
 export interface CardLine {
@@ -120,7 +122,7 @@ export function Kanban({
       ) : null}
 
       <div className="-mx-5 overflow-x-auto px-5 pb-2 lg:-mx-8 lg:px-8">
-        <div className="flex min-w-max gap-4">
+        <motion.div initial="hidden" animate="visible" variants={containerVariants} className="flex min-w-max gap-4">
           {stages.map((stage, i) => {
             const list = cards.filter((c) => stageOf(c) === stage.key);
             const total = totalsByStage[i];
@@ -128,8 +130,9 @@ export function Kanban({
             const active = over === stage.key;
 
             return (
-              <section
+              <motion.section
                 key={stage.key}
+                variants={itemVariants}
                 onDragOver={(e) => {
                   if (!canEdit) return;
                   e.preventDefault();
@@ -189,7 +192,7 @@ export function Kanban({
                   ) : null}
                 </header>
 
-                <div className="flex flex-1 flex-col gap-2.5 p-2.5">
+                <motion.div className="flex flex-1 flex-col gap-2.5 p-2.5" initial="hidden" animate="visible" variants={containerVariants}>
                   {list.map((card) => (
                     <Card
                       key={card.id}
@@ -210,11 +213,11 @@ export function Kanban({
                       {t(S.common.empty)}
                     </div>
                   ) : null}
-                </div>
-              </section>
+                </motion.div>
+              </motion.section>
             );
           })}
-        </div>
+        </motion.div>
       </div>
     </>
   );
@@ -250,18 +253,19 @@ function Card({
   const metaLines = lines.filter((l) => l.key !== "amount");
 
   return (
-    <Link
-      href={card.href}
-      draggable={draggable}
-      onDragStart={(e) => {
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", card.id);
-        onDragStart();
-      }}
-      onDragEnd={onDragEnd}
-      className={`card card-hover relative block px-3.5 py-3${landed ? " just-landed" : ""}`}
-      style={{ opacity: dragging ? 0.4 : 1, cursor: draggable ? "grab" : "pointer" }}
-    >
+    <motion.div variants={itemVariants}>
+      <Link
+        href={card.href}
+        draggable={draggable}
+        onDragStart={(e) => {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", card.id);
+          onDragStart();
+        }}
+        onDragEnd={onDragEnd}
+        className={`card card-hover relative block px-3.5 py-3 transition-opacity${landed ? " just-landed" : ""}`}
+        style={{ opacity: dragging ? 0.4 : 1, cursor: draggable ? "grab" : "pointer" }}
+      >
       {card.flag ? (
         <span
           className="absolute left-1.5 top-3.5 h-6 w-[3px] rounded-full"
@@ -298,6 +302,7 @@ function Card({
           ) : null}
         </div>
       ) : null}
-    </Link>
+      </Link>
+    </motion.div>
   );
 }
