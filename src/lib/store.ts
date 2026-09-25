@@ -14,7 +14,7 @@ import { loc, type Loc } from "./i18n";
 import type { Action, Module } from "./rbac";
 import type {
   CalendarEvent, Channel, Deal, Department, EventKind, Lead, Pipeline, Project, Role, Stage,
-  Student, StudentDocument, Task, TimelineEvent, User, WorkSession,
+  Student, StudentDocument, Task, Tenant, TimelineEvent, User, WorkSession,
 } from "./types";
 
 /**
@@ -784,6 +784,27 @@ export function addBranch(tenantId: string, name: string, city: string) {
   const branch = { id: nextId("b"), name, city };
   tenant.branches.push(branch);
   return branch;
+}
+
+/**
+ * Профиль агентства правит сам админ: название, юрлицо, монограмма в
+ * логотипе, язык портала по умолчанию и курс доллара. Возвращаем агентство,
+ * чтобы вызывающий слой (server action) сохранил его в базу для реальных
+ * порталов — сюда, в store, БД тащить нельзя: этот модуль попадает и в
+ * клиентскую сборку.
+ */
+export function updateTenant(
+  tenantId: string,
+  patch: Partial<Pick<Tenant, "name" | "legalName" | "mark" | "locale" | "usdRate">>,
+): Tenant | null {
+  const tenant = TENANTS.find((x) => x.id === tenantId);
+  if (!tenant) return null;
+  if (patch.name !== undefined) tenant.name = patch.name;
+  if (patch.legalName !== undefined) tenant.legalName = patch.legalName;
+  if (patch.mark !== undefined) tenant.mark = patch.mark;
+  if (patch.locale !== undefined) tenant.locale = patch.locale;
+  if (patch.usdRate !== undefined) tenant.usdRate = patch.usdRate;
+  return tenant;
 }
 
 /* ── задачи ──────────────────────────────────────────────────── */

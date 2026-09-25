@@ -3,7 +3,7 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { loc } from "@/lib/i18n";
+import { isLocale, loc } from "@/lib/i18n";
 import { allow, type Action, type Module } from "@/lib/rbac";
 import * as db from "@/lib/store";
 import type { CalendarEvent, Lead, Role, StudentDocument, TimelineEvent } from "@/lib/types";
@@ -11,6 +11,7 @@ import { checklistKey, DOCUMENT_CHECKLIST } from "@/lib/labels";
 import { ADMIN_COOKIE, adminUnlocked, passcodeMatches } from "@/lib/admin-lock";
 import { getSession } from "@/lib/session";
 import { signSession } from "@/lib/auth";
+import { saveTenant } from "@/lib/db";
 import { acceptInvite, authenticate, createTenant, inviteEmployee } from "@/lib/onboarding";
 import { validateSlug } from "@/lib/tenants";
 import {
@@ -386,6 +387,33 @@ export async function addBranchAction(formData: FormData) {
   if (!name || !city) return;
   db.addBranch(session.tenant.id, name, city);
   revalidatePath("/admin/portal");
+}
+
+/** Профиль агентства правит админ: имя, юрлицо, монограмма, язык, курс $. */
+export async function updateAgencyAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "settings", "edit")) return;
+
+  const name = String(formData.get("name") ?? "").trim();
+  const legalName = String(formData.get("legalName") ?? "").trim();
+  const mark = String(formData.get("mark") ?? "").trim().slice(0, 2).toUpperCase();
+  const localeRaw = String(formData.get("locale") ?? "");
+  const rate = Number(formData.get("usdRate"));
+  if (!name) return;
+
+  const updated = db.updateTenant(session.tenant.id, {
+    name,
+    legalName: legalName || name,
+    mark: mark || name.slice(0, 1).toUpperCase(),
+    locale: isLocale(localeRaw) ? localeRaw : undefined,
+    usdRate: Number.isFinite(rate) && rate > 0 ? Math.round(rate) : undefined,
+  });
+  // Реальное агентство переживает перезапуск: демо-порталы правятся только
+  // в памяти процесса, как и всё остальное в моках.
+  if (updated?.source === "signup") saveTenant(updated);
+
+  revalidatePath("/admin/portal");
+  revalidatePath("/", "layout");
 }
 
 /* ── каналы продаж ───────────────────────────────────────────── */

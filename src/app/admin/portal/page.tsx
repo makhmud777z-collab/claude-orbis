@@ -1,5 +1,6 @@
 import { moduleGate } from "@/components/guard";
 import { AddBranchDialog } from "@/components/AddBranchDialog";
+import { AgencyProfileCard } from "@/components/AgencyProfileCard";
 import { DomainCard } from "@/components/DomainCard";
 import { setPasscodeAction } from "@/app/actions";
 import {
@@ -12,7 +13,7 @@ import {
   StatusDot,
 } from "@/components/ui";
 import { formatters } from "@/lib/format";
-import { translator, LOCALES, type Loc } from "@/lib/i18n";
+import { translator, type Loc } from "@/lib/i18n";
 import { BRANCH_LABEL, CITY_LABEL, ref } from "@/lib/labels";
 import { allow, ROLES } from "@/lib/rbac";
 import { P, S } from "@/lib/strings";
@@ -115,30 +116,19 @@ export default async function SettingsPage() {
         </div>
 
         <div className="space-y-5">
-          <div className="card p-5">
-            <div className="t-caption mb-3 uppercase tracking-[0.07em] text-ink-faint">
-              {t(S.settings.agency)}
-            </div>
-            <Field label={t(S.settings.name)} value={tenant.name} />
-            <Field label={t(S.settings.legalName)} value={tenant.legalName} />
-            <Field label={t(S.settings.monogram)} value={tenant.mark} />
-            <Field
-              label={t(S.settings.interfaceLanguage)}
-              value={LOCALES.find((l) => l.key === tenant.locale)?.label ?? tenant.locale}
-            />
-            <Field
-              label={t(S.settings.currency)}
-              value={session.locale === "ru" ? "Сум (UZS)" : "So‘m (UZS)"}
-            />
-            <Field
-              label={t(S.settings.usdRate)}
-              value={`1 $ = ${f.som(tenant.usdRate)}`}
-            />
-            <Field label={t(S.settings.inSystemSince)} value={f.date(tenant.createdAt)} />
-            <p className="t-micro mt-3 leading-relaxed text-ink-faint">
-              {t(S.settings.rateHint)}
-            </p>
-          </div>
+          <AgencyProfileCard
+            name={tenant.name}
+            legalName={tenant.legalName}
+            mark={tenant.mark}
+            locale={tenant.locale}
+            usdRate={tenant.usdRate}
+            usdRateLabel={`1 $ = ${f.som(tenant.usdRate)}`}
+            currencyLabel={session.locale === "ru" ? "Сум (UZS)" : "So‘m (UZS)"}
+            createdLabel={f.date(tenant.createdAt)}
+            rateHint={t(S.settings.rateHint)}
+            canEdit={allow(session.tenant.id, session.role, "settings", "edit")}
+            uiLocale={session.locale}
+          />
 
           <div className="card p-5">
             <div className="t-caption mb-3 uppercase tracking-[0.07em] text-ink-faint">

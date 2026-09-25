@@ -73,6 +73,7 @@ export const S = {
     delete: loc("Удалить", "O‘chirish"),
     add: loc("Добавить", "Qo‘shish"),
     rename: loc("Переименовать", "Nomini o‘zgartirish"),
+    edit: loc("Изменить", "O‘zgartirish"),
     moveUp: loc("Выше", "Yuqoriga"),
     moveDown: loc("Ниже", "Pastga"),
     today: loc("Сегодня", "Bugun"),
