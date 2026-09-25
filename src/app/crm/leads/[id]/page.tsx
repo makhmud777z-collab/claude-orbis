@@ -15,7 +15,8 @@ import { SOURCE_LABEL } from "@/lib/labels";
 import { scopedLeads } from "@/lib/queries";
 import { allow } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
-import { channelById, defaultPipeline, stageOf } from "@/lib/store";
+import { channelById, customFieldsOf, customValuesOf, defaultPipeline, stageOf } from "@/lib/store";
+import { CustomFieldsCard, type ContactCustomField } from "@/components/CustomFieldsCard";
 import { S } from "@/lib/strings";
 import { timelineItems } from "@/lib/timeline-view";
 
@@ -35,6 +36,15 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   const owner = userById(lead.ownerId);
   const channel = channelById(lead.channelId);
   const canEdit = allow(session.tenant.id, session.role, "leads", "edit");
+
+  const leadValues = customValuesOf(lead.id);
+  const leadCustomFields: ContactCustomField[] = customFieldsOf(session.tenant.id, "lead").map((cf) => ({
+    id: cf.id,
+    label: t(cf.label),
+    type: cf.type,
+    options: cf.options ?? [],
+    value: leadValues[cf.id] ?? "",
+  }));
 
   return (
     <>
@@ -113,6 +123,14 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
               {lead.junkReason ? <Chip dot="var(--color-status-risk)">{lead.junkReason}</Chip> : null}
             </div>
           </div>
+
+          <CustomFieldsCard
+            entity="lead"
+            entityId={lead.id}
+            fields={leadCustomFields}
+            locale={session.locale}
+            canEdit={canEdit}
+          />
         </div>
 
         <div className="min-w-0">

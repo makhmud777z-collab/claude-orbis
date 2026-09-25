@@ -826,22 +826,41 @@ export function setUserAccess(userId: string, hiddenModules: string[]): User | n
 
 /* ── пользовательские поля агентства ─────────────────────────── */
 
-/** Определения полей живут на арендаторе — свои у каждого агентства. */
-export const customFieldsOf = (tenantId: string): CustomField[] =>
-  TENANTS.find((x) => x.id === tenantId)?.customFields ?? [];
+/**
+ * Определения полей живут на арендаторе — свои у каждого агентства.
+ * Поля из ранних версий могли не иметь типа карточки — считаем их полями
+ * контакта, чтобы старые записи не пропадали.
+ */
+export const customFieldsOf = (
+  tenantId: string,
+  entity?: CustomField["entity"],
+): CustomField[] => {
+  const all = (TENANTS.find((x) => x.id === tenantId)?.customFields ?? []).map((f) => ({
+    ...f,
+    entity: f.entity ?? "contact",
+  }));
+  return entity ? all.filter((f) => f.entity === entity) : all;
+};
 
 /**
- * Новое поле карточки контакта. Возвращаем арендатора, чтобы server action
- * сохранил его в базу для реальных агентств (в store БД тащить нельзя).
+ * Новое поле карточки. Возвращаем арендатора, чтобы server action сохранил
+ * его в базу для реальных агентств (в store БД тащить нельзя).
  */
 export function addCustomField(
   tenantId: string,
-  input: { id: string; label: Loc; type: CustomField["type"]; options?: string[] },
+  input: {
+    id: string;
+    entity: CustomField["entity"];
+    label: Loc;
+    type: CustomField["type"];
+    options?: string[];
+  },
 ): Tenant | null {
   const tenant = TENANTS.find((x) => x.id === tenantId);
   if (!tenant) return null;
   const field: CustomField = {
     id: input.id,
+    entity: input.entity,
     label: input.label,
     type: input.type,
     options: input.type === "select" ? (input.options ?? []).filter(Boolean) : undefined,

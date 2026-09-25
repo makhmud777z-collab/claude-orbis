@@ -23,6 +23,7 @@ export default async function AdminFieldsPage() {
 
   const rows: CustomFieldRow[] = customFieldsOf(session.tenant.id).map((f) => ({
     id: f.id,
+    entity: f.entity,
     labelRu: f.label.ru,
     labelUz: f.label.uz,
     type: f.type,

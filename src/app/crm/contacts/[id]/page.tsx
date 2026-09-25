@@ -66,7 +66,7 @@ export default async function ContactPage({
 
   // Пользовательские поля агентства + значения этого контакта.
   const customValues = customValuesOf(student.id);
-  const customFields: ContactCustomField[] = customFieldsOf(session.tenant.id).map((cf) => ({
+  const customFields: ContactCustomField[] = customFieldsOf(session.tenant.id, "contact").map((cf) => ({
     id: cf.id,
     label: t(cf.label),
     type: cf.type,
@@ -160,7 +160,8 @@ export default async function ContactPage({
           />
 
           <CustomFieldsCard
-            studentId={student.id}
+            entity="contact"
+            entityId={student.id}
             fields={customFields}
             locale={session.locale}
             canEdit={canEdit}

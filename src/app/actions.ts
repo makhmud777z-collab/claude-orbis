@@ -419,8 +419,16 @@ export async function updateAgencyAction(formData: FormData) {
 /* ── пользовательские поля агентства ─────────────────────────── */
 
 const CUSTOM_TYPES = new Set(["text", "number", "date", "select"]);
+const CUSTOM_ENTITIES = new Set(["contact", "lead", "deal"]);
 
-/** Агентство заводит своё поле карточки контакта — без разработчика. */
+/** Раздел и путь списка для типа карточки — для проверки прав и revalidate. */
+const ENTITY_META: Record<"contact" | "lead" | "deal", { module: Module; list: string }> = {
+  contact: { module: "contacts", list: "/crm/contacts" },
+  lead: { module: "leads", list: "/crm/leads" },
+  deal: { module: "deals", list: "/crm/deals" },
+};
+
+/** Агентство заводит своё поле карточки (контакт/лид/сделка) — без разработчика. */
 export async function addCustomFieldAction(formData: FormData) {
   const session = await actor();
   if (!allow(session.tenant.id, session.role, "admin", "edit")) return;
@@ -428,8 +436,10 @@ export async function addCustomFieldAction(formData: FormData) {
   const ru = String(formData.get("labelRu") ?? "").trim();
   const uz = String(formData.get("labelUz") ?? "").trim() || ru;
   const typeRaw = String(formData.get("type") ?? "text");
-  if (!ru || !CUSTOM_TYPES.has(typeRaw)) return;
+  const entityRaw = String(formData.get("entity") ?? "contact");
+  if (!ru || !CUSTOM_TYPES.has(typeRaw) || !CUSTOM_ENTITIES.has(entityRaw)) return;
   const type = typeRaw as "text" | "number" | "date" | "select";
+  const entity = entityRaw as "contact" | "lead" | "deal";
 
   // Варианты списка — по строке на вариант.
   const options = String(formData.get("options") ?? "")
@@ -439,13 +449,14 @@ export async function addCustomFieldAction(formData: FormData) {
 
   const updated = db.addCustomField(session.tenant.id, {
     id: newId("cf"),
+    entity,
     label: loc(ru, uz),
     type,
     options,
   });
   if (updated?.source === "signup") saveTenant(updated);
   revalidatePath("/admin/fields");
-  revalidatePath("/crm/contacts", "layout");
+  revalidatePath(ENTITY_META[entity].list, "layout");
 }
 
 export async function removeCustomFieldAction(formData: FormData) {
@@ -455,21 +466,28 @@ export async function removeCustomFieldAction(formData: FormData) {
   if (updated?.source === "signup") saveTenant(updated);
   revalidatePath("/admin/fields");
   revalidatePath("/crm/contacts", "layout");
+  revalidatePath("/crm/leads", "layout");
+  revalidatePath("/crm/deals", "layout");
 }
 
-/** Значения пользовательских полей у одного контакта (name="cf_<fieldId>"). */
+/** Значения пользовательских полей у одной карточки (name="cf_<fieldId>"). */
 export async function setCustomValuesAction(formData: FormData) {
   const session = await actor();
-  if (!allow(session.tenant.id, session.role, "contacts", "edit")) return;
-  const studentId = String(formData.get("studentId") ?? "");
-  if (!studentId) return;
+  const entityRaw = String(formData.get("entity") ?? "contact");
+  if (!CUSTOM_ENTITIES.has(entityRaw)) return;
+  const entity = entityRaw as "contact" | "lead" | "deal";
+  const meta = ENTITY_META[entity];
+  if (!allow(session.tenant.id, session.role, meta.module, "edit")) return;
+
+  const entityId = String(formData.get("entityId") ?? "");
+  if (!entityId) return;
 
   const values: Record<string, string> = {};
-  for (const field of db.customFieldsOf(session.tenant.id)) {
+  for (const field of db.customFieldsOf(session.tenant.id, entity)) {
     values[field.id] = String(formData.get(`cf_${field.id}`) ?? "");
   }
-  db.setCustomValues(studentId, values);
-  revalidatePath(`/crm/contacts/${studentId}`);
+  db.setCustomValues(entityId, values);
+  revalidatePath(`${meta.list}/${entityId}`);
 }
 
 /* ── каналы продаж ───────────────────────────────────────────── */

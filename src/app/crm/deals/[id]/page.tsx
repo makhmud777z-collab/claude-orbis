@@ -16,7 +16,10 @@ import {
 import { scopedContacts, scopedDeals, scopedTasks } from "@/lib/queries";
 import { allow } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
-import { documentsOfStudent, dossierProgress, pipelineById, stageOf } from "@/lib/store";
+import {
+  customFieldsOf, customValuesOf, documentsOfStudent, dossierProgress, pipelineById, stageOf,
+} from "@/lib/store";
+import { CustomFieldsCard, type ContactCustomField } from "@/components/CustomFieldsCard";
 import { S } from "@/lib/strings";
 import { timelineItems } from "@/lib/timeline-view";
 
@@ -39,6 +42,15 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
   const pipeline = pipelineById(deal.pipelineId);
   const stage = stageOf(pipeline, deal.stage);
   const canEdit = allow(session.tenant.id, session.role, "deals", "edit");
+
+  const dealValues = customValuesOf(deal.id);
+  const dealCustomFields: ContactCustomField[] = customFieldsOf(session.tenant.id, "deal").map((cf) => ({
+    id: cf.id,
+    label: t(cf.label),
+    type: cf.type,
+    options: cf.options ?? [],
+    value: dealValues[cf.id] ?? "",
+  }));
 
   const docs = contact ? documentsOfStudent(contact.id) : [];
   const dossier = contact ? dossierProgress(contact.id) : { done: 0, total: 0, percent: 0 };
@@ -206,6 +218,14 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
               </ul>
             </div>
           ) : null}
+
+          <CustomFieldsCard
+            entity="deal"
+            entityId={deal.id}
+            fields={dealCustomFields}
+            locale={session.locale}
+            canEdit={canEdit}
+          />
         </div>
 
         <div className="min-w-0">

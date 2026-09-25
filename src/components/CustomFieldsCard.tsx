@@ -19,12 +19,14 @@ export interface ContactCustomField {
  * целиком с «Отмена / Готово», как основные поля карточки.
  */
 export function CustomFieldsCard({
-  studentId,
+  entity,
+  entityId,
   fields,
   locale,
   canEdit,
 }: {
-  studentId: string;
+  entity: "contact" | "lead" | "deal";
+  entityId: string;
   fields: ContactCustomField[];
   locale: Locale;
   canEdit: boolean;
@@ -70,7 +72,8 @@ export function CustomFieldsCard({
       }}
       className="card p-4"
     >
-      <input type="hidden" name="studentId" value={studentId} />
+      <input type="hidden" name="entity" value={entity} />
+      <input type="hidden" name="entityId" value={entityId} />
 
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="t-headline">{t(S.customFields.cardTitle)}</div>
