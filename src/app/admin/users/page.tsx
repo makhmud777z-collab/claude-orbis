@@ -3,7 +3,7 @@ import { SectionFilter } from "@/components/SectionFilter";
 import { InviteDialog } from "@/components/InviteDialog";
 import { moduleGate } from "@/components/guard";
 import { UsersAdmin, type AdminUserRow } from "@/components/UsersAdmin";
-import { EmptyState, PageHeader } from "@/components/ui";
+import { Crumbs, EmptyState, PageHeader } from "@/components/ui";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
 import { formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
@@ -68,6 +68,7 @@ export default async function AdminUsersPage({
 
   return (
     <>
+      <Crumbs back="/admin" backLabel={t(S.admin.title)} current={t(S.admin.users)} />
       <PageHeader
         title={t(S.admin.users)}
         meta={

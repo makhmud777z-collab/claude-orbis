@@ -6,7 +6,7 @@ import { StageBar } from "@/components/StageBar";
 import { Timeline } from "@/components/Timeline";
 import { moduleGate } from "@/components/guard";
 import { IconArrowUpRight } from "@/components/icons";
-import { Chip, PageHeader, StatusDot } from "@/components/ui";
+import { Chip, Crumbs, PageHeader, StatusDot } from "@/components/ui";
 import { boardStages } from "@/lib/crm";
 import { userById } from "@/lib/data/users";
 import { formatters } from "@/lib/format";
@@ -38,12 +38,11 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
 
   return (
     <>
+      <Crumbs back="/crm/leads" backLabel={t(S.crm.leads)} current={lead.name} />
       <PageHeader
         title={lead.name}
         meta={
           <>
-            <Link href="/crm/leads" className="hover:text-ink">{t(S.crm.backToLeads)}</Link>
-            <span>·</span>
             <span className="t-num">{lead.id.toUpperCase()}</span>
             <span>·</span>
             <span className="inline-flex items-center gap-1.5">

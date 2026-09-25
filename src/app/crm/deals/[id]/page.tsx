@@ -4,7 +4,7 @@ import { EditableFields } from "@/components/EditableFields";
 import { StageBar } from "@/components/StageBar";
 import { Timeline } from "@/components/Timeline";
 import { moduleGate } from "@/components/guard";
-import { Avatar, Field, PageHeader, Progress, StatusDot } from "@/components/ui";
+import { Avatar, Crumbs, Field, PageHeader, Progress, StatusDot } from "@/components/ui";
 import { boardStages } from "@/lib/crm";
 import { userById } from "@/lib/data/users";
 import { programById, universityById } from "@/lib/data/universities";
@@ -48,12 +48,11 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
 
   return (
     <>
+      <Crumbs back="/crm/deals" backLabel={t(S.crm.deals)} current={contact?.fullName ?? deal.id.toUpperCase()} />
       <PageHeader
         title={contact?.fullName ?? "—"}
         meta={
           <>
-            <Link href="/crm/deals" className="hover:text-ink">{t(S.crm.backToDeals)}</Link>
-            <span>·</span>
             <span className="t-num">{deal.id.toUpperCase()}</span>
             <span>·</span>
             <span className="inline-flex items-center gap-1.5">

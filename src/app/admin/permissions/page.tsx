@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { moduleGate } from "@/components/guard";
 import { PermissionsMatrix, type Grid } from "@/components/PermissionsMatrix";
-import { Banner, PageHeader } from "@/components/ui";
+import { Banner, Crumbs, PageHeader } from "@/components/ui";
 import { editionModules } from "@/lib/edition";
 import { translator } from "@/lib/i18n";
 import {
@@ -45,6 +45,7 @@ export default async function PermissionsPage() {
 
   return (
     <>
+      <Crumbs back="/admin" backLabel={t(S.admin.title)} current={t(S.admin.permissions)} />
       <PageHeader
         title={t(S.admin.permissions)}
         meta={

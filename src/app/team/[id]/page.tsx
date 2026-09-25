@@ -4,7 +4,7 @@ import { moduleGate } from "@/components/guard";
 import { IconMail, IconPhone } from "@/components/icons";
 import { EditableFields } from "@/components/EditableFields";
 import { Timeline } from "@/components/Timeline";
-import { Avatar, Chip, Field, PageHeader, SectionTitle, StatusDot } from "@/components/ui";
+import { Avatar, Chip, Crumbs, Field, PageHeader, SectionTitle, StatusDot } from "@/components/ui";
 import { age, formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
 import { CITY_LABEL, ref, TASK_STATUS } from "@/lib/labels";
@@ -49,11 +49,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
 
   return (
     <>
-      <div className="t-caption mb-4 flex items-center gap-2 text-ink-faint">
-        <Link href="/team" className="hover:text-ink">{t(S.nav.team)}</Link>
-        <span>/</span>
-        <span className="text-ink-muted">{user.name}</span>
-      </div>
+      <Crumbs back="/team" backLabel={t(S.nav.team)} current={user.name} />
 
       <PageHeader
         title={user.name}

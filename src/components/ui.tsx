@@ -4,8 +4,12 @@ import { initials } from "@/lib/format";
 import { IconChevronRight } from "./icons";
 
 /**
- * Хлебные крошки. Настройки спрятаны по разделам, и без обратного пути
- * человек в них теряется: страница обязана показывать, откуда в неё пришли.
+ * Обратный путь + хлебные крошки одним элементом.
+ *
+ * Ведёт стрелка «назад»: на любой вложенной странице человек видит, куда
+ * вернуться, и попадает туда одним нажатием, а не ищет кнопку браузера.
+ * Справа от стрелки — родитель и текущая страница, чтобы было понятно,
+ * где именно находишься.
  */
 export function Crumbs({
   back,
@@ -14,15 +18,23 @@ export function Crumbs({
 }: {
   back: string;
   backLabel: string;
-  current: string;
+  current?: string;
 }) {
   return (
     <nav className="t-caption mb-4 flex items-center gap-1.5 text-ink-faint">
-      <Link href={back} className="transition-colors hover:text-ink">
+      <Link
+        href={back}
+        className="-ml-2 inline-flex items-center gap-1 rounded-full px-2 py-1 font-medium text-ink-muted transition-colors hover:bg-surface-1 hover:text-ink"
+      >
+        <IconChevronRight size={14} style={{ transform: "rotate(180deg)" }} />
         {backLabel}
       </Link>
-      <IconChevronRight size={13} />
-      <span className="text-ink-muted">{current}</span>
+      {current ? (
+        <>
+          <IconChevronRight size={13} />
+          <span className="text-ink-muted">{current}</span>
+        </>
+      ) : null}
     </nav>
   );
 }

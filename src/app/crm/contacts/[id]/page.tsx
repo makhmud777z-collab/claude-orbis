@@ -5,6 +5,7 @@ import { moduleGate } from "@/components/guard";
 import {
   Avatar,
   Chip,
+  Crumbs,
   Field,
   PageHeader,
   Progress,
@@ -75,13 +76,7 @@ export default async function ContactPage({
 
   return (
     <>
-      <div className="t-caption mb-4 flex items-center gap-2 text-ink-faint">
-        <Link href="/crm/contacts" className="hover:text-ink">
-          {t(S.crm.contacts)}
-        </Link>
-        <span>/</span>
-        <span className="text-ink-muted">{student.fullName}</span>
-      </div>
+      <Crumbs back="/crm/contacts" backLabel={t(S.crm.contacts)} current={student.fullName} />
 
       <PageHeader
         title={student.fullName}

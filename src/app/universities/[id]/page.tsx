@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   Chip,
+  Crumbs,
   Field,
   PageHeader,
   SectionTitle,
@@ -68,13 +69,7 @@ export default async function UniversityPage({
 
   return (
     <>
-      <div className="t-caption mb-4 flex items-center gap-2 text-ink-faint">
-        <Link href="/universities" className="hover:text-ink">
-          {t(S.nav.universities)}
-        </Link>
-        <span>/</span>
-        <span className="text-ink-muted">{uni.name}</span>
-      </div>
+      <Crumbs back="/universities" backLabel={t(S.nav.universities)} current={uni.name} />
 
       <PageHeader
         title={uni.name}

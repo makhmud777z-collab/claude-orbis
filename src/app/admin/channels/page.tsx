@@ -1,7 +1,7 @@
 import { toggleChannelAction } from "@/app/actions";
 import { moduleGate } from "@/components/guard";
 import { IconInstagram, IconMail, IconPhone, IconTelegram } from "@/components/icons";
-import { Banner, Chip, PageHeader, StatusDot } from "@/components/ui";
+import { Banner, Chip, Crumbs, PageHeader, StatusDot } from "@/components/ui";
 import { formatters } from "@/lib/format";
 import { translator, type Loc } from "@/lib/i18n";
 import { allow } from "@/lib/rbac";
@@ -57,6 +57,7 @@ export default async function ChannelsPage() {
 
   return (
     <>
+      <Crumbs back="/admin" backLabel={t(S.admin.title)} current={t(S.channels.title)} />
       <PageHeader
         title={t(S.channels.title)}
         meta={
