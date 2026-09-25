@@ -10,7 +10,9 @@ import { translator } from "@/lib/i18n";
 import { BRANCH_LABEL, CITY_LABEL, STUDENT_STATUS, ref } from "@/lib/labels";
 import { scopedContacts, scopedDeals, scopedTeam } from "@/lib/queries";
 import { allow } from "@/lib/rbac";
-import { contactFields, contactPresets } from "@/lib/section-filters";
+import {
+  contactFields, contactPresets, customFilterFields, withCustom,
+} from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
 import { S } from "@/lib/strings";
 import type { Student } from "@/lib/types";
@@ -31,7 +33,7 @@ export default async function ContactsPage({
   if (gate) return gate;
 
   const team = scopedTeam(session);
-  const fields = contactFields(team, t);
+  const fields = [...contactFields(team, t), ...customFilterFields(session.tenant.id, "contact")];
   const values = readFilter(params);
   const query = readQuery(params);
 
@@ -39,7 +41,7 @@ export default async function ContactsPage({
   const deals = scopedDeals(session);
   const all = scopedContacts(session);
   const rows: ContactRow[] = all
-    .filter((s) => matchesFilter(contactRow(s), fields, values, query))
+    .filter((s) => matchesFilter(withCustom(contactRow(s), session.tenant.id, "contact", s.id), fields, values, query))
     .map((s) => {
       const branch = branches.get(s.branchId);
       return {

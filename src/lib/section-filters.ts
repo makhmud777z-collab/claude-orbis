@@ -1,4 +1,5 @@
-import { channelsOf, departmentsOf } from "./store";
+import { channelsOf, customFieldsOf, customValuesOf, departmentsOf } from "./store";
+import type { CustomFieldEntity } from "./types";
 import { userById } from "./data/users";
 import { UNIVERSITIES } from "./data/universities";
 import { STALE_DAYS } from "./format";
@@ -9,7 +10,7 @@ import {
 } from "./labels";
 import { ROLES } from "./rbac";
 import type { Session } from "./session";
-import type { FilterField, FilterOption, FilterPreset } from "./filters";
+import type { FilterField, FilterOption, FilterPreset, FilterRow } from "./filters";
 import type { Pipeline, Project, User } from "./types";
 
 /**
@@ -142,6 +143,46 @@ export function teamFields(session: Session, t: Translate): FilterField[] {
       options: departmentsOf(session.tenant.id).map((d) => opt(d.id, t(d.name))) },
     { key: "joinedAt", label: loc("Принят на работу", "Ishga qabul"), kind: "date", range: true },
   ];
+}
+
+/**
+ * Пользовательские поля агентства как условия фильтра. «Список» даёт выбор
+ * из вариантов, остальные типы — поиск по подстроке. Ключ поля = его id,
+ * так что значение из строки FilterRow берётся тем же ключом.
+ */
+export function customFilterFields(
+  tenantId: string,
+  entity: CustomFieldEntity,
+  // translate не нужен: подпись поля уже двуязычная (Loc)
+): FilterField[] {
+  return customFieldsOf(tenantId, entity).map((cf) =>
+    cf.type === "select"
+      ? { key: cf.id, label: cf.label, kind: "select" as const, options: (cf.options ?? []).map((o) => opt(o, o)) }
+      : { key: cf.id, label: cf.label, kind: "text" as const },
+  );
+}
+
+/**
+ * Домешивает значения пользовательских полей в строку фильтра: под ключом
+ * поля (для условий) и в общий поиск (чтобы верхняя строка их тоже находила).
+ */
+export function withCustom(
+  row: FilterRow,
+  tenantId: string,
+  entity: CustomFieldEntity,
+  entityId: string,
+): FilterRow {
+  const values = customValuesOf(entityId);
+  const fields = customFieldsOf(tenantId, entity);
+  if (!fields.length) return row;
+  const extra: Record<string, string> = {};
+  const found: string[] = [];
+  for (const cf of fields) {
+    const v = values[cf.id] ?? "";
+    extra[cf.id] = v;
+    if (v) found.push(v);
+  }
+  return { ...row, ...extra, search: found.length ? `${row.search} ${found.join(" ")}` : row.search };
 }
 
 export function universityFields(t: Translate): FilterField[] {

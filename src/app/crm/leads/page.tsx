@@ -15,7 +15,7 @@ import { translator, type Loc } from "@/lib/i18n";
 import { ref, SOURCE_LABEL } from "@/lib/labels";
 import { scopedLeads, scopedTeam } from "@/lib/queries";
 import { allow } from "@/lib/rbac";
-import { leadFields, leadPresets } from "@/lib/section-filters";
+import { customFilterFields, leadFields, leadPresets, withCustom } from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
 import { CARD_FIELDS, cardFieldsOf, channelsOf, defaultPipeline, stageOf } from "@/lib/store";
 import { P, S } from "@/lib/strings";
@@ -40,12 +40,14 @@ export default async function LeadsPage({
   const f = formatters(session.locale);
   const pipeline = defaultPipeline(session.tenant.id, "lead");
   const team = scopedTeam(session);
-  const fields = leadFields(session, team, pipeline, t);
+  const fields = [...leadFields(session, team, pipeline, t), ...customFilterFields(session.tenant.id, "lead")];
   const values = readFilter(params);
   const query = readQuery(params);
 
   const all = scopedLeads(session);
-  const leads = all.filter((lead) => matchesFilter(leadRow(lead), fields, values, query));
+  const leads = all.filter((lead) =>
+    matchesFilter(withCustom(leadRow(lead), session.tenant.id, "lead", lead.id), fields, values, query),
+  );
   const canEdit = allow(session.tenant.id, session.role, "leads", "edit");
   const view = readView(params);
 

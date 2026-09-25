@@ -15,7 +15,7 @@ import { TODAY_ISO, formatters, idleDays, STALE_DAYS } from "@/lib/format";
 import { translator } from "@/lib/i18n";
 import { scopedContacts, scopedDeals, scopedTeam } from "@/lib/queries";
 import { allow } from "@/lib/rbac";
-import { dealFields, dealPresets } from "@/lib/section-filters";
+import { customFilterFields, dealFields, dealPresets, withCustom } from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
 import { CARD_FIELDS, cardFieldsOf, defaultPipeline, pipelineById, pipelinesOf, stageOf } from "@/lib/store";
 import { P, S } from "@/lib/strings";
@@ -43,13 +43,15 @@ export default async function DealsPage({
   const pipeline = pipelineById(requested) ?? defaultPipeline(session.tenant.id, "deal");
 
   const team = scopedTeam(session);
-  const fields = dealFields(team, pipeline, t);
+  const fields = [...dealFields(team, pipeline, t), ...customFilterFields(session.tenant.id, "deal")];
   const values = readFilter(params);
   const query = readQuery(params);
 
   const contacts = new Map(scopedContacts(session).map((s) => [s.id, s]));
   const all = scopedDeals(session).filter((d) => d.pipelineId === pipeline?.id);
-  const deals = all.filter((d) => matchesFilter(dealRow(d, contacts.get(d.studentId)), fields, values, query));
+  const deals = all.filter((d) =>
+    matchesFilter(withCustom(dealRow(d, contacts.get(d.studentId)), session.tenant.id, "deal", d.id), fields, values, query),
+  );
   const view = readView(params);
   // В шапке — вся воронка, а не текущий срез: сколько показано из скольких,
   // говорит сам фильтр («0 / 22»), и дублировать его цифрой «0 сделок» значит
