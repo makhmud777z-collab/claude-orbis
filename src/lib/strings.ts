@@ -666,6 +666,8 @@ export const S = {
     newStage: loc("Новая стадия", "Yangi bosqich"),
     removeStage: loc("Удалить стадию", "Bosqichni o‘chirish"),
     stageInUse: loc("На стадии есть карточки — сначала перенесите их", "Bosqichda kartalar bor — avval ularni ko‘chiring"),
+    dragStageHint: loc("Перетащите стадию, чтобы изменить порядок", "Tartibni o‘zgartirish uchun bosqichni torting"),
+    stageEmpty: loc("нет карточек", "kartalar yo‘q"),
     addPipeline: loc("Новая воронка", "Yangi voronka"),
     removePipeline: loc("Удалить воронку", "Voronkani o‘chirish"),
     pipelineName: loc("Название воронки", "Voronka nomi"),

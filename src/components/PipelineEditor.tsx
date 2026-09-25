@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   addPipelineAction, addStageAction, moveStageAction, removePipelineAction,
-  removeStageAction, updatePipelineAction, updateStageAction,
+  removeStageAction, reorderStageAction, updatePipelineAction, updateStageAction,
 } from "@/app/actions";
 import { ColorPicker, Modal } from "./controls";
 import { Check } from "./Check";
 import { StatusDot } from "./ui";
 import {
-  IconArrowDown, IconArrowUp, IconPlus, IconTrash,
+  IconChevronRight, IconDrag, IconPlus, IconTrash,
 } from "./icons";
 import { translator, type Locale } from "@/lib/i18n";
 import { S } from "@/lib/strings";
@@ -44,10 +44,11 @@ export interface PipelineDraft {
 /**
  * Настройки воронок — рабочий экран, а не витрина.
  *
- * Здесь агентство делает всё, что обычно приходится просить у разработчика:
- * переименовывает и перекрашивает стадии, меняет их порядок, добавляет свои
- * и убирает лишние, назначает финальные «успех» и «провал», заводит вторую
- * воронку под другой продукт и выбирает основную.
+ * Стадии показаны так же, как их видит менеджер на доске CRM: колонками
+ * слева направо. Колонку можно перетащить мышью на новое место (как
+ * карточку на канбане) — порядок стадий это и есть порядок работы. На
+ * телефоне, где перетаскивание ненадёжно, тот же порядок меняется
+ * стрелками в шапке колонки.
  *
  * Два запрета зашиты в саму модель, потому что их нарушение ломает данные:
  * нельзя удалить стадию, на которой стоят карточки, и нельзя удалить
@@ -69,73 +70,23 @@ export function PipelineEditor({
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-8">
         {pipelines.map((pipeline) => (
           <section key={pipeline.id} className="card overflow-hidden">
             <PipelineHead pipeline={pipeline} locale={locale} canEdit={canEdit} />
-
-            <div className="divide-y divide-hairline-soft">
-              {pipeline.stages.map((item, index) => (
-                <div key={item.key} className="flex items-center gap-3 px-5 py-3">
-                  <span className="h-8 w-1 flex-none rounded-full" style={{ background: item.color }} />
-
-                  <button
-                    type="button"
-                    data-stage={item.key}
-                    disabled={!canEdit}
-                    onClick={() => setStage({ pipeline, stage: item })}
-                    className="min-w-0 flex-1 text-left"
-                    style={{ cursor: canEdit ? "pointer" : "default" }}
-                  >
-                    <span className="t-body-sm flex items-center gap-2 truncate">
-                      {item.labelRu}
-                      {item.final ? (
-                        <StatusDot
-                          color={item.final === "won" ? "var(--color-status-deal)" : "var(--color-status-risk)"}
-                        />
-                      ) : null}
-                    </span>
-                    <span className="t-micro block truncate text-ink-faint">
-                      {item.labelUz}
-                      {item.cards ? ` · ${item.cardsLabel}` : ""}
-                    </span>
-                  </button>
-
-                  {canEdit ? (
-                    <span className="flex flex-none items-center gap-0.5">
-                      <StageMove pipelineId={pipeline.id} stageKey={item.key} delta={-1} disabled={index === 0} label={t(S.common.moveUp)} />
-                      <StageMove pipelineId={pipeline.id} stageKey={item.key} delta={1} disabled={index === pipeline.stages.length - 1} label={t(S.common.moveDown)} />
-                      <form action={removeStageAction}>
-                        <input type="hidden" name="pipelineId" value={pipeline.id} />
-                        <input type="hidden" name="stageKey" value={item.key} />
-                        <button
-                          className="btn-icon h-7 w-7"
-                          disabled={item.cards > 0 || pipeline.stages.length <= 2}
-                          aria-label={t(S.pipelines.removeStage)}
-                          title={item.cards > 0 ? t(S.pipelines.stageInUse) : t(S.pipelines.removeStage)}
-                        >
-                          <IconTrash size={13} />
-                        </button>
-                      </form>
-                    </span>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-
-            {canEdit ? (
-              <div className="border-t border-hairline-soft px-5 py-3.5">
-                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setAdding(pipeline)}>
-                  <IconPlus size={14} /> {t(S.pipelines.addStage)}
-                </button>
-              </div>
-            ) : null}
+            <PipelineBoard
+              pipeline={pipeline}
+              locale={locale}
+              canEdit={canEdit}
+              onEditStage={(s) => setStage({ pipeline, stage: s })}
+              onAddStage={() => setAdding(pipeline)}
+            />
           </section>
         ))}
       </div>
 
       {canEdit ? (
-        <button type="button" className="btn btn-secondary mt-5" onClick={() => setNewPipeline(true)}>
+        <button type="button" className="btn btn-secondary mt-6" onClick={() => setNewPipeline(true)}>
           <IconPlus size={15} /> {t(S.pipelines.addPipeline)}
         </button>
       ) : null}
@@ -158,6 +109,232 @@ export function PipelineEditor({
         <AddPipelineDialog locale={locale} onClose={() => setNewPipeline(false)} />
       ) : null}
     </>
+  );
+}
+
+/**
+ * Доска одной воронки: стадии-колонки с перетаскиванием.
+ *
+ * Порядок держим оптимистично в локальном состоянии, иначе перетаскивание
+ * ждёт ответа сервера и ощущается как зависание. Когда сервер присылает
+ * свежие данные (revalidate после сохранения), сигнатура стадий меняется —
+ * и локальная догадка сбрасывается на правду.
+ */
+function PipelineBoard({
+  pipeline,
+  locale,
+  canEdit,
+  onEditStage,
+  onAddStage,
+}: {
+  pipeline: PipelineDraft;
+  locale: Locale;
+  canEdit: boolean;
+  onEditStage: (stage: StageDraft) => void;
+  onAddStage: () => void;
+}) {
+  const t = translator(locale);
+  const [, startTransition] = useTransition();
+  const byKey = new Map(pipeline.stages.map((s) => [s.key, s]));
+  const signature = pipeline.stages.map((s) => s.key).join(",");
+
+  const [order, setOrder] = useState<string[]>(pipeline.stages.map((s) => s.key));
+  const [dragging, setDragging] = useState<string | null>(null);
+  const [over, setOver] = useState<string | null>(null);
+  const lastSignature = useRef(signature);
+
+  useEffect(() => {
+    if (lastSignature.current !== signature) {
+      lastSignature.current = signature;
+      setOrder(pipeline.stages.map((s) => s.key));
+    }
+  }, [signature, pipeline.stages]);
+
+  const stages = order.map((k) => byKey.get(k)).filter((s): s is StageDraft => Boolean(s));
+
+  const persist = (stageKey: string, toIndex: number) => {
+    const data = new FormData();
+    data.set("pipelineId", pipeline.id);
+    data.set("stageKey", stageKey);
+    data.set("toIndex", String(toIndex));
+    startTransition(() => {
+      void reorderStageAction(data);
+    });
+  };
+
+  const drop = (targetKey: string) => {
+    const from = dragging;
+    setOver(null);
+    setDragging(null);
+    if (!from || !canEdit || from === targetKey) return;
+    const current = [...order];
+    const fromIndex = current.indexOf(from);
+    const targetIndex = current.indexOf(targetKey);
+    if (fromIndex < 0 || targetIndex < 0) return;
+    current.splice(fromIndex, 1);
+    current.splice(targetIndex, 0, from);
+    setOrder(current);
+    persist(from, targetIndex);
+  };
+
+  // Стрелки — запасной путь для телефона: там нативного перетаскивания нет.
+  const nudge = (stageKey: string, delta: number) => {
+    const current = [...order];
+    const i = current.indexOf(stageKey);
+    const to = i + delta;
+    if (i < 0 || to < 0 || to >= current.length) return;
+    current.splice(i, 1);
+    current.splice(to, 0, stageKey);
+    setOrder(current);
+    persist(stageKey, to);
+  };
+
+  return (
+    <div className="px-4 py-4">
+      {canEdit ? (
+        <div className="t-micro mb-3 text-ink-faint">{t(S.pipelines.dragStageHint)}</div>
+      ) : null}
+
+      <div className="-mx-4 overflow-x-auto px-4 pb-1">
+        <div className="flex min-w-max items-stretch gap-3">
+          {stages.map((item, index) => {
+            const active = over === item.key && dragging !== item.key;
+            return (
+              <section
+                key={item.key}
+                onDragOver={(e) => {
+                  if (!canEdit || !dragging) return;
+                  e.preventDefault();
+                  setOver(item.key);
+                }}
+                onDragLeave={() => setOver((v) => (v === item.key ? null : v))}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  drop(item.key);
+                }}
+                className="stage-col page-in relative flex w-[220px] flex-none flex-col overflow-hidden rounded-[16px] border border-hairline bg-surface-2"
+                style={{
+                  animationDelay: `${Math.min(index * 40, 240)}ms`,
+                  opacity: dragging === item.key ? 0.4 : 1,
+                  background: active
+                    ? `color-mix(in srgb, ${item.color} 7%, var(--color-surface-2))`
+                    : undefined,
+                }}
+              >
+                <div className="h-[3px] w-full flex-none" style={{ background: item.color }} />
+
+                {active ? (
+                  <span
+                    aria-hidden
+                    className="kan-drop-ring pointer-events-none absolute inset-0 rounded-[16px]"
+                    style={{ boxShadow: `inset 0 0 0 2px ${item.color}` }}
+                  />
+                ) : null}
+
+                <header
+                  draggable={canEdit}
+                  onDragStart={(e) => {
+                    if (!canEdit) return;
+                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData("text/plain", item.key);
+                    setDragging(item.key);
+                  }}
+                  onDragEnd={() => {
+                    setDragging(null);
+                    setOver(null);
+                  }}
+                  className="flex items-center gap-1.5 border-b border-hairline-soft bg-surface-1 px-2.5 py-2"
+                  style={{ cursor: canEdit ? "grab" : "default" }}
+                >
+                  {canEdit ? <IconDrag size={14} className="flex-none text-ink-faint" /> : null}
+                  <StatusDot color={item.color} />
+                  <span className="t-caption min-w-0 flex-1 truncate font-semibold" style={{ color: item.color }}>
+                    {item.labelRu}
+                  </span>
+                  {item.final ? (
+                    <span
+                      className="t-micro flex-none rounded-full px-1.5 py-0.5 font-medium"
+                      style={{
+                        background: item.final === "won"
+                          ? "color-mix(in srgb, var(--color-status-deal) 16%, transparent)"
+                          : "color-mix(in srgb, var(--color-status-risk) 16%, transparent)",
+                        color: item.final === "won" ? "var(--color-status-deal)" : "var(--color-status-risk)",
+                      }}
+                    >
+                      {t(item.final === "won" ? S.pipelines.finalWon : S.pipelines.finalLost)}
+                    </span>
+                  ) : null}
+                </header>
+
+                <button
+                  type="button"
+                  data-stage={item.key}
+                  disabled={!canEdit}
+                  onClick={() => onEditStage(item)}
+                  className="flex flex-1 flex-col gap-1 px-3 py-3 text-left transition-colors hover:bg-surface-1"
+                  style={{ cursor: canEdit ? "pointer" : "default" }}
+                >
+                  <span className="t-micro truncate text-ink-muted">{item.labelUz || "—"}</span>
+                  <span className="t-micro truncate text-ink-faint">
+                    {item.cards ? item.cardsLabel : t(S.pipelines.stageEmpty)}
+                  </span>
+                </button>
+
+                {canEdit ? (
+                  <div className="flex items-center gap-0.5 border-t border-hairline-soft px-2 py-1.5">
+                    <button
+                      type="button"
+                      className="btn-icon h-7 w-7 disabled:opacity-30"
+                      disabled={index === 0}
+                      aria-label={t(S.common.moveUp)}
+                      title={t(S.common.moveUp)}
+                      onClick={() => nudge(item.key, -1)}
+                    >
+                      <IconChevronRight size={13} style={{ transform: "rotate(180deg)" }} />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-icon h-7 w-7 disabled:opacity-30"
+                      disabled={index === stages.length - 1}
+                      aria-label={t(S.common.moveDown)}
+                      title={t(S.common.moveDown)}
+                      onClick={() => nudge(item.key, 1)}
+                    >
+                      <IconChevronRight size={13} />
+                    </button>
+                    <span className="flex-1" />
+                    <form action={removeStageAction}>
+                      <input type="hidden" name="pipelineId" value={pipeline.id} />
+                      <input type="hidden" name="stageKey" value={item.key} />
+                      <button
+                        className="btn-icon h-7 w-7"
+                        disabled={item.cards > 0 || stages.length <= 2}
+                        aria-label={t(S.pipelines.removeStage)}
+                        title={item.cards > 0 ? t(S.pipelines.stageInUse) : t(S.pipelines.removeStage)}
+                      >
+                        <IconTrash size={13} />
+                      </button>
+                    </form>
+                  </div>
+                ) : null}
+              </section>
+            );
+          })}
+
+          {canEdit ? (
+            <button
+              type="button"
+              onClick={onAddStage}
+              className="stage-add flex w-[220px] flex-none flex-col items-center justify-center gap-1.5 rounded-[16px] border border-dashed border-hairline text-ink-faint transition-colors hover:border-accent hover:text-accent"
+              style={{ minHeight: 132 }}
+            >
+              <IconPlus size={18} />
+              <span className="t-caption">{t(S.pipelines.addStage)}</span>
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -223,27 +400,6 @@ function PipelineHead({
         </span>
       ) : null}
     </div>
-  );
-}
-
-function StageMove({
-  pipelineId, stageKey, delta, disabled, label,
-}: {
-  pipelineId: string;
-  stageKey: string;
-  delta: number;
-  disabled: boolean;
-  label: string;
-}) {
-  return (
-    <form action={moveStageAction}>
-      <input type="hidden" name="pipelineId" value={pipelineId} />
-      <input type="hidden" name="stageKey" value={stageKey} />
-      <input type="hidden" name="delta" value={delta} />
-      <button className="btn-icon h-7 w-7" disabled={disabled} aria-label={label} title={label}>
-        {delta < 0 ? <IconArrowUp size={13} /> : <IconArrowDown size={13} />}
-      </button>
-    </form>
   );
 }
 

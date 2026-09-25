@@ -366,6 +366,22 @@ export function moveStage(pipelineId: string, stageKey: string, delta: number) {
   pipeline.stages.splice(to, 0, stage);
 }
 
+/**
+ * Перенос стадии на произвольную позицию — для перетаскивания на канбане
+ * воронок. Индекс клампится в границы, так что «бросок» мимо колонок не
+ * ломает порядок, а ставит стадию в край.
+ */
+export function reorderStage(pipelineId: string, stageKey: string, toIndex: number) {
+  const pipeline = pipelineById(pipelineId);
+  if (!pipeline) return;
+  const from = pipeline.stages.findIndex((s) => s.key === stageKey);
+  if (from < 0) return;
+  const to = Math.max(0, Math.min(pipeline.stages.length - 1, toIndex));
+  if (from === to) return;
+  const [stage] = pipeline.stages.splice(from, 1);
+  pipeline.stages.splice(to, 0, stage);
+}
+
 /** Ключ стадии латиницей: он уходит в адрес доски и в данные сделок. */
 function stageKeyFrom(name: string, taken: string[]): string {
   const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || "stage";

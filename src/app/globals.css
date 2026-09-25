@@ -337,6 +337,20 @@
   .kan-drop-ring {
     animation: orbis-pulse 900ms ease-in-out infinite;
   }
+  /* Колонки-стадии в редакторе воронок: плавная смена фона/прозрачности
+     при перетаскивании, чтобы перенос читался как движение, а не рывок. */
+  .stage-col {
+    transition:
+      background-color 140ms ease,
+      opacity 140ms ease,
+      box-shadow 140ms ease;
+  }
+  .stage-add {
+    transition:
+      border-color 140ms ease,
+      color 140ms ease,
+      background-color 140ms ease;
+  }
 
   .nav-item {
     transition:

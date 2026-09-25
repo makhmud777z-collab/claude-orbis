@@ -273,6 +273,17 @@ export async function moveStageAction(formData: FormData) {
   revalidateCrm();
 }
 
+/** Перетаскивание стадии на канбане воронок: стадия встаёт на позицию toIndex. */
+export async function reorderStageAction(formData: FormData) {
+  if (!(await canEditCrm())) return;
+  db.reorderStage(
+    String(formData.get("pipelineId") ?? ""),
+    String(formData.get("stageKey") ?? ""),
+    Number(formData.get("toIndex") ?? 0),
+  );
+  revalidateCrm();
+}
+
 export async function addStageAction(formData: FormData) {
   if (!(await canEditCrm())) return;
   const ru = String(formData.get("labelRu") ?? "").trim();
