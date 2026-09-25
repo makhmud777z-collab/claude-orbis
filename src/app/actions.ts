@@ -11,7 +11,7 @@ import { checklistKey, DOCUMENT_CHECKLIST } from "@/lib/labels";
 import { ADMIN_COOKIE, adminUnlocked, passcodeMatches } from "@/lib/admin-lock";
 import { getSession } from "@/lib/session";
 import { signSession } from "@/lib/auth";
-import { saveTenant } from "@/lib/db";
+import { saveTenant, saveUser } from "@/lib/db";
 import { acceptInvite, authenticate, createTenant, inviteEmployee } from "@/lib/onboarding";
 import { validateSlug } from "@/lib/tenants";
 import {
@@ -584,6 +584,25 @@ export async function setUserStatusAction(formData: FormData) {
     session.user.id,
   );
   revalidatePath("/", "layout");
+}
+
+/**
+ * Персональный доступ сотрудника: админ прячет ему выбранные разделы.
+ * Форма присылает ключи скрытых модулей (name="hidden"); чего нет в списке —
+ * остаётся открытым по правам роли.
+ */
+export async function setUserAccessAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "admin", "edit")) return;
+
+  const userId = String(formData.get("userId") ?? "");
+  const hidden = formData.getAll("hidden").map(String).filter(Boolean);
+
+  const updated = db.setUserAccess(userId, hidden);
+  // Владельца store не запирает и вернёт как есть — сохранять нечего.
+  if (updated && updated.role !== "owner" && session.tenant.source === "signup") saveUser(updated);
+  revalidatePath("/", "layout");
+  revalidatePath("/admin/users");
 }
 
 /** Тема портала — настройка сотрудника, а не агентства: у каждого своя. */

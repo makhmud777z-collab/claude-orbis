@@ -7,10 +7,16 @@ import { allow, visibleModules, type Module } from "@/lib/rbac";
 import type { Session } from "@/lib/session";
 import { S } from "@/lib/strings";
 
-/** Модули, которые реально открыты сотруднику: права роли ∩ версия продукта. */
+/**
+ * Модули, которые реально открыты сотруднику:
+ * права роли ∩ версия продукта − персональные ограничения от админа.
+ */
 export function openModules(session: Session): Module[] {
   const inEdition = new Set(editionModules(session.tenant.edition));
-  return visibleModules(session.tenant.id, session.role).filter((m) => inEdition.has(m));
+  const restricted = new Set(session.user.restrictedModules ?? []);
+  return visibleModules(session.tenant.id, session.role).filter(
+    (m) => inEdition.has(m) && !restricted.has(m),
+  );
 }
 
 /**
@@ -43,7 +49,10 @@ export function moduleGate(
       />
     );
   }
-  if (!allow(session.tenant.id, session.role, module)) {
+  // Персональный запрет админа блокирует и прямой заход по ссылке, а не
+  // только прячет пункт из меню.
+  const restricted = session.user.restrictedModules ?? [];
+  if (restricted.includes(module) || !allow(session.tenant.id, session.role, module)) {
     return <NoAccess role={session.role} module={label} locale={session.locale} />;
   }
   return null;

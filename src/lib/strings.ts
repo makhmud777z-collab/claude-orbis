@@ -903,6 +903,18 @@ export const S = {
     linkCopied: loc("Скопировано", "Nusxalandi"),
   },
 
+  access: {
+    title: loc("Доступ к разделам", "Bo‘limlarga kirish"),
+    manage: loc("Настроить доступ", "Kirishni sozlash"),
+    hint: loc(
+      "Отметьте разделы, которые этому сотруднику видеть не нужно. Это сужает доступ поверх его роли — выдать больше, чем даёт роль, нельзя.",
+      "Bu xodimga kerak bo‘lmagan bo‘limlarni belgilang. Bu rol ustidan kirishni toraytiradi.",
+    ),
+    hiddenCount: loc("скрыто", "yashirilgan"),
+    hidden: loc("Скрыт", "Yashirilgan"),
+    visible: loc("Виден", "Ko‘rinadi"),
+  },
+
   adminLock: {
     title: loc("Настройки портала", "Portal sozlamalari"),
     hint: loc(

@@ -807,6 +807,20 @@ export function updateTenant(
   return tenant;
 }
 
+/**
+ * Персональный доступ сотрудника: админ прячет ему отдельные разделы, не
+ * трогая роль. Возвращаем сотрудника, чтобы server action сохранил его в
+ * базу для реальных агентств (в store БД тащить нельзя — модуль клиентский).
+ */
+export function setUserAccess(userId: string, hiddenModules: string[]): User | null {
+  const user = USERS.find((u) => u.id === userId);
+  if (!user) return null;
+  // Владельца не запираем: агентство не должно случайно отрезать себе доступ.
+  if (user.role === "owner") return user;
+  user.restrictedModules = hiddenModules.length ? [...new Set(hiddenModules)] : undefined;
+  return user;
+}
+
 /* ── задачи ──────────────────────────────────────────────────── */
 
 /** Новая задача от руководителя сотруднику: та же модель, что и в сидах. */

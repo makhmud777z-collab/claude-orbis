@@ -8,13 +8,17 @@ import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } fro
 import { formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
 import { BRANCH_LABEL, CITY_LABEL, ref } from "@/lib/labels";
+import { editionModules } from "@/lib/edition";
 import { scopedTeam } from "@/lib/queries";
-import { allow, ROLES, roleDef } from "@/lib/rbac";
+import { allow, MODULE_LABEL, ROLES, roleDef, visibleModules, type Module } from "@/lib/rbac";
 import { simplePresets, teamFields } from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
 import { departmentOf } from "@/lib/store";
 import { S } from "@/lib/strings";
 import type { User } from "@/lib/types";
+
+/** Разделы, которые нельзя прятать лично: дашборд-дом и само администрирование. */
+const NON_RESTRICTABLE: Module[] = ["dashboard", "admin"];
 
 /** Пользователи портала: кто имеет доступ, с какой ролью и зоной видимости. */
 export default async function AdminUsersPage({
@@ -47,6 +51,15 @@ export default async function AdminUsersPage({
           : S.common.scopeOwn,
     );
 
+  // Прятать можно только то, что роль вообще видит на этой версии продукта,
+  // и не системные разделы (дом, администрирование).
+  const editionSet = new Set(editionModules(session.tenant.edition));
+  const restrictable = new Set(NON_RESTRICTABLE);
+  const accessModulesFor = (role: User["role"]) =>
+    visibleModules(session.tenant.id, role)
+      .filter((m) => editionSet.has(m) && !restrictable.has(m))
+      .map((m) => ({ key: m, label: t(MODULE_LABEL[m]) }));
+
   const rows: AdminUserRow[] = team.map((u) => {
     const role = roleDef(u.role);
     const branch = branches.get(u.branchId);
@@ -63,6 +76,8 @@ export default async function AdminUsersPage({
       joinedAt: f.date(u.joinedAt),
       isLastOwner: u.role === "owner" && owners.length === 1,
       inviteUrl: u.inviteToken ? `/invite/${u.inviteToken}` : null,
+      accessModules: u.role === "owner" ? [] : accessModulesFor(u.role),
+      restrictedModules: u.restrictedModules ?? [],
     };
   });
 
