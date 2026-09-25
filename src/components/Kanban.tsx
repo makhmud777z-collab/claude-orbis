@@ -140,8 +140,9 @@ export function Kanban({
                   e.preventDefault();
                   drop(stage.key);
                 }}
-                className="kan-col relative flex w-[280px] flex-none flex-col overflow-hidden rounded-[18px] border border-hairline bg-surface-2 transition-colors duration-150"
+                className="kan-col page-in relative flex w-[280px] flex-none flex-col overflow-hidden rounded-[18px] border border-hairline bg-surface-2 transition-colors duration-150"
                 style={{
+                  animationDelay: `${Math.min(i * 45, 270)}ms`,
                   background: active
                     ? `color-mix(in srgb, ${stage.color} 6%, var(--color-surface-2))`
                     : undefined,
@@ -196,6 +197,7 @@ export function Kanban({
                       fields={fields}
                       draggable={canEdit}
                       dragging={dragging === card.id}
+                      landed={Boolean(moved[card.id])}
                       onDragStart={() => setDragging(card.id)}
                       onDragEnd={() => {
                         setDragging(null);
@@ -223,6 +225,7 @@ function Card({
   fields,
   draggable,
   dragging,
+  landed,
   onDragStart,
   onDragEnd,
 }: {
@@ -230,6 +233,8 @@ function Card({
   fields: string[];
   draggable: boolean;
   dragging: boolean;
+  /** карточка только что «приземлилась» на новую стадию — короткий отклик */
+  landed: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;
 }) {
@@ -254,7 +259,7 @@ function Card({
         onDragStart();
       }}
       onDragEnd={onDragEnd}
-      className="card card-hover relative block px-3.5 py-3"
+      className={`card card-hover relative block px-3.5 py-3${landed ? " just-landed" : ""}`}
       style={{ opacity: dragging ? 0.4 : 1, cursor: draggable ? "grab" : "pointer" }}
     >
       {card.flag ? (

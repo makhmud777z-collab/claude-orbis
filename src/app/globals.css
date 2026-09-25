@@ -351,6 +351,16 @@
       color 140ms ease,
       background-color 140ms ease;
   }
+  /* Карточка, только что перенесённая на другую стадию, коротко
+     «приземляется»: подсветка кольцом акцента гаснет за 600 мс — глаз
+     ловит, куда именно уехала карточка, а не теряет её среди прочих. */
+  @keyframes orbis-land {
+    0% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 55%, transparent); }
+    100% { box-shadow: 0 0 0 2px transparent; }
+  }
+  .just-landed {
+    animation: orbis-land 600ms ease-out;
+  }
 
   .nav-item {
     transition:
