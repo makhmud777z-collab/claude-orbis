@@ -41,7 +41,7 @@ export function ViewSwitch({ view, locale }: { view: ListView; locale: Locale })
           onClick={() => go(option.key)}
           aria-pressed={view === option.key}
           title={option.label}
-          className="t-micro flex items-center gap-1.5 rounded-full px-2.5 py-1.5 transition-colors"
+          className="seg-item t-micro flex items-center gap-1.5 rounded-full px-2.5 py-1.5"
           style={{
             background: view === option.key ? "var(--color-surface-3)" : "transparent",
             color: view === option.key ? "var(--color-ink)" : "var(--color-ink-faint)",

@@ -96,7 +96,7 @@ export default async function AdminHome() {
       {groups.map((group) => (
         <section key={group.label.ru}>
           <SectionTitle>{t(group.label)}</SectionTitle>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="stagger-in grid grid-cols-1 gap-4 md:grid-cols-2">
             {group.items.map((item) => (
               <Link
                 key={item.href}

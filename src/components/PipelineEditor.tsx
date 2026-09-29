@@ -70,7 +70,7 @@ export function PipelineEditor({
 
   return (
     <>
-      <div className="space-y-8">
+      <div className="stagger-in space-y-8">
         {pipelines.map((pipeline) => (
           <section key={pipeline.id} className="card overflow-hidden">
             <PipelineHead pipeline={pipeline} locale={locale} canEdit={canEdit} />

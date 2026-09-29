@@ -52,7 +52,7 @@ export function StageBar({
               type="button"
               onClick={() => move(stage.key)}
               disabled={!canEdit}
-              className="t-micro whitespace-nowrap rounded-[6px] px-2.5 py-1.5 transition-colors"
+              className="seg-item t-micro whitespace-nowrap rounded-[6px] px-2.5 py-1.5"
               style={{
                 background: passed ? stage.color : "var(--color-surface-1)",
                 color: passed ? "#10151c" : "var(--color-ink-faint)",

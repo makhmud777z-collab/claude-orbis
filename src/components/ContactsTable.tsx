@@ -1,12 +1,10 @@
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { Avatar, Chip, StatusDot } from "./ui";
 import { formatters } from "@/lib/format";
 import { translator, type Locale } from "@/lib/i18n";
 import { CITY_LABEL, DEGREE_LABEL, FIELD_LABEL, ref, SOURCE_LABEL, STUDENT_STATUS } from "@/lib/labels";
 import { P, S } from "@/lib/strings";
 import type { Student } from "@/lib/types";
-import { containerVariants, itemVariants } from "@/lib/animations";
 
 export interface ContactRow extends Student {
   ownerName: string;
@@ -49,14 +47,13 @@ export function ContactsTable({ rows, locale }: { rows: ContactRow[]; locale: Lo
               ))}
             </tr>
           </thead>
-          <motion.tbody initial="hidden" animate="visible" variants={containerVariants}>
+          <tbody className="stagger-in">
             {rows.map((s) => {
               const st = STUDENT_STATUS[s.status];
               return (
-                <motion.tr
+                <tr
                   key={s.id}
-                  variants={itemVariants}
-                  className="border-b border-hairline-soft transition-colors last:border-b-0 hover:bg-surface-2"
+                  className="row-hover border-b border-hairline-soft last:border-b-0 hover:bg-surface-2"
                 >
                   <td className="px-4 py-3.5">
                     <Link href={`/crm/contacts/${s.id}`} className="flex items-center gap-3">
@@ -114,10 +111,10 @@ export function ContactsTable({ rows, locale }: { rows: ContactRow[]; locale: Lo
                       {t(st.label)}
                     </span>
                   </td>
-                </motion.tr>
+                </tr>
               );
             })}
-          </motion.tbody>
+          </tbody>
         </table>
       </div>
     </div>

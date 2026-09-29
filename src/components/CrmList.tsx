@@ -1,10 +1,8 @@
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { IconMail, IconPhone } from "./icons";
 import { Avatar, StatusDot } from "./ui";
 import { translator, type Locale } from "@/lib/i18n";
 import { S } from "@/lib/strings";
-import { containerVariants, itemVariants } from "@/lib/animations";
 
 export interface CrmRow {
   id: string;
@@ -58,9 +56,9 @@ export function CrmList({
               ))}
             </tr>
           </thead>
-          <motion.tbody initial="hidden" animate="visible" variants={containerVariants}>
+          <tbody className="stagger-in">
             {rows.map((row) => (
-              <motion.tr key={row.id} variants={itemVariants} className="border-b border-hairline-soft transition-colors last:border-b-0 hover:bg-surface-2">
+              <tr key={row.id} className="row-hover border-b border-hairline-soft last:border-b-0 hover:bg-surface-2">
                 <td className="px-5 py-3">
                   <Link href={row.href} className="block min-w-0">
                     <span className="t-body-sm block truncate">{row.title}</span>
@@ -116,9 +114,9 @@ export function CrmList({
                     ) : null}
                   </span>
                 </td>
-              </motion.tr>
+              </tr>
             ))}
-          </motion.tbody>
+          </tbody>
         </table>
       </div>
     </div>

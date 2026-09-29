@@ -1,14 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { useEffect, useState, useTransition } from "react";
 import { moveCardAction } from "@/app/actions";
 import { Avatar, StatusDot } from "./ui";
 import { translator, type Locale } from "@/lib/i18n";
 import { som } from "@/lib/format";
 import { S } from "@/lib/strings";
-import { scaleVariants, containerVariants, itemVariants } from "@/lib/animations";
 
 /** Одно поле на карточке: подпись нужна в настройках, значение — на доске. */
 export interface CardLine {
@@ -122,7 +120,7 @@ export function Kanban({
       ) : null}
 
       <div className="-mx-5 overflow-x-auto px-5 pb-2 lg:-mx-8 lg:px-8">
-        <motion.div initial="hidden" animate="visible" variants={containerVariants} className="flex min-w-max gap-4">
+        <div className="flex min-w-max gap-4">
           {stages.map((stage, i) => {
             const list = cards.filter((c) => stageOf(c) === stage.key);
             const total = totalsByStage[i];
@@ -130,9 +128,8 @@ export function Kanban({
             const active = over === stage.key;
 
             return (
-              <motion.section
+              <section
                 key={stage.key}
-                variants={itemVariants}
                 onDragOver={(e) => {
                   if (!canEdit) return;
                   e.preventDefault();
@@ -184,7 +181,7 @@ export function Kanban({
                       </div>
                       <div className="mt-2 h-[3px] overflow-hidden rounded-full bg-surface-3">
                         <div
-                          className="h-full rounded-full transition-[width] duration-300"
+                          className="bar-fill h-full rounded-full"
                           style={{ width: `${share}%`, background: stage.color, opacity: 0.6 }}
                         />
                       </div>
@@ -192,7 +189,7 @@ export function Kanban({
                   ) : null}
                 </header>
 
-                <motion.div className="flex flex-1 flex-col gap-2.5 p-2.5" initial="hidden" animate="visible" variants={containerVariants}>
+                <div className="stagger-in flex flex-1 flex-col gap-2.5 p-2.5">
                   {list.map((card) => (
                     <Card
                       key={card.id}
@@ -213,11 +210,11 @@ export function Kanban({
                       {t(S.common.empty)}
                     </div>
                   ) : null}
-                </motion.div>
-              </motion.section>
+                </div>
+              </section>
             );
           })}
-        </motion.div>
+        </div>
       </div>
     </>
   );
@@ -253,19 +250,18 @@ function Card({
   const metaLines = lines.filter((l) => l.key !== "amount");
 
   return (
-    <motion.div variants={itemVariants}>
-      <Link
-        href={card.href}
-        draggable={draggable}
-        onDragStart={(e) => {
-          e.dataTransfer.effectAllowed = "move";
-          e.dataTransfer.setData("text/plain", card.id);
-          onDragStart();
-        }}
-        onDragEnd={onDragEnd}
-        className={`card card-hover relative block px-3.5 py-3 transition-opacity${landed ? " just-landed" : ""}`}
-        style={{ opacity: dragging ? 0.4 : 1, cursor: draggable ? "grab" : "pointer" }}
-      >
+    <Link
+      href={card.href}
+      draggable={draggable}
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", card.id);
+        onDragStart();
+      }}
+      onDragEnd={onDragEnd}
+      className={`card card-hover relative block px-3.5 py-3${landed ? " just-landed" : ""}`}
+      style={{ opacity: dragging ? 0.4 : 1, cursor: draggable ? "grab" : "pointer" }}
+    >
       {card.flag ? (
         <span
           className="absolute left-1.5 top-3.5 h-6 w-[3px] rounded-full"
@@ -302,7 +298,6 @@ function Card({
           ) : null}
         </div>
       ) : null}
-      </Link>
-    </motion.div>
+    </Link>
   );
 }

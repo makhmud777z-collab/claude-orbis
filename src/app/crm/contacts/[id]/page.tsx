@@ -349,7 +349,7 @@ export default async function ContactPage({
             >
               {t(S.students.recommended)}
             </SectionTitle>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="stagger-in grid grid-cols-1 gap-4 md:grid-cols-2">
               {shortlist.map((m) => (
                 <Link
                   key={`${m.university.id}_${m.program.id}`}

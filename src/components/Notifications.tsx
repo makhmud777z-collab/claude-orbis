@@ -72,7 +72,7 @@ export function Notifications({ items, locale }: { items: NoticeItem[]; locale: 
           </div>
 
           {items.length ? (
-            <div className="max-h-[60vh] divide-y divide-hairline-soft overflow-y-auto">
+            <div className="stagger-in max-h-[60vh] divide-y divide-hairline-soft overflow-y-auto">
               {items.map((item) => (
                 <Link
                   key={item.id}

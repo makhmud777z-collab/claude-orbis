@@ -80,9 +80,9 @@ export function PermissionsMatrix({
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="stagger-in">
               {roles.map((role) => (
-                <tr key={role.key} className="border-b border-hairline-soft last:border-b-0">
+                <tr key={role.key} className="row-hover border-b border-hairline-soft last:border-b-0 hover:bg-surface-2">
                   <td className="sticky left-0 z-10 bg-surface-1 px-5 py-3">
                     <div className="t-body-sm">{role.label}</div>
                     <div className="t-micro max-w-[260px] text-ink-faint">{role.scopeLabel}</div>

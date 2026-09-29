@@ -157,7 +157,7 @@ export function DocumentsExplorer({
               </div>
             </div>
 
-            <div className="divide-y divide-hairline-soft">
+            <div className="stagger-in divide-y divide-hairline-soft">
               {open.items.map((d) => {
                 const st = DOCUMENT_STATUS[d.status];
                 return (

@@ -64,7 +64,7 @@ export default async function ProjectsPage({
 
       {!projects.length ? <EmptyState title={t(FILTER_TEXT.nothing)} /> : null}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="stagger-in grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {projects.map((project) => {
           const mine = tasks.filter((task) => task.projectId === project.id);
           const done = mine.filter((task) => task.status === "done").length;

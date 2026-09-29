@@ -35,7 +35,7 @@ export function TasksBoard({ tasks, locale }: { tasks: TaskCard[]; locale: Local
   const t = translator(locale);
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="stagger-in grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
       {COLUMNS.map((status) => {
         const meta = TASK_STATUS[status];
         const items = tasks.filter((task) => task.status === status);

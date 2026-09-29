@@ -121,7 +121,7 @@ export function Timeline({
       ) : null}
 
       {items.length ? (
-        <ol className="relative space-y-4 border-l border-hairline-soft pl-4">
+        <ol className="stagger-in relative space-y-4 border-l border-hairline-soft pl-4">
           {items.map((item) => (
             <li key={item.id} className="relative">
               <span

@@ -34,7 +34,7 @@ export function CardFieldsEditor({
         <span className="t-micro mt-0.5 block text-ink-faint">{t(S.pipelines.cardViewHint)}</span>
       </div>
 
-      <div className="divide-y divide-hairline-soft">
+      <div className="stagger-in divide-y divide-hairline-soft">
         {allFields.map((field) => (
           <label
             key={field.key}

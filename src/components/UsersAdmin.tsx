@@ -80,9 +80,9 @@ export function UsersAdmin({
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="stagger-in">
             {rows.map((row) => (
-              <tr key={row.id} className="border-b border-hairline-soft last:border-b-0">
+              <tr key={row.id} className="row-hover border-b border-hairline-soft last:border-b-0 hover:bg-surface-2">
                 <td className="px-5 py-3.5">
                   <Link href={`/team/${row.id}`} className="flex items-center gap-3">
                     <Avatar name={row.name} size={30} />

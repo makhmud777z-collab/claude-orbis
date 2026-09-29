@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { deleteFilterAction, saveFilterAction } from "@/app/actions";
@@ -12,7 +11,6 @@ import {
   type FilterOption, type FilterValues,
 } from "@/lib/filters";
 import { S } from "@/lib/strings";
-import { slideUpVariants } from "@/lib/animations";
 
 /** Поле фильтра с уже переведёнными подписями — компонент клиентский. */
 export interface ClientField {
@@ -181,7 +179,7 @@ export function SmartFilter({
   const hidden = fields.filter((f) => !visible.includes(f.key));
 
   return (
-    <motion.div className="relative mb-5" ref={box} initial="hidden" animate="visible" variants={slideUpVariants}>
+    <div className="relative mb-5" ref={box}>
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -239,7 +237,7 @@ export function SmartFilter({
             <div className="t-micro mb-2 px-2 uppercase tracking-[0.08em] text-ink-faint">
               {t(FILTER_TEXT.savedFilters)}
             </div>
-            <div className="space-y-0.5">
+            <div className="stagger-in space-y-0.5">
               {presets.map((item) => (
                 <button
                   key={item.key}
@@ -406,7 +404,7 @@ export function SmartFilter({
                     {t(FILTER_TEXT.addField)}
                   </button>
                   {addOpen ? (
-                    <span className="card-raised absolute bottom-7 left-0 z-10 max-h-[240px] w-[220px] overflow-y-auto py-1">
+                    <span className="pop-in card-raised absolute bottom-7 left-0 z-10 max-h-[240px] w-[220px] overflow-y-auto py-1">
                       {hidden.map((field) => (
                         <button
                           key={field.key}
@@ -473,6 +471,6 @@ export function SmartFilter({
           </div>
         </form>
       </Modal>
-    </motion.div>
+    </div>
   );
 }

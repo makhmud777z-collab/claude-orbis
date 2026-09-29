@@ -100,7 +100,7 @@ export function EditableFields({
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div className="stagger-in space-y-3">
         {fields.map((field) => (
           <label key={field.name} className="block">
             <span className="t-micro mb-1 block text-ink-faint">{field.label}</span>

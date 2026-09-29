@@ -259,7 +259,7 @@ function MenuCustomizer({
   return (
     <Modal open={open} onClose={onClose} title={t(S.nav.customizeTitle)} width={420}>
       <p className="t-caption mb-4 leading-relaxed text-ink-faint">{t(S.nav.customizeHint)}</p>
-      <div className="space-y-1">
+      <div className="stagger-in space-y-1">
         {entries.map((entry, i) => {
           const Icon = entry.icon;
           const isHidden = hidden.includes(entry.key);

@@ -1,11 +1,7 @@
-"use client";
-
 import Link from "next/link";
-import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 import { initials } from "@/lib/format";
 import { IconChevronRight } from "./icons";
-import { slideDownVariants, slideUpVariants, fadeInVariants } from "@/lib/animations";
 
 /**
  * Обратный путь + хлебные крошки одним элементом.
@@ -25,7 +21,7 @@ export function Crumbs({
   current?: string;
 }) {
   return (
-    <motion.nav className="t-caption mb-4 flex items-center gap-1.5 text-ink-faint" initial="hidden" animate="visible" variants={slideDownVariants}>
+    <nav className="t-caption mb-4 flex items-center gap-1.5 text-ink-faint">
       <Link
         href={back}
         className="-ml-2 inline-flex items-center gap-1 rounded-full px-2 py-1 font-medium text-ink-muted transition-colors hover:bg-surface-1 hover:text-ink"
@@ -39,7 +35,7 @@ export function Crumbs({
           <span className="text-ink-muted">{current}</span>
         </>
       ) : null}
-    </motion.nav>
+    </nav>
   );
 }
 
@@ -53,7 +49,7 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <motion.header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 pb-6" initial="hidden" animate="visible" variants={slideDownVariants}>
+    <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 pb-6">
       <div className="min-w-0">
         <h1 className="t-display-md">{title}</h1>
         {meta ? (
@@ -63,7 +59,7 @@ export function PageHeader({
         ) : null}
       </div>
       {actions ? <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div> : null}
-    </motion.header>
+    </header>
   );
 }
 
@@ -101,7 +97,7 @@ export function Avatar({
 }) {
   return (
     <span
-      className="inline-flex flex-none items-center justify-center rounded-full font-medium"
+      className="avatar inline-flex flex-none items-center justify-center rounded-full font-medium"
       style={{
         width: size,
         height: size,
@@ -168,7 +164,7 @@ export function Progress({ percent, tone = "ink" }: { percent: number; tone?: st
   return (
     <div className="h-[3px] w-full overflow-hidden rounded-full bg-surface-2">
       <div
-        className="h-full rounded-full transition-[width] duration-500"
+        className="bar-fill h-full rounded-full"
         style={{
           width: `${Math.max(2, Math.min(100, percent))}%`,
           background: tone === "ink" ? "var(--color-ink)" : tone,
@@ -197,10 +193,10 @@ export function SectionTitle({
 
 export function EmptyState({ title, hint }: { title: string; hint?: string }) {
   return (
-    <motion.div className="card flex flex-col items-center justify-center px-6 py-16 text-center" initial="hidden" animate="visible" variants={fadeInVariants}>
-      <motion.div className="t-body-lg" variants={slideUpVariants}>{title}</motion.div>
-      {hint ? <motion.div className="t-caption mt-2 max-w-sm text-ink-muted" variants={slideUpVariants}>{hint}</motion.div> : null}
-    </motion.div>
+    <div className="rise-in card flex flex-col items-center justify-center px-6 py-16 text-center">
+      <div className="t-body-lg">{title}</div>
+      {hint ? <div className="t-caption mt-2 max-w-sm text-ink-muted">{hint}</div> : null}
+    </div>
   );
 }
 
@@ -222,7 +218,7 @@ export function Banner({
 }) {
   return (
     <div
-      className="t-caption mb-6 flex items-start gap-3 rounded-[10px] border px-4 py-3"
+      className="rise-in t-caption mb-6 flex items-start gap-3 rounded-[10px] border px-4 py-3"
       style={{
         borderColor: tone === "warn" ? "rgb(224 179 65 / 0.25)" : "var(--color-hairline)",
         background: "var(--color-surface-1)",
