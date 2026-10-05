@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { SectionFilter } from "@/components/SectionFilter";
 import { moduleGate } from "@/components/guard";
-import { Avatar, Chip, EmptyState, PageHeader, Progress, StatusDot } from "@/components/ui";
+import { Avatar, Chip, Crumbs, EmptyState, PageHeader, Progress, StatusDot } from "@/components/ui";
 import { userById } from "@/lib/data/users";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
 import { formatters, isPast } from "@/lib/format";
@@ -41,6 +41,7 @@ export default async function ProjectsPage({
 
   return (
     <>
+      <Crumbs back="/tasks" backLabel={t(S.nav.tasks)} current={t(S.projects.title)} />
       <PageHeader
         title={t(S.projects.title)}
         meta={

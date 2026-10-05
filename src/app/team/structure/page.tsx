@@ -1,6 +1,6 @@
 import { CompanyStructure, type StructureNode, type StructurePerson } from "@/components/CompanyStructure";
 import { moduleGate } from "@/components/guard";
-import { PageHeader } from "@/components/ui";
+import { Crumbs, PageHeader } from "@/components/ui";
 import { translator } from "@/lib/i18n";
 import { scopedTeam } from "@/lib/queries";
 import { allow } from "@/lib/rbac";
@@ -49,6 +49,7 @@ export default async function StructurePage() {
 
   return (
     <>
+      <Crumbs back="/team" backLabel={t(S.nav.team)} current={t(S.structure.title)} />
       <PageHeader
         title={t(S.structure.title)}
         meta={

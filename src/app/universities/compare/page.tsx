@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { moduleGate } from "@/components/guard";
 import { IconArrowUpRight } from "@/components/icons";
-import { Chip, PageHeader, StatusDot } from "@/components/ui";
+import { Chip, Crumbs, PageHeader, StatusDot } from "@/components/ui";
 import { clearShortlist } from "@/app/actions";
 import {
   hasEnglishTrack,
@@ -140,6 +140,7 @@ export default async function ComparePage({
         <span className="text-ink-muted">{t(S.shortlist.compareTitle)}</span>
       </div>
 
+      <Crumbs back="/universities" backLabel={t(S.nav.universities)} current={t(S.shortlist.compareTitle)} />
       <PageHeader
         title={t(S.shortlist.compareTitle)}
         meta={

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { moduleGate } from "@/components/guard";
-import { Avatar, PageHeader, Progress, StatTile, StatusDot } from "@/components/ui";
+import { Avatar, Crumbs, PageHeader, Progress, StatTile, StatusDot } from "@/components/ui";
 import { formatters, isPast, isSoon } from "@/lib/format";
 import { translator } from "@/lib/i18n";
 import { TASK_STATUS } from "@/lib/labels";
@@ -45,6 +45,7 @@ export default async function TaskReportsPage() {
 
   return (
     <>
+      <Crumbs back="/tasks" backLabel={t(S.nav.tasks)} current={t(S.projects.reports)} />
       <PageHeader
         title={t(S.projects.reports)}
         meta={

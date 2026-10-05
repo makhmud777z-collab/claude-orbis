@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { moduleGate } from "@/components/guard";
-import { Avatar, PageHeader, Progress, StatusDot } from "@/components/ui";
+import { Avatar, Crumbs, PageHeader, Progress, StatusDot } from "@/components/ui";
 import { TODAY_ISO, formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
 import { scopedTeam } from "@/lib/queries";
@@ -50,6 +50,7 @@ export default async function StaffReportsPage() {
 
   return (
     <>
+      <Crumbs back="/team" backLabel={t(S.nav.team)} current={t(S.staffReports.title)} />
       <PageHeader
         title={t(S.staffReports.title)}
         meta={
