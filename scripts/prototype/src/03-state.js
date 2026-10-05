@@ -11,6 +11,9 @@ const S = {
   stages: {},        // pipelineId → stageKey → {label, color}
   moved: {},         // id карточки → стадия
   perms: {},         // роль → модуль → действия
+  roles: null,       // роли агентства; null — ещё не правили, берём стартовый набор
+  back: [],          // куда возвращает стрелка «назад»
+  folded: {},        // свёрнутые разделы матрицы прав
   work: {},          // userId → {startedAt, endedAt, breakMinutes, onBreak}
   notes: [],         // добавленные записи истории
   cardFields: ["phone", "dossier", "deadline", "amount"],
@@ -91,7 +94,7 @@ const channelsOf = () => D.channels.filter((c) => c.tenantId === S.tenant).map((
   return { ...c, status: on ? "connected" : "off", connectedAt: on ? TODAY_ISO : null };
 });
 const channelById = (id) => D.channels.find((c) => c.id === id);
-const scope = () => roleDef(user().role).scope;
+const scope = () => roleById(user().role).scope;
 const digits = (phone) => String(phone ?? "").replace(/\D/g, "");
 
 /* ── воронки и стадии ────────────────────────────────────── */

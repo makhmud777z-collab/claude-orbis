@@ -26,7 +26,9 @@ import {
   INTAKE_LABEL, OWNERSHIP_LABEL, PRIORITY_LABEL, PROGRAM_LANGUAGE, REGION_LABEL,
   SOURCE_LABEL, STUDENT_STATUS, TASK_STATUS, VISA_GRADE_LABEL,
 } from "../../src/lib/labels";
-import { ACTION_LABEL, MODULE_LABEL, SEED_ROLES } from "../../src/lib/rbac";
+import {
+  ACTION_LABEL, MODULE_ACTIONS, MODULE_GROUPS, MODULE_LABEL, SEED_ROLES,
+} from "../../src/lib/rbac";
 import { EDITIONS } from "../../src/lib/edition";
 import { TENANTS } from "../../src/lib/tenants";
 
@@ -50,6 +52,8 @@ const payload = {
   universities: UNIVERSITIES,
   editions: EDITIONS,
   roles: SEED_ROLES,
+  moduleGroups: MODULE_GROUPS,
+  moduleActions: MODULE_ACTIONS,
   labels: {
     documentStatus: DOCUMENT_STATUS,
     taskStatus: TASK_STATUS,

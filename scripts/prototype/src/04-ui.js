@@ -6,7 +6,57 @@ const avatar = (name, size = 30) =>
   `<span class="avatar" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.36)}px" title="${esc(name)}">${esc(initials(name))}</span>`;
 const bar = (percent, color) =>
   `<span class="progress"><i style="width:${Math.max(2, Math.min(100, percent))}%;background:${color ?? "var(--ink)"}"></i></span>`;
+/*
+ * Куда ведёт стрелка «назад», если человек открыл экран напрямую.
+ * Всё, что не перечислено, возвращает на дашборд: это корень портала.
+ */
+const ROUTE_PARENT = {
+  pipelines: "admin", channels: "admin", cards: "admin", users: "admin",
+  permissions: "admin", portal: "admin", demo: "admin",
+  lead: "leads", deal: "deals", contact: "contacts",
+  employee: "team", staffreports: "team", structure: "team",
+  projects: "tasks", taskreports: "tasks",
+  compare: "universities",
+};
+
+/** Подписи разделов для крошек — берём из того же меню, что и навигация. */
+function routeLabel(route) {
+  for (const e of NAV) {
+    if (e.href === route && !e.children) return t(e.label);
+    for (const c of e.children ?? []) if (c.href === route) return t(c.label);
+  }
+  if (route === "dashboard") return t(loc("Дашборд", "Boshqaruv paneli"));
+  if (route === "admin") return t(loc("Администрирование", "Boshqaruv"));
+  if (route === "leads") return t(loc("Лиды", "Lidlar"));
+  if (route === "deals") return t(loc("Сделки", "Bitimlar"));
+  if (route === "contacts") return t(loc("Контакты", "Kontaktlar"));
+  if (route === "team") return t(loc("Сотрудники", "Xodimlar"));
+  if (route === "tasks") return t(loc("Задачи", "Vazifalar"));
+  if (route === "universities") return t(loc("Каталог вузов", "Universitetlar katalogi"));
+  return t(loc("Назад", "Orqaga"));
+}
+
+/**
+ * Хлебные крошки с возвратом. Стрелка возвращает туда, откуда человек
+ * пришёл: из «Финансов», открытых из «Сделок», — обратно в сделки, а не
+ * на дашборд, которого он не видел. Если истории нет (экран открыт
+ * первым), ведёт к разделу-родителю.
+ */
+const crumbs = (current) => {
+  if (S.route === "dashboard") return "";
+  const from = S.back[S.back.length - 1];
+  const parent = from ? from.split("/")[0] : (ROUTE_PARENT[S.route] ?? "dashboard");
+  return `
+    <nav class="t-caption" style="display:flex;align-items:center;gap:6px;margin:0 0 14px;color:var(--ink-faint)">
+      <a href="#" data-act="back" data-value="${esc(ROUTE_PARENT[S.route] ?? "dashboard")}"
+         style="display:inline-flex;align-items:center;gap:4px;margin-left:-8px;padding:4px 8px;border-radius:999px;color:var(--ink-muted);font-weight:500">
+        <span style="display:inline-flex;transform:rotate(180deg)">${icon("chevron", 14)}</span>${esc(routeLabel(parent))}</a>
+      ${current ? `<span style="display:inline-flex">${icon("chevron", 13)}</span><span class="muted">${esc(current)}</span>` : ""}
+    </nav>`;
+};
+
 const head = (title, meta, actions) => `
+  ${crumbs(title)}
   <div class="head">
     <div style="min-width:0">
       <h1 class="t-display">${esc(title)}</h1>
@@ -445,7 +495,7 @@ function documentFields() {
 function teamFields() {
   return [
     { key: "role", label: loc("Роль", "Rol"), kind: "select", def: true,
-      options: D.roles.map((r) => opt(r.key, r.label)) },
+      options: rolesList().map((r) => opt(r.id, roleName(r))) },
     { key: "branchId", label: loc("Филиал", "Filial"), kind: "select", def: true,
       options: tenant().branches.map((b) => opt(b.id, loc(b.name, b.name))) },
     { key: "departmentId", label: loc("Подразделение", "Bo‘lim"), kind: "select",

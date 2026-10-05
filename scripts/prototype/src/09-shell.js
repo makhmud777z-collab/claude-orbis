@@ -102,7 +102,7 @@ function renderRail() {
         <span style="width:28px;height:28px;border-radius:7px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex:none">${esc(tenant().mark)}</span>
         <span style="min-width:0">
           <span class="t-caption truncate" style="display:block">${esc(tenant().name)}</span>
-          <span class="t-micro faint truncate" style="display:block">${esc(t(roleDef(user().role).label))}</span>
+          <span class="t-micro faint truncate" style="display:block">${esc(roleName(roleById(user().role)))}</span>
         </span>
       </div>
     </div>`}`;
@@ -194,7 +194,7 @@ function renderTopbar() {
         </span>
         <span style="text-align:left" class="nowrap">
           <span class="t-caption" style="display:block">${esc(user().name)}</span>
-          <span class="t-micro faint" style="display:block">${esc(t(roleDef(user().role).label))}</span>
+          <span class="t-micro faint" style="display:block">${esc(roleName(roleById(user().role)))}</span>
         </span>
         ${icon("chevron", 14)}
       </button>
@@ -320,7 +320,7 @@ function renderModal() {
         <input class="field" id="invite-email" type="email" style="margin-bottom:14px"></label>
       <span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Роль", "Rol"))}</span>
       ${select("invite.role", m.role ?? "sales_manager",
-        D.roles.map((r) => ({ value: r.key, label: t(r.label) })), 300)}
+        rolesList().map((r) => ({ value: r.id, label: roleName(r) })), 300)}
       <p class="t-micro faint" style="margin:14px 0 0;line-height:1.5">${t(loc(
         "Сотрудник появится в списке со статусом «приглашён» и займёт место по тарифу.",
         "Xodim ro‘yxatda «taklif qilingan» holatida paydo bo‘ladi va tarif o‘rnini egallaydi."))}</p>`,
@@ -443,9 +443,9 @@ function renderModal() {
   }
   if (m.kind === "perm") {
     const list = effective(m.role)[m.module] ?? [];
-    const def = roleDef(m.role);
-    return modal(`${t(def.label)} · ${t(L.module[m.module])}`, `
-      <p class="t-caption muted" style="margin:0 0 14px">${esc(t(def.description))}</p>
+    const def = roleById(m.role);
+    return modal(`${roleName(def)} · ${t(L.module[m.module])}`, `
+      <p class="t-caption muted" style="margin:0 0 14px">${esc(def.description ? t(def.description) : "")}</p>
       ${ACTIONS_LIST.map((a) => `<button data-act="toggleperm" data-value="${esc(a)}"
         style="display:flex;gap:12px;align-items:center;width:100%;padding:8px 10px;border:0;border-radius:10px;background:none;cursor:pointer;color:inherit;text-align:left">
         ${checkbox((m.draft ?? list).includes(a))}<span class="t-caption" style="flex:1">${esc(t(L.action[a]))}</span>
@@ -571,6 +571,11 @@ setInterval(() => {
 
 function go(href, extra = {}) {
   const [route, param] = href.split("/");
+  // Куда вернёт стрелка «назад»: запоминаем, откуда ушли, чтобы из
+  // «Финансов», открытых из «Сделок», вернуться в сделки, а не на дашборд.
+  const from = S.route + (S.param ? "/" + S.param : "");
+  if (from !== href && !extra.back) S.back = [...S.back.slice(-19), from];
+  if (extra.back) S.back = S.back.slice(0, -1);
   S.route = route;
   S.param = param ?? null;
   if (extra.student) { S.catalog.student = extra.student; S.catalog.strict = false; applyStudentProfile(); }
@@ -702,7 +707,7 @@ const ACTIONS = {
     S.invited.push({
       id: "u_" + Math.random().toString(36).slice(2, 7), tenantId: S.tenant, name, email,
       role: S.modal.role ?? "sales_manager", phone: "", phone2: null, birthDate: "1998-01-01",
-      branchId: user().branchId, title: t(roleDef(S.modal.role ?? "sales_manager").label),
+      branchId: user().branchId, title: roleName(roleById(S.modal.role ?? "sales_manager")),
       status: "invited", lastActiveAt: `${TODAY_ISO}T09:30:00`, joinedAt: TODAY_ISO,
     });
     S.modal = null;
@@ -937,6 +942,49 @@ const ACTIONS = {
     };
     S.modal = null;
   },
+  /* ── матрица прав: роли заводит агентство ─────────────────── */
+  permtg: (v) => {
+    const [roleId, key] = v.split(":");
+    const [module, action] = key.split(".");
+    const roles = materializeRoles();
+    const r = roles.find((x) => x.id === roleId);
+    if (!r || r.system) return;
+    const current = r.permissions[module] ?? [];
+    const on = !current.includes(action);
+    let next = on ? [...current, action] : current.filter((a) => a !== action);
+    // Сняли просмотр — остальные действия по разделу теряют смысл.
+    if (!on && action === "view") next = [];
+    if (on && action !== "view" && !next.includes("view")) next = ["view", ...next];
+    r.permissions = { ...r.permissions, [module]: next };
+  },
+  rolescope: (v) => {
+    const order = ["tenant", "branch", "own"];
+    const r = materializeRoles().find((x) => x.id === v);
+    if (!r || r.system) return;
+    r.scope = order[(order.indexOf(r.scope) + 1) % order.length];
+  },
+  roleadd: () => {
+    const roles = materializeRoles();
+    roles.push({
+      id: "r_" + Date.now().toString(36),
+      name: t(loc("Новая роль", "Yangi rol")),
+      scope: "own",
+      // Без дашборда новая роль упирается в пустой портал сразу после входа.
+      permissions: { dashboard: ["view"] },
+    });
+  },
+  roledel: (v) => {
+    // Роль с сотрудниками не удаляем: у них осталась бы ссылка в никуда.
+    if (scopedTeam().some((u) => u.role === v)) return;
+    S.roles = materializeRoles().filter((r) => r.id !== v || r.system);
+  },
+  secfold: (v) => {
+    // Умолчание у разделов разное (первый открыт), поэтому текущее состояние
+    // приходит из разметки — иначе первое нажатие уходило бы вхолостую.
+    const [id, folded] = v.split(":");
+    S.folded[id] = folded !== "1";
+  },
+  back: (v) => { go(S.back[S.back.length - 1] ?? v, { back: true }); },
   perm: (v) => { const [role, module] = v.split(":"); S.modal = { kind: "perm", role, module, draft: effective(role)[module] ?? [] }; },
   toggleperm: (v) => {
     const draft = S.modal.draft ?? [];
@@ -1235,6 +1283,17 @@ document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   if (S.modal) { S.modal = null; render(); return; }
   if (S.popover) { S.popover = null; render(); }
+});
+
+document.addEventListener("change", (e) => {
+  // Название роли правится прямо в заголовке колонки матрицы прав.
+  const input = e.target.closest(".role-name");
+  if (!input) return;
+  const name = input.value.trim();
+  const role = materializeRoles().find((r) => r.id === input.dataset.role);
+  if (!role || role.system || !name) return render();
+  role.name = name;
+  render();
 });
 
 document.getElementById("scrim").addEventListener("click", () => { S.menu = false; render(); });

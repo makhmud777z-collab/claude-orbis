@@ -101,7 +101,31 @@ const roleDef = (role) => D.roles.find((r) => r.key === role);
  * Права роли с учётом настроек агентства: матрица правится в разделе
  * «Администрирование → Права доступа», её переопределения живут в S.perms.
  */
-const effective = (role) => ({ ...roleDef(role).permissions, ...(S.perms[role] ?? {}) });
+/*
+ * Роли агентства. Состав нигде не зашит: стартовый набор — лишь шаблон,
+ * первая правка переносит список в состояние целиком, как в продукте.
+ */
+const OWNER_ROLE = "owner";
+
+function seedRoles() {
+  return D.roles.map((r) => ({
+    id: r.key,
+    name: r.label,
+    description: r.description,
+    scope: r.scope,
+    permissions: { ...r.permissions, ...(S.perms[r.key] ?? {}) },
+    system: r.key === OWNER_ROLE,
+  }));
+}
+
+const rolesList = () => S.roles ?? seedRoles();
+const materializeRoles = () => (S.roles ??= seedRoles());
+const roleById = (id) =>
+  rolesList().find((r) => r.id === id) ??
+  { id, name: loc("Роль удалена", "Rol o‘chirilgan"), scope: "own", permissions: {} };
+const roleName = (r) => (typeof r.name === "string" ? r.name : t(r.name));
+
+const effective = (role) => roleById(role).permissions ?? {};
 const allow = (role, module, action = "view") => (effective(role)[module] ?? []).includes(action);
 
 /**
@@ -184,6 +208,7 @@ const ICONS = {
   search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/>',
   phone: '<path d="M6.5 3.5h3l1.5 4-2 1.4a12 12 0 0 0 6.1 6.1l1.4-2 4 1.5v3a2 2 0 0 1-2.2 2A17 17 0 0 1 4.5 5.7a2 2 0 0 1 2-2.2Z"/>',
   menu: '<path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8.5 11V7.5a3.5 3.5 0 0 1 7 0V11"/>',
   plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
   export: '<path d="M12 15V3"/><path d="m8 7 4-4 4 4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
   arrow: '<path d="M7 17 17 7"/><path d="M8 7h9v9"/>',

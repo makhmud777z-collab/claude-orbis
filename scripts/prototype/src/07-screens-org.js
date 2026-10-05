@@ -1,3 +1,8 @@
+/** Подпись зоны видимости — нужна и в списке сотрудников, и в матрице прав. */
+const scopeOf = (s) => t(s === "tenant" ? loc("всё агентство", "butun agentlik")
+  : s === "branch" ? loc("свой филиал", "o‘z filiali")
+  : loc("только свои записи", "faqat o‘z yozuvlari"));
+
 /* ── сотрудники, структура, отчётность ───────────────────── */
 const teamRow = (u) => ({
   search: `${u.name} ${u.title} ${u.email} ${u.phone}`,
@@ -27,7 +32,7 @@ function screenTeam() {
 
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
       ${team.map((u) => {
-        const role = roleDef(u.role);
+        const role = roleById(u.role);
         const w = workOf(u.id);
         const dep = allDepartments().find((d) => d.id === departmentOf(u.id));
         return `<a class="card card-hover" style="padding:18px;display:block" href="#" data-go="employee/${esc(u.id)}">
@@ -44,7 +49,7 @@ function screenTeam() {
             <span class="chip">${dot(STATUS[u.status])}${esc(t(STATUS_LABEL[u.status]))}</span>
           </span>
           <span style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px">
-            ${chip(t(role.label), null, true)}${dep ? chip(t(dep.name)) : ""}
+            ${chip(roleName(role), null, true)}${dep ? chip(t(dep.name)) : ""}
           </span>
           <span style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--hairline-soft)">
             ${[[contacts.filter((s) => s.ownerId === u.id).length, loc("контакты", "kontakt")],
@@ -68,7 +73,7 @@ function screenTeam() {
 function screenEmployee(id) {
   const u = scopedTeam().find((x) => x.id === id);
   if (!u) return screenNotFound();
-  const role = roleDef(u.role);
+  const role = roleById(u.role);
   const dep = allDepartments().find((d) => d.id === departmentOf(u.id));
   const branch = tenant().branches.find((b) => b.id === u.branchId);
   const sessions = D.sessions.filter((s) => s.userId === u.id).sort((a, b) => b.date.localeCompare(a.date));
@@ -79,7 +84,7 @@ function screenEmployee(id) {
     ${crumb("team", t(loc("Сотрудники", "Xodimlar")), u.name)}
     ${head(u.name,
       `<span>${esc(u.title)}</span><span class="faint">·</span>
-       <span class="chip on">${esc(t(role.label))}</span>
+       <span class="chip on">${esc(roleName(role))}</span>
        <span>${esc(branch ? t(ref(L.city, branch.city)) : "—")}</span>`,
       `<a class="btn btn-secondary" href="tel:${esc(u.phone)}">${icon("phone", 15)} ${t(loc("Позвонить", "Qo‘ng‘iroq"))}</a>
        <a class="btn btn-secondary" href="mailto:${esc(u.email)}">${icon("mail", 15)} ${t(loc("Написать", "Yozish"))}</a>
@@ -301,7 +306,6 @@ function screenAdminUsers() {
   const team = scopedTeam();
   const owners = team.filter((u) => u.role === "owner");
   const canEdit = allow(user().role, "admin", "edit");
-  const scopeOf = (s) => t(s === "tenant" ? loc("всё агентство", "butun agentlik") : s === "branch" ? loc("свой филиал", "o‘z filiali") : loc("только свои записи", "faqat o‘z yozuvlari"));
   const STATUS_LABEL = { active: loc("активен", "faol"), invited: loc("приглашён", "taklif qilingan"), suspended: loc("заблокирован", "bloklangan") };
   const STATUS_DOT = { active: "var(--deal)", invited: "var(--progress)", suspended: "var(--hold)" };
 
@@ -323,9 +327,9 @@ function screenAdminUsers() {
                 <span style="min-width:0"><span class="t-body-sm truncate" style="display:block">${esc(u.name)}</span>
                 <span class="t-micro faint truncate" style="display:block">${esc(u.email)}</span></span></a></td>
               <td>${canEdit && !last
-                ? select("role:" + u.id, u.role, D.roles.map((r) => ({ value: r.key, label: t(r.label), hint: scopeOf(r.scope) })), 200)
-                : `<span class="t-caption">${esc(t(roleDef(u.role).label))}</span>`}</td>
-              <td class="t-caption muted">${esc(scopeOf(roleDef(u.role).scope))}</td>
+                ? select("role:" + u.id, u.role, rolesList().map((r) => ({ value: r.id, label: roleName(r), hint: scopeOf(r.scope) })), 200)
+                : `<span class="t-caption">${esc(roleName(roleById(u.role)))}</span>`}</td>
+              <td class="t-caption muted">${esc(scopeOf(roleById(u.role).scope))}</td>
               <td><span class="chip">${dot(STATUS_DOT[u.status])}${esc(t(STATUS_LABEL[u.status]))}</span></td>
               <td class="t-caption num nowrap">${esc(fmtDate(u.joinedAt))}</td>
             </tr>`;
@@ -337,20 +341,102 @@ function screenAdminUsers() {
 
 const ACTIONS_LIST = ["view", "create", "edit", "delete", "export", "assign"];
 
+/**
+ * Права доступа агентства.
+ *
+ * Роли стоят колонками, права — строками: матрицу читают сравнением ролей
+ * между собой («у кого ещё открыты финансы»), а это главный вопрос к этому
+ * экрану. Состав ролей нигде не зашит — агентство заводит свои и называет
+ * как хочет, поэтому колонку добавляют прямо в шапке.
+ */
 function screenPermissions() {
-  const modules = editionModules(tenant().edition);
+  const open = new Set(editionModules(tenant().edition));
   const canEdit = allow(user().role, "admin", "edit");
-  const level = (role, module) => {
-    const list = effective(role)[module] ?? [];
-    if (!list.length) return { text: "—", tone: "var(--hairline)" };
-    if (list.includes("delete")) return { text: t(loc("полный", "to‘liq")), tone: "var(--ink)" };
-    if (list.includes("edit")) return { text: t(loc("правка", "tahrir")), tone: "var(--ink-muted)" };
-    return { text: t(loc("чтение", "o‘qish")), tone: "var(--ink-faint)" };
+  const roles = rolesList();
+
+  const sections = (D.moduleGroups ?? [])
+    .map((g) => ({
+      id: g.id,
+      title: t(g.title),
+      rows: g.modules.filter((m) => open.has(m)).flatMap((m) =>
+        (D.moduleActions?.[m] ?? ["view"]).map((a) => ({
+          key: `${m}.${a}`, module: m, action: a,
+          label: `${t(L.module[m])} — ${t(L.action[a]).toLowerCase()}`,
+        })),
+      ),
+    }))
+    .filter((g) => g.rows.length);
+
+  const total = sections.reduce((n, g) => n + g.rows.length, 0);
+  const on = (role, row) => (role.permissions[row.module] ?? []).includes(row.action);
+  const staffOf = (role) => scopedTeam().filter((u) => u.role === role.id);
+
+  const toggle = (role, row) => {
+    if (!canEdit || role.system) return "";
+    return `data-act="permtg" data-value="${esc(role.id)}:${esc(row.key)}"`;
+  };
+
+  const colHead = (role) => {
+    const staff = staffOf(role);
+    return `<th style="min-width:162px;text-align:center;vertical-align:top;border-left:1px solid var(--hairline-soft);padding:12px 10px">
+      ${role.system || !canEdit
+        ? `<div class="t-body-sm" style="font-weight:600">${esc(roleName(role))}</div>`
+        : `<input class="role-name" data-role="${esc(role.id)}" value="${esc(roleName(role))}" title="${esc(roleName(role))}"
+             style="width:100%;text-align:center;font-weight:600;font-size:14px;background:none;border:0;border-radius:7px;padding:3px 4px;color:inherit">`}
+      <div style="display:flex;align-items:center;justify-content:center;gap:5px;margin-top:8px">
+        ${staff.slice(0, 3).map((u) => avatar(u.name, 22)).join("")}
+        ${staff.length > 3 ? `<span class="t-micro faint num">+${staff.length - 3}</span>` : ""}
+        ${role.system
+          ? `<span class="faint" title="${esc(t(loc("Роль владельца защищена", "Egasi roli himoyalangan")))}">${icon("lock", 12)}</span>`
+          : canEdit
+            ? `<button class="t-micro" title="${esc(staff.length
+                ? t(loc("Сначала переведите сотрудников на другую роль", "Avval xodimlarni boshqa rolga o‘tkazing"))
+                : t(loc("Удалить роль", "Rolni o‘chirish")))}"
+                ${staff.length ? "disabled" : `data-act="roledel" data-value="${esc(role.id)}"`}
+                style="background:none;border:0;padding:2px 5px;border-radius:5px;color:var(--ink-faint);cursor:${staff.length ? "not-allowed" : "pointer"};opacity:${staff.length ? ".35" : "1"}">✕</button>`
+            : ""}
+      </div>
+    </th>`;
+  };
+
+  const scopeRow = `
+    <tr style="border-bottom:1px solid var(--hairline-soft)">
+      <td style="position:sticky;left:0;background:var(--surface-1);z-index:1;padding:10px 16px">
+        <span class="t-body-sm">${t(loc("Зона видимости", "Ko‘rish doirasi"))}</span></td>
+      ${roles.map((r) => `<td style="text-align:center;border-left:1px solid var(--hairline-soft);padding:10px">
+        <button class="t-micro" ${canEdit && !r.system ? `data-act="rolescope" data-value="${esc(r.id)}"` : "disabled"}
+          style="background:none;border:0;padding:4px 8px;border-radius:6px;cursor:${canEdit && !r.system ? "pointer" : "default"};
+                 color:${r.system ? "var(--ink-muted)" : "var(--accent)"};${r.system ? "" : "text-decoration:underline dashed;text-underline-offset:4px"}">
+          ${esc(scopeOf(r.scope))}</button></td>`).join("")}
+      ${canEdit ? '<td style="border-left:1px solid var(--hairline-soft)"></td>' : ""}
+    </tr>`;
+
+  const sectionRows = (g) => {
+    const folded = S.folded[g.id] ?? g.id !== sections[0].id;
+    const span = roles.length + (canEdit ? 2 : 1);
+    const headRow = `
+      <tr><td colspan="${span}" style="padding:0;background:var(--surface-2)">
+        <button data-act="secfold" data-value="${esc(g.id)}:${folded ? 1 : 0}"
+          style="display:flex;align-items:center;gap:8px;width:100%;padding:9px 16px;border:0;background:none;color:inherit;cursor:pointer;text-align:left">
+          <span class="faint" style="display:inline-flex;transition:transform .15s ease;transform:rotate(${folded ? -90 : 0}deg)">${icon("chevron", 12)}</span>
+          <span class="t-caption" style="font-weight:600">${esc(g.title)}</span>
+          <span class="t-micro faint num" style="margin-left:auto">${g.rows.length}</span>
+        </button></td></tr>`;
+    if (folded) return headRow;
+    return headRow + g.rows.map((row) => `
+      <tr style="border-bottom:1px solid var(--hairline-soft)">
+        <td style="position:sticky;left:0;background:var(--surface-1);z-index:1;padding:7px 16px">
+          <span class="t-body-sm">${esc(row.label)}</span></td>
+        ${roles.map((r) => `<td style="text-align:center;border-left:1px solid var(--hairline-soft);padding:7px 10px">
+          <button class="tg${on(r, row) ? " on" : ""}" ${toggle(r, row)} ${!canEdit || r.system ? "disabled" : ""}
+            aria-label="${esc(row.label)} — ${esc(roleName(r))}"></button></td>`).join("")}
+        ${canEdit ? '<td style="border-left:1px solid var(--hairline-soft)"></td>' : ""}
+      </tr>`).join("");
   };
 
   return `
     ${head(t(loc("Права доступа", "Kirish huquqlari")),
-      `<span>${t(loc("Роли и разделы", "Rollar va bo‘limlar"))}: ${D.roles.length} × ${modules.length}</span><span class="faint">·</span>
+      `<span>${plural(roles.length, ["роль", "роли", "ролей"], "rol")}</span><span class="faint">·</span>
        <a href="#" data-go="users">${t(loc("Пользователи", "Foydalanuvchilar"))}</a>`)}
     <div class="banner" style="margin-bottom:20px">
       ${dot("var(--accent)")}
@@ -359,25 +445,20 @@ function screenPermissions() {
         "Huquqlar matritsasi shu yerda tahrirlanadi: o‘zgarishlar darhol menyuga ta’sir qiladi."))}</span>
     </div>
     <div class="card scroll-x">
-      <table style="min-width:1080px">
-        <thead><tr>
-          <th style="position:sticky;left:0;background:var(--surface-1)">${t(loc("Роль", "Rol"))}</th>
-          ${modules.map((m) => `<th style="text-align:center">${esc(t(L.module[m]))}</th>`).join("")}
+      <table style="min-width:${260 + roles.length * 162}px">
+        <thead><tr style="border-bottom:1px solid var(--hairline)">
+          <th style="position:sticky;left:0;background:var(--surface-1);z-index:2;min-width:260px;text-align:left;vertical-align:top;padding:12px 16px">
+            <div class="t-body-sm" style="font-weight:600">${t(loc("Роль", "Rol"))}</div>
+            <div class="t-micro faint num" style="margin-top:4px">${roles.length} · ${total} ${t(loc("прав", "huquq"))}</div>
+          </th>
+          ${roles.map(colHead).join("")}
+          ${canEdit ? `<th style="width:64px;border-left:1px solid var(--hairline-soft);padding:12px 10px;text-align:center;vertical-align:top">
+            <button class="icon-btn" data-act="roleadd" title="${esc(t(loc("Добавить роль", "Rol qo‘shish")))}"
+              style="border:1px solid var(--hairline)">${icon("plus", 15)}</button></th>` : ""}
         </tr></thead>
         <tbody>
-          ${D.roles.map((r) => `<tr>
-            <td style="position:sticky;left:0;background:var(--surface-1)">
-              <div class="t-body-sm">${esc(t(r.label))}</div>
-              <div class="t-micro faint" style="max-width:240px">${esc(t(r.description))}</div>
-            </td>
-            ${modules.map((m) => {
-              const st = level(r.key, m);
-              return `<td style="text-align:center">
-                <button class="t-micro" style="background:none;border:0;padding:6px 8px;border-radius:7px;color:${st.tone};cursor:${canEdit ? "pointer" : "default"}"
-                  ${canEdit ? `data-act="perm" data-value="${esc(r.key)}:${esc(m)}"` : ""}>${esc(st.text)}</button>
-              </td>`;
-            }).join("")}
-          </tr>`).join("")}
+          ${scopeRow}
+          ${sections.map(sectionRows).join("")}
         </tbody>
       </table>
     </div>`;
@@ -489,7 +570,7 @@ function screenDemo() {
         ${avatar(u.name, 32)}
         <span style="min-width:0;flex:1">
           <span class="t-body-sm truncate" style="display:block">${esc(u.name)}</span>
-          <span class="t-micro faint truncate" style="display:block">${esc(t(roleDef(u.role).label))} · ${esc(u.title)}</span>
+          <span class="t-micro faint truncate" style="display:block">${esc(roleName(roleById(u.role)))} · ${esc(u.title)}</span>
         </span>
       </button>`).join("")}
     </div>`;

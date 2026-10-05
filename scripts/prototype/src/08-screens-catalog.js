@@ -474,7 +474,7 @@ function screenNoAccess(module) {
   const label = t(L.module[module] ?? loc("Раздел", "Bo‘lim"));
   return `<div class="card" style="max-width:480px;margin:64px auto;padding:44px 32px;text-align:center">
     <div class="t-headline">${t(loc("Раздел недоступен", "Bo‘lim mavjud emas"))}</div>
-    <p class="t-body-sm muted" style="margin:12px 0 0;line-height:1.55">${esc(t(roleDef(user().role).label))} · ${esc(label)}</p>
+    <p class="t-body-sm muted" style="margin:12px 0 0;line-height:1.55">${esc(roleName(roleById(user().role)))} · ${esc(label)}</p>
     <p class="t-body-sm muted" style="margin:8px 0 0;line-height:1.55">${t(loc(
       "У роли нет прав на этот модуль. Матрица прав редактируется в разделе «Администрирование → Права доступа».",
       "Bu rolda modulga huquq yo‘q. Huquqlar «Boshqaruv → Kirish huquqlari» bo‘limida tahrirlanadi."))}</p>

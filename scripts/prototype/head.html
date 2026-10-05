@@ -381,6 +381,23 @@
   .tree-child > .tree-node::before { content: ""; position: absolute; top: -18px; left: 50%; width: 1px; height: 18px; background: var(--hairline); }
   .tree-child.drop .card { border-color: var(--accent); }
 
+  /* ── тумблер в матрице прав ──────────────────────────────── */
+  .tg {
+    position: relative; width: 34px; height: 19px; flex: none; padding: 0;
+    border: 0; border-radius: 999px; background: var(--surface-3); cursor: pointer;
+    vertical-align: middle; transition: background-color .16s ease;
+  }
+  .tg::after {
+    content: ""; position: absolute; left: 2px; top: 2px; width: 15px; height: 15px;
+    border-radius: 999px; background: #fff; box-shadow: 0 1px 2px rgb(16 24 40 / .25);
+    transition: transform .16s cubic-bezier(.22, 1, .36, 1);
+  }
+  .tg.on { background: var(--accent); }
+  .tg.on::after { transform: translateX(15px); }
+  .tg:disabled { opacity: .5; cursor: not-allowed; }
+  .role-name:hover:not(:disabled) { background: var(--surface-2); }
+  .role-name:focus { outline: none; background: var(--surface-1); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
+
   /* ── движение ────────────────────────────────────────────── */
   /* Анимации показывают, откуда взялся элемент, и длятся 120–180 мс:
      портал должен ощущаться быстрым, а не плавным. */
