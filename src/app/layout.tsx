@@ -8,7 +8,7 @@ import { Topbar } from "@/components/Topbar";
 import { openModules } from "@/components/guard";
 import { navFor } from "@/components/nav";
 import { homeHref } from "@/lib/edition";
-import { roleLabel } from "@/lib/rbac";
+import { roleLabel, roleTitle } from "@/lib/rbac";
 import { formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
 import { DEADLINE_KIND } from "@/lib/labels";
@@ -88,14 +88,14 @@ export default async function RootLayout({
             tenantMark={session.tenant.mark}
             host={host}
             modules={modules}
-            roleLabel={roleLabel(session.role)}
+            roleLabel={roleTitle(roleLabel(session.tenant.id, session.role), t)}
             locale={session.locale}
             home={home}
           />
           <div className="relative z-10 flex min-w-0 flex-1 flex-col">
             <Topbar
               user={session.user}
-              roleLabel={roleLabel(session.role)}
+              roleLabel={roleTitle(roleLabel(session.tenant.id, session.role), t)}
               showLogout={session.tenant.source === "signup"}
               canAdmin={modules.includes("admin")}
               notices={noticesFor(session).map((n) => ({

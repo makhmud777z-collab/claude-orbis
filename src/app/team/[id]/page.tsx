@@ -9,7 +9,7 @@ import { age, formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
 import { CITY_LABEL, ref, TASK_STATUS } from "@/lib/labels";
 import { scopedContacts, scopedDeals, scopedTasks, scopedTeam } from "@/lib/queries";
-import { allow, roleDef } from "@/lib/rbac";
+import { allow, roleOf, roleTitle } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
 import {
   departmentById,
@@ -34,7 +34,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
   if (!user) notFound();
 
   const f = formatters(session.locale);
-  const role = roleDef(user.role);
+  const role = roleOf(session.tenant.id, user.role);
   const department = departmentById(departmentOf(user.id) ?? "");
   const branch = session.tenant.branches.find((b) => b.id === user.branchId);
   const canEdit = allow(session.tenant.id, session.role, "team", "edit");
@@ -57,7 +57,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
           <>
             <span>{user.title}</span>
             <span>·</span>
-            <Chip active>{t(role.label)}</Chip>
+            <Chip active>{roleTitle(role.name, t)}</Chip>
             <span>
               {branch ? t(ref(CITY_LABEL, branch.city)) : "—"} ·{" "}
               {f.plural(age(user.birthDate), P.years)}

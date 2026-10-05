@@ -3,7 +3,8 @@ import { NoAccess } from "./NoAccess";
 import { NotInEdition } from "./NotInEdition";
 import { navFor } from "./nav";
 import { editionModules, hasModule, moduleEdition } from "@/lib/edition";
-import { allow, visibleModules, type Module } from "@/lib/rbac";
+import { translator } from "@/lib/i18n";
+import { allow, roleLabel, roleTitle, visibleModules, type Module } from "@/lib/rbac";
 import type { Session } from "@/lib/session";
 import { S } from "@/lib/strings";
 
@@ -53,7 +54,13 @@ export function moduleGate(
   // только прячет пункт из меню.
   const restricted = session.user.restrictedModules ?? [];
   if (restricted.includes(module) || !allow(session.tenant.id, session.role, module)) {
-    return <NoAccess role={session.role} module={label} locale={session.locale} />;
+    return (
+      <NoAccess
+        roleName={roleTitle(roleLabel(session.tenant.id, session.role), translator(session.locale))}
+        module={label}
+        locale={session.locale}
+      />
+    );
   }
   return null;
 }

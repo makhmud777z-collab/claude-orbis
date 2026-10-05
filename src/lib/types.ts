@@ -77,15 +77,31 @@ export interface CustomField {
 
 /* ── Люди ────────────────────────────────────────────────────── */
 
-export type Role =
-  | "owner"
-  | "director"
-  | "branch_manager"
-  | "sales_manager"
-  | "case_manager"
-  | "document_specialist"
-  | "finance"
-  | "partner";
+/**
+ * Роль — идентификатор внутри агентства, а не значение из списка в коде.
+ * Каждое агентство заводит свои роли и называет их как хочет; стартовый
+ * набор (SEED_ROLES в rbac.ts) подставляется при регистрации и дальше
+ * живёт как обычные данные арендатора.
+ */
+export type Role = string;
+
+/** Роль агентства: название, зона видимости и галочки по разделам. */
+export interface TenantRole {
+  id: Role;
+  tenantId: string;
+  /** Loc у стартового набора, обычная строка — как её назвал админ. */
+  name: string | Loc;
+  scope: "tenant" | "branch" | "own";
+  /** пояснение из стартового набора; у заведённых агентством его нет */
+  description?: string | Loc;
+  permissions: Partial<Record<string, string[]>>;
+  /**
+   * Владельца нельзя переименовать, урезать или удалить: иначе агентство
+   * останется без входа в администрирование, и вернуть его сможет только
+   * поддержка руками в базе.
+   */
+  system?: boolean;
+}
 
 export interface User {
   id: string;

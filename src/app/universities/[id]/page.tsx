@@ -23,7 +23,6 @@ import {
   VISA_GRADE_LABEL,
 } from "@/lib/labels";
 import { matchProgram, verdictDot, verdictLabel } from "@/lib/matching";
-import { can } from "@/lib/rbac";
 import { scopedDeals, scopedContacts } from "@/lib/queries";
 import { getSession } from "@/lib/session";
 import { NO_STUDENT } from "@/lib/shortlist";

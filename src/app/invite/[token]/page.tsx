@@ -1,7 +1,7 @@
 import { acceptInviteAction } from "@/app/actions";
 import { userByInviteToken } from "@/lib/onboarding";
 import { getSession } from "@/lib/session";
-import { roleDef } from "@/lib/rbac";
+import { roleOf, roleTitle } from "@/lib/rbac";
 import { translator } from "@/lib/i18n";
 
 /** Сотрудник открывает ссылку из /admin/users, задаёт пароль и сразу в портале. */
@@ -43,7 +43,7 @@ export default async function InvitePage({
       <div className="card w-full max-w-[400px] p-8">
         <h1 className="t-headline">{t({ ru: "Добро пожаловать", uz: "Xush kelibsiz" })}, {user.name}</h1>
         <p className="t-caption mt-2.5 leading-relaxed text-ink-muted">
-          {t({ ru: "Роль", uz: "Rol" })}: {t(roleDef(user.role).label)}
+          {t({ ru: "Роль", uz: "Rol" })}: {roleTitle(roleOf(user.tenantId, user.role).name, t)}
           {" · "}
           {t({ ru: "Осталось задать пароль", uz: "Faqat parol qo‘yish qoldi" })}
         </p>

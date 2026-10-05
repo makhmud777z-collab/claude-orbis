@@ -26,7 +26,7 @@ import {
   INTAKE_LABEL, OWNERSHIP_LABEL, PRIORITY_LABEL, PROGRAM_LANGUAGE, REGION_LABEL,
   SOURCE_LABEL, STUDENT_STATUS, TASK_STATUS, VISA_GRADE_LABEL,
 } from "../../src/lib/labels";
-import { ACTION_LABEL, MODULE_LABEL, ROLES } from "../../src/lib/rbac";
+import { ACTION_LABEL, MODULE_LABEL, SEED_ROLES } from "../../src/lib/rbac";
 import { EDITIONS } from "../../src/lib/edition";
 import { TENANTS } from "../../src/lib/tenants";
 
@@ -49,7 +49,7 @@ const payload = {
   checklist: DOCUMENT_CHECKLIST,
   universities: UNIVERSITIES,
   editions: EDITIONS,
-  roles: ROLES,
+  roles: SEED_ROLES,
   labels: {
     documentStatus: DOCUMENT_STATUS,
     taskStatus: TASK_STATUS,

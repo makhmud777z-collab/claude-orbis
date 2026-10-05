@@ -10,7 +10,7 @@ import { translator } from "@/lib/i18n";
 import { BRANCH_LABEL, CITY_LABEL, ref } from "@/lib/labels";
 import { editionModules } from "@/lib/edition";
 import { scopedTeam } from "@/lib/queries";
-import { allow, MODULE_LABEL, ROLES, roleDef, visibleModules, type Module } from "@/lib/rbac";
+import { allow, MODULE_LABEL, roleOf, roleTitle, rolesOf, visibleModules, type Module } from "@/lib/rbac";
 import { simplePresets, teamFields } from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
 import { departmentOf } from "@/lib/store";
@@ -29,6 +29,7 @@ export default async function AdminUsersPage({
   const session = await getSession();
   const params = await searchParams;
   const t = translator(session.locale);
+  const roles = rolesOf(session.tenant.id);
   const gate = moduleGate(session, "admin", t(S.admin.users));
   if (gate) return gate;
 
@@ -61,7 +62,7 @@ export default async function AdminUsersPage({
       .map((m) => ({ key: m, label: t(MODULE_LABEL[m]) }));
 
   const rows: AdminUserRow[] = team.map((u) => {
-    const role = roleDef(u.role);
+    const role = roleOf(session.tenant.id, u.role);
     const branch = branches.get(u.branchId);
     return {
       id: u.id,
@@ -69,7 +70,7 @@ export default async function AdminUsersPage({
       title: u.title,
       email: u.email,
       role: u.role,
-      roleLabel: t(role.label),
+      roleLabel: roleTitle(role.name, t),
       status: u.status,
       scopeLabel: scopeLabel(role.scope),
       branchLabel: branch ? t(ref(CITY_LABEL, branch.city)) : "—",
@@ -103,7 +104,7 @@ export default async function AdminUsersPage({
             <InviteDialog
               locale={session.locale}
               defaultBranchId={session.user.branchId}
-              roles={ROLES.map((r) => ({ value: r.key, label: t(r.label), hint: t(r.description) }))}
+              roles={roles.map((r) => ({ value: r.id, label: roleTitle(r.name, t), hint: scopeLabel(r.scope) }))}
               branches={session.tenant.branches.map((b) => ({
                 value: b.id,
                 label: `${t(ref(BRANCH_LABEL, b.name))} · ${t(ref(CITY_LABEL, b.city))}`,
@@ -129,9 +130,9 @@ export default async function AdminUsersPage({
         rows={rows}
         locale={session.locale}
         canEdit={allow(session.tenant.id, session.role, "admin", "edit")}
-        roles={ROLES.map((r) => ({
-          value: r.key,
-          label: t(r.label),
+        roles={roles.map((r) => ({
+          value: r.id,
+          label: roleTitle(r.name, t),
           hint: scopeLabel(r.scope),
         }))}
       />

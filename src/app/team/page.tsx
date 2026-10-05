@@ -8,7 +8,7 @@ import { age, formatters, type Formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
 import { CITY_LABEL, ref } from "@/lib/labels";
 import { scopedContacts, scopedDeals, scopedTasks, scopedTeam } from "@/lib/queries";
-import { allow, ROLES } from "@/lib/rbac";
+import { allow, roleTitle, rolesOf } from "@/lib/rbac";
 import { simplePresets, teamFields } from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
 import { departmentOf, departmentsOf, openSession, sessionMinutes } from "@/lib/store";
@@ -28,6 +28,7 @@ export default async function TeamPage({
   const session = await getSession();
   const params = await searchParams;
   const t = translator(session.locale);
+  const roles = rolesOf(session.tenant.id);
   const f = formatters(session.locale);
   const gate = moduleGate(session, "team", t(S.nav.team));
   if (gate) return gate;
@@ -83,7 +84,7 @@ export default async function TeamPage({
 
       <div className="stagger-in grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {team.map((u) => {
-          const role = ROLES.find((r) => r.key === u.role)!;
+          const role = roles.find((r) => r.id === u.role);
           const work = openSession(u.id);
           const department = departments.get(departmentOf(u.id) ?? "");
           return (
@@ -128,7 +129,7 @@ export default async function TeamPage({
               </div>
 
               <div className="mt-4 flex flex-wrap gap-1.5">
-                <Chip active>{t(role.label)}</Chip>
+                <Chip active>{role ? roleTitle(role.name, t) : t(S.team.roleGone)}</Chip>
                 {department ? <Chip>{t(department.name)}</Chip> : null}
               </div>
 

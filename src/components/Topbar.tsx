@@ -34,7 +34,7 @@ export function Topbar({
   showLogout,
 }: {
   user: User;
-  roleLabel: Loc;
+  roleLabel: string;
   locale: Locale;
   modules: Module[];
   home: string;
@@ -145,7 +145,7 @@ export function Topbar({
           </span>
           <span className="hidden text-left md:block">
             <span className="t-caption block leading-tight">{user.name}</span>
-            <span className="t-micro block leading-tight text-ink-faint">{t(roleLabel)}</span>
+            <span className="t-micro block leading-tight text-ink-faint">{roleLabel}</span>
           </span>
           <IconChevron size={14} className="text-ink-faint" />
         </button>

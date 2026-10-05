@@ -2,7 +2,7 @@ import { switchTenant, switchUser } from "@/app/actions";
 import { Avatar, Crumbs, PageHeader, SectionTitle } from "@/components/ui";
 import { translator } from "@/lib/i18n";
 import { usersOfTenant } from "@/lib/data/users";
-import { roleDef } from "@/lib/rbac";
+import { roleOf, roleTitle } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
 import { S } from "@/lib/strings";
 import { TENANTS } from "@/lib/tenants";
@@ -64,7 +64,7 @@ export default async function AdminDemoPage() {
               <span className="min-w-0 flex-1">
                 <span className="t-body-sm block truncate">{member.name}</span>
                 <span className="t-micro block truncate text-ink-faint">
-                  {t(roleDef(member.role).label)} · {member.title}
+                  {roleTitle(roleOf(session.tenant.id, member.role).name, t)} · {member.title}
                 </span>
               </span>
             </button>

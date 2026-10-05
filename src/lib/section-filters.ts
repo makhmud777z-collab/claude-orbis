@@ -8,7 +8,7 @@ import {
   CITY_LABEL, DEGREE_LABEL, DEADLINE_KIND, DOCUMENT_STATUS, FIELD_LABEL, INTAKE_LABEL,
   OWNERSHIP_LABEL, PRIORITY_LABEL, ref, SOURCE_LABEL, STUDENT_STATUS, TASK_STATUS,
 } from "./labels";
-import { ROLES } from "./rbac";
+import { roleTitle, rolesOf } from "./rbac";
 import type { Session } from "./session";
 import type { FilterField, FilterOption, FilterPreset, FilterRow } from "./filters";
 import type { Pipeline, Project, User } from "./types";
@@ -131,7 +131,7 @@ export function documentFields(team: User[], t: Translate): FilterField[] {
 export function teamFields(session: Session, t: Translate): FilterField[] {
   return [
     { key: "role", label: loc("Роль", "Rol"), kind: "select",
-      options: ROLES.map((r) => opt(r.key, t(r.label))), base: true },
+      options: rolesOf(session.tenant.id).map((r) => opt(r.id, roleTitle(r.name, t))), base: true },
     { key: "branchId", label: loc("Филиал", "Filial"), kind: "select",
       options: session.tenant.branches.map((b) => opt(b.id, t(ref(CITY_LABEL, b.city)))), base: true },
     { key: "status", label: loc("Статус", "Holat"), kind: "select", options: [

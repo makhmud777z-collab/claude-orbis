@@ -14,7 +14,7 @@ import { loc, type Loc } from "./i18n";
 import type { Action, Module } from "./rbac";
 import type {
   CalendarEvent, Channel, CustomField, Deal, Department, EventKind, Lead, Pipeline, Project, Role,
-  Stage, Student, StudentDocument, Task, Tenant, TimelineEvent, User, WorkSession,
+  Stage, Student, StudentDocument, Task, Tenant, TenantRole, TimelineEvent, User, WorkSession,
 } from "./types";
 
 /**
@@ -42,6 +42,12 @@ interface State {
   departmentOf: Record<string, string>;
   /** переопределения прав по арендаторам: tenantId → роль → модуль → действия */
   permissions: Record<string, Partial<Record<Role, Partial<Record<Module, Action[]>>>>>;
+  /**
+   * Роли агентства. Пусто, пока агентство их не правило: тогда rbac.ts
+   * отдаёт стартовый набор. Первая же правка материализует весь список,
+   * и дальше роли живут здесь как обычные данные арендатора.
+   */
+  roles: Record<string, TenantRole[]>;
   /** какие поля показывать на карточке канбана: userId → список полей */
   cardFields: Record<string, string[]>;
   /** сохранённые фильтры: «userId:раздел» → срезы сотрудника */
@@ -61,7 +67,7 @@ interface State {
  * кода, и новое поле оказалось бы undefined — поэтому состояние с чужой
  * версией пересоздаётся целиком.
  */
-const STATE_VERSION = 7;
+const STATE_VERSION = 8;
 
 const globalStore = globalThis as unknown as { __orbisStore?: State };
 
@@ -79,6 +85,7 @@ function createState(): State {
     departments: DEPARTMENTS.map((x) => ({ ...x })),
     departmentOf: { ...DEPARTMENT_OF },
     permissions: {},
+    roles: {},
     cardFields: {},
     filters: {},
     passcodes: {},
@@ -265,18 +272,23 @@ export function toggleChannel(channelId: string) {
 /* ── права ───────────────────────────────────────────────────── */
 export const permissionOverrides = (tenantId: string) => state.permissions[tenantId] ?? {};
 
+/* ── роли агентства ──────────────────────────────────────────── */
+/*
+ * Здесь только хранение: стартовый набор и сборка роли живут в rbac.ts,
+ * рядом с Module и Action. Если положить их сюда, получится кольцо
+ * импортов — rbac уже читает это хранилище.
+ */
+export const storedRoles = (tenantId: string): TenantRole[] | undefined => state.roles[tenantId];
+
+export function putRoles(tenantId: string, roles: TenantRole[]) {
+  state.roles[tenantId] = roles;
+}
+
 /* ── код входа в администрирование ───────────────────────────── */
 
 export const passcodeOverride = (tenantId: string) => state.passcodes[tenantId];
 export function setPasscode(tenantId: string, code: string) {
   state.passcodes[tenantId] = code;
-}
-export function setPermission(
-  tenantId: string, role: Role, module: Module, actions: Action[],
-) {
-  state.permissions[tenantId] ??= {};
-  state.permissions[tenantId][role] ??= {};
-  state.permissions[tenantId][role]![module] = actions;
 }
 
 /* ── настройка карточки канбана ──────────────────────────────── */

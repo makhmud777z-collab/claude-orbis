@@ -15,7 +15,7 @@ import {
 import { formatters } from "@/lib/format";
 import { translator, type Loc } from "@/lib/i18n";
 import { BRANCH_LABEL, CITY_LABEL, ref } from "@/lib/labels";
-import { allow, ROLES } from "@/lib/rbac";
+import { allow, roleTitle, rolesOf } from "@/lib/rbac";
 import { P, S } from "@/lib/strings";
 import { getSession } from "@/lib/session";
 import { ROOT_DOMAIN } from "@/lib/tenants";
@@ -75,11 +75,11 @@ export default async function SettingsPage() {
           <div className="card p-6">
             <SectionTitle>{t(S.settings.rolesTitle)}</SectionTitle>
             <div className="divide-y divide-hairline-soft">
-              {ROLES.map((r) => (
-                <div key={r.key} className="flex flex-wrap items-center gap-4 py-3.5">
+              {rolesOf(session.tenant.id).map((r) => (
+                <div key={r.id} className="flex flex-wrap items-center gap-4 py-3.5">
                   <div className="min-w-[200px] flex-1">
-                    <div className="t-body-sm">{t(r.label)}</div>
-                    <div className="t-micro text-ink-faint">{t(r.description)}</div>
+                    <div className="t-body-sm">{roleTitle(r.name, t)}</div>
+                    <div className="t-micro text-ink-faint">{r.description ? roleTitle(r.description, t) : ""}</div>
                   </div>
                   <Chip>
                     {t(

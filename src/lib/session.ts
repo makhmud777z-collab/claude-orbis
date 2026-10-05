@@ -4,7 +4,7 @@ import { hydrate } from "./db";
 import { USERS, usersOfTenant } from "./data/users";
 import { isLocale, type Locale } from "./i18n";
 import { isTheme, type Theme } from "./theme";
-import { roleDef, type Scope } from "./rbac";
+import { scopeOf, type Scope } from "./rbac";
 import { TENANTS, tenantBySlug } from "./tenants";
 import type { Role, Tenant, User } from "./types";
 
@@ -71,7 +71,7 @@ export async function getSession(): Promise<Session> {
     tenant,
     user,
     role: user.role,
-    scope: roleDef(user.role).scope,
+    scope: scopeOf(tenant.id, user.role),
     host: h.get("x-orbis-host") ?? "",
     locale: isLocale(requestedLocale) ? requestedLocale : tenant.locale,
     theme: isTheme(requestedTheme) ? requestedTheme : "light",

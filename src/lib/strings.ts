@@ -19,6 +19,7 @@ export const P = {
   days: { ru: ["день", "дня", "дней"] as [string, string, string], uz: ["kun", "kun", "kun"] as [string, string, string] },
   cards: { ru: ["карточка", "карточки", "карточек"] as [string, string, string], uz: ["karta", "karta", "karta"] as [string, string, string] },
   departments: { ru: ["отдел", "отдела", "отделов"] as [string, string, string], uz: ["bo‘lim", "bo‘lim", "bo‘lim"] as [string, string, string] },
+  roles: { ru: ["роль", "роли", "ролей"] as [string, string, string], uz: ["rol", "rol", "rol"] as [string, string, string] },
   modules: { ru: ["модуль", "модуля", "модулей"] as [string, string, string], uz: ["modul", "modul", "modul"] as [string, string, string] },
   people: { ru: ["человек", "человека", "человек"] as [string, string, string], uz: ["kishi", "kishi", "kishi"] as [string, string, string] },
   contracts: { ru: ["договор", "договора", "договоров"] as [string, string, string], uz: ["shartnoma", "shartnoma", "shartnoma"] as [string, string, string] },
@@ -463,6 +464,7 @@ export const S = {
   },
 
   team: {
+    roleGone: loc("Роль удалена", "Rol o‘chirilgan"),
     openCard: loc("Открыть карточку", "Kartani ochish"),
     status: loc("Статус", "Holat"),
     personal: loc("Личные данные", "Shaxsiy ma’lumotlar"),
@@ -856,7 +858,20 @@ export const S = {
     users: loc("Пользователи", "Foydalanuvchilar"),
     permissions: loc("Права доступа", "Kirish huquqlari"),
     portal: loc("Настройки портала", "Portal sozlamalari"),
-    permissionsCount: loc("Роли и разделы", "Rollar va bo‘limlar"),
+    permissionsCount: loc("прав", "huquq"),
+    roleScope: loc("Зона видимости", "Ko‘rish doirasi"),
+    roleScopeHint: loc("Нажмите, чтобы сменить зону", "Doirani almashtirish uchun bosing"),
+    roleAdd: loc("Добавить роль", "Rol qo‘shish"),
+    roleNew: loc("Новая роль", "Yangi rol"),
+    roleDelete: loc("Удалить роль", "Rolni o‘chirish"),
+    roleBusy: loc(
+      "Сначала переведите сотрудников на другую роль",
+      "Avval xodimlarni boshqa rolga o‘tkazing",
+    ),
+    roleLocked: loc(
+      "Роль владельца защищена: иначе можно закрыть себе вход в администрирование",
+      "Egasi roli himoyalangan: aks holda boshqaruvga kirishni yo‘qotish mumkin",
+    ),
     crmSettings: loc("Настройки CRM", "CRM sozlamalari"),
     permissionsHint: loc(
       "Матрица прав редактируется прямо здесь: изменения сразу влияют на меню и данные сотрудников.",

@@ -62,7 +62,7 @@ export function Sidebar({
   tenantMark: string;
   host: string;
   modules: Module[];
-  roleLabel: Loc;
+  roleLabel: string;
   locale: Locale;
   /** куда ведёт логотип: у MVP и у ролей без дашборда это не «/» */
   home: string;
@@ -202,7 +202,7 @@ export function Sidebar({
             </span>
             <span className="min-w-0">
               <span className="t-caption block truncate">{tenantName}</span>
-              <span className="t-micro block truncate text-ink-faint">{t(roleLabel)}</span>
+              <span className="t-micro block truncate text-ink-faint">{roleLabel}</span>
             </span>
           </div>
         </div>

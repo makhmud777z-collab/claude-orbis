@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isLocale, loc } from "@/lib/i18n";
 import { allow, type Action, type Module } from "@/lib/rbac";
+import * as rbac from "@/lib/rbac";
+import { usersOfTenant } from "@/lib/data/users";
 import * as db from "@/lib/store";
 import type { CalendarEvent, Lead, Role, StudentDocument, TimelineEvent } from "@/lib/types";
 import { checklistKey, DOCUMENT_CHECKLIST } from "@/lib/labels";
@@ -568,16 +570,73 @@ export async function setDocumentStatusAction(formData: FormData) {
 
 /* ── Права доступа ───────────────────────────────────────────── */
 
-export async function setPermissionAction(formData: FormData) {
-  const session = await actor();
-  if (!allow(session.tenant.id, session.role, "admin", "edit")) return;
+/*
+ * Роли агентства. Каждое агентство заводит их само: состав ролей и их
+ * названия нигде не зашиты, поэтому все действия ниже правят данные
+ * арендатора, а не константы в коде.
+ */
 
-  db.setPermission(
+/** Может ли этот сотрудник вообще трогать роли. */
+async function roleEditor() {
+  const session = await actor();
+  return allow(session.tenant.id, session.role, "admin", "edit") ? session : null;
+}
+
+export async function createRoleAction(formData: FormData) {
+  const session = await roleEditor();
+  if (!session) return;
+
+  const name = String(formData.get("name") ?? "").trim();
+  rbac.createRole(session.tenant.id, name || "Новая роль");
+  revalidatePath("/", "layout");
+}
+
+export async function renameRoleAction(formData: FormData) {
+  const session = await roleEditor();
+  if (!session) return;
+
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+  rbac.renameRole(session.tenant.id, String(formData.get("role") ?? ""), name);
+  revalidatePath("/", "layout");
+}
+
+export async function setRoleScopeAction(formData: FormData) {
+  const session = await roleEditor();
+  if (!session) return;
+
+  const scope = String(formData.get("scope") ?? "");
+  if (scope !== "tenant" && scope !== "branch" && scope !== "own") return;
+  rbac.setRoleScope(session.tenant.id, String(formData.get("role") ?? ""), scope);
+  revalidatePath("/", "layout");
+}
+
+/** Один тумблер в матрице: раздел + действие. */
+export async function setRoleActionAction(formData: FormData) {
+  const session = await roleEditor();
+  if (!session) return;
+
+  rbac.setRoleAction(
     session.tenant.id,
-    String(formData.get("role") ?? "") as Role,
+    String(formData.get("role") ?? ""),
     String(formData.get("module") ?? "") as Module,
-    formData.getAll("action").map(String) as Action[],
+    String(formData.get("action") ?? "") as Action,
+    formData.get("on") === "1",
   );
+  revalidatePath("/", "layout");
+}
+
+export async function deleteRoleAction(formData: FormData) {
+  const session = await roleEditor();
+  if (!session) return;
+
+  const role = String(formData.get("role") ?? "");
+  // Роль с сотрудниками не удаляем: иначе у них останется ссылка в никуда,
+  // а молча пересадить людей на другую роль — тихо поменять им права.
+  const staff = usersOfTenant(session.tenant.id).filter((u) => u.role === role);
+  if (staff.length) return;
+
+  rbac.removeRole(session.tenant.id, role);
   revalidatePath("/", "layout");
 }
 
