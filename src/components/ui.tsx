@@ -1,43 +1,9 @@
 import Link from "next/link";
+
+export { Crumbs } from "./Crumbs";
 import type { ReactNode } from "react";
 import { initials } from "@/lib/format";
 import { IconChevronRight } from "./icons";
-
-/**
- * Обратный путь + хлебные крошки одним элементом.
- *
- * Ведёт стрелка «назад»: на любой вложенной странице человек видит, куда
- * вернуться, и попадает туда одним нажатием, а не ищет кнопку браузера.
- * Справа от стрелки — родитель и текущая страница, чтобы было понятно,
- * где именно находишься.
- */
-export function Crumbs({
-  back,
-  backLabel,
-  current,
-}: {
-  back: string;
-  backLabel: string;
-  current?: string;
-}) {
-  return (
-    <nav className="t-caption mb-4 flex items-center gap-1.5 text-ink-faint">
-      <Link
-        href={back}
-        className="-ml-2 inline-flex items-center gap-1 rounded-full px-2 py-1 font-medium text-ink-muted transition-colors hover:bg-surface-1 hover:text-ink"
-      >
-        <IconChevronRight size={14} style={{ transform: "rotate(180deg)" }} />
-        {backLabel}
-      </Link>
-      {current ? (
-        <>
-          <IconChevronRight size={13} />
-          <span className="text-ink-muted">{current}</span>
-        </>
-      ) : null}
-    </nav>
-  );
-}
 
 export function PageHeader({
   title,

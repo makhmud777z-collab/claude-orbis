@@ -2,7 +2,7 @@ import Link from "next/link";
 import { moduleGate } from "@/components/guard";
 import { IconPlus } from "@/components/icons";
 import { SectionFilter } from "@/components/SectionFilter";
-import { Avatar, Chip, EmptyState, PageHeader, StatusDot } from "@/components/ui";
+import { Avatar, Chip, Crumbs, EmptyState, PageHeader, StatusDot } from "@/components/ui";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
 import { age, formatters, type Formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
@@ -47,6 +47,7 @@ export default async function TeamPage({
 
   return (
     <>
+      <Crumbs back="/" backLabel={t(S.nav.dashboard)} current={t(S.team.title)} />
       <PageHeader
         title={t(S.team.title)}
         meta={

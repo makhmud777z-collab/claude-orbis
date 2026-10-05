@@ -3,7 +3,7 @@ import { SectionFilter } from "@/components/SectionFilter";
 import { TasksBoard, type TaskCard } from "@/components/TasksBoard";
 import { NewTaskDialog } from "@/components/NewTaskDialog";
 import { moduleGate } from "@/components/guard";
-import { EmptyState, PageHeader } from "@/components/ui";
+import { Crumbs, EmptyState, PageHeader } from "@/components/ui";
 import { studentById } from "@/lib/data/students";
 import { userById } from "@/lib/data/users";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
@@ -63,6 +63,7 @@ export default async function TasksPage({
 
   return (
     <>
+      <Crumbs back="/" backLabel={t(S.nav.dashboard)} current={t(S.tasks.title)} />
       <PageHeader
         title={t(S.tasks.title)}
         meta={

@@ -5,7 +5,7 @@ import { PipelinePicker } from "@/components/PipelinePicker";
 import { SectionFilter } from "@/components/SectionFilter";
 import { ViewSwitch } from "@/components/ViewSwitch";
 import { moduleGate } from "@/components/guard";
-import { EmptyState, PageHeader } from "@/components/ui";
+import { Crumbs, EmptyState, PageHeader } from "@/components/ui";
 import { CARD_FIELD_LABEL, boardStages, leadCard } from "@/lib/crm";
 import { isActiveLead } from "@/lib/data/leads";
 import { userById } from "@/lib/data/users";
@@ -53,6 +53,7 @@ export default async function LeadsPage({
 
   return (
     <>
+      <Crumbs back="/" backLabel={t(S.nav.dashboard)} current={t(S.crm.leads)} />
       <PageHeader
         title={t(S.crm.leads)}
         meta={

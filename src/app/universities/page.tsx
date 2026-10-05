@@ -2,7 +2,7 @@ import { ExportButton } from "@/components/ExportButton";
 import { moduleGate } from "@/components/guard";
 import { CatalogExplorer, type Filters } from "@/components/CatalogExplorer";
 import { SectionFilter } from "@/components/SectionFilter";
-import { Banner, PageHeader } from "@/components/ui";
+import { Banner, Crumbs, PageHeader } from "@/components/ui";
 import { UNIVERSITIES } from "@/lib/data/universities";
 import { readFilter, readQuery } from "@/lib/filters";
 import { translator } from "@/lib/i18n";
@@ -63,6 +63,7 @@ export default async function UniversitiesPage({
 
   return (
     <>
+      <Crumbs back="/" backLabel={t(S.nav.dashboard)} current={t(S.universities.title)} />
       <PageHeader
         title={t(S.universities.title)}
         meta={

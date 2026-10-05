@@ -6,7 +6,7 @@ import { SectionFilter } from "@/components/SectionFilter";
 import { ViewSwitch } from "@/components/ViewSwitch";
 import { moduleGate } from "@/components/guard";
 import { IconPlus } from "@/components/icons";
-import { EmptyState, PageHeader } from "@/components/ui";
+import { Crumbs, EmptyState, PageHeader } from "@/components/ui";
 import { CARD_FIELD_LABEL, boardStages, dealCard } from "@/lib/crm";
 import { universityById } from "@/lib/data/universities";
 import { userById } from "@/lib/data/users";
@@ -60,6 +60,7 @@ export default async function DealsPage({
 
   return (
     <>
+      <Crumbs back="/" backLabel={t(S.nav.dashboard)} current={t(S.crm.deals)} />
       <PageHeader
         title={t(S.crm.deals)}
         meta={

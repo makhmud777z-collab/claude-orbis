@@ -1,15 +1,7 @@
 import { ExportButton } from "@/components/ExportButton";
 import { SectionFilter } from "@/components/SectionFilter";
 import { moduleGate } from "@/components/guard";
-import {
-  Avatar,
-  EmptyState,
-  PageHeader,
-  Progress,
-  SectionTitle,
-  StatTile,
-  StatusDot,
-} from "@/components/ui";
+import { Avatar, Crumbs, EmptyState, PageHeader, Progress, SectionTitle, StatTile, StatusDot } from "@/components/ui";
 import { studentById } from "@/lib/data/students";
 import { universityById } from "@/lib/data/universities";
 import { userById } from "@/lib/data/users";
@@ -64,6 +56,7 @@ export default async function FinancePage({
 
   return (
     <>
+      <Crumbs back="/" backLabel={t(S.nav.dashboard)} current={t(S.finance.title)} />
       <PageHeader
         title={t(S.finance.title)}
         meta={

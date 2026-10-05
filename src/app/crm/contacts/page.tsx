@@ -2,7 +2,7 @@ import { ContactsTable, type ContactRow } from "@/components/ContactsTable";
 import { ExportButton } from "@/components/ExportButton";
 import { SectionFilter } from "@/components/SectionFilter";
 import { moduleGate } from "@/components/guard";
-import { EmptyState, PageHeader } from "@/components/ui";
+import { Crumbs, EmptyState, PageHeader } from "@/components/ui";
 import { dossierProgress } from "@/lib/store";
 import { userById } from "@/lib/data/users";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
@@ -57,6 +57,7 @@ export default async function ContactsPage({
 
   return (
     <>
+      <Crumbs back="/" backLabel={t(S.nav.dashboard)} current={t(S.crm.contactsTitle)} />
       <PageHeader
         title={t(S.crm.contactsTitle)}
         meta={

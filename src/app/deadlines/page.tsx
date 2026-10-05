@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SectionFilter } from "@/components/SectionFilter";
 import { moduleGate } from "@/components/guard";
 import { IconCalendar } from "@/components/icons";
-import { Avatar, EmptyState, PageHeader, SectionTitle, StatusDot } from "@/components/ui";
+import { Avatar, Crumbs, EmptyState, PageHeader, SectionTitle, StatusDot } from "@/components/ui";
 import { userById } from "@/lib/data/users";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
 import { daysUntil, formatters } from "@/lib/format";
@@ -51,6 +51,7 @@ export default async function DeadlinesPage({
 
   return (
     <>
+      <Crumbs back="/" backLabel={t(S.nav.dashboard)} current={t(S.deadlines.title)} />
       <PageHeader
         title={t(S.deadlines.title)}
         meta={

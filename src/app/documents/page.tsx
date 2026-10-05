@@ -2,7 +2,7 @@ import { moduleGate } from "@/components/guard";
 import { DocumentsExplorer, type DossierFolder } from "@/components/DocumentsExplorer";
 import { SectionFilter } from "@/components/SectionFilter";
 import { RequestDocumentDialog } from "@/components/RequestDocumentDialog";
-import { EmptyState, PageHeader } from "@/components/ui";
+import { Crumbs, EmptyState, PageHeader } from "@/components/ui";
 import { userById } from "@/lib/data/users";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
 import { formatters } from "@/lib/format";
@@ -103,6 +103,7 @@ export default async function DocumentsPage({
 
   return (
     <>
+      <Crumbs back="/" backLabel={t(S.nav.dashboard)} current={t(S.documents.title)} />
       <PageHeader
         title={t(S.documents.title)}
         meta={

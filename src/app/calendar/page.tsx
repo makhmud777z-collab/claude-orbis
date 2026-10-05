@@ -1,6 +1,6 @@
 import { Calendar, type CalendarItem } from "@/components/Calendar";
 import { moduleGate } from "@/components/guard";
-import { PageHeader } from "@/components/ui";
+import { Crumbs, PageHeader } from "@/components/ui";
 import { userById } from "@/lib/data/users";
 import { formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
@@ -111,6 +111,7 @@ export default async function CalendarPage() {
 
   return (
     <>
+      <Crumbs back="/" backLabel={t(S.nav.dashboard)} current={t(S.calendar.title)} />
       <PageHeader
         title={t(S.calendar.title)}
         meta={

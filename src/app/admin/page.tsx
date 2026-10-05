@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { lockAdminAction } from "@/app/actions";
-import { PageHeader, SectionTitle } from "@/components/ui";
+import { Crumbs, PageHeader, SectionTitle } from "@/components/ui";
 import {
   IconApplications, IconChevronRight, IconLock, IconSettings, IconTeam,
 } from "@/components/icons";
@@ -81,6 +81,7 @@ export default async function AdminHome() {
 
   return (
     <>
+      <Crumbs back="/" backLabel={t(S.nav.dashboard)} current={t(S.admin.title)} />
       <PageHeader
         title={t(S.admin.title)}
         meta={<span>{t(S.admin.subtitle)}</span>}
