@@ -640,6 +640,60 @@ export async function deleteRoleAction(formData: FormData) {
   revalidatePath("/", "layout");
 }
 
+/* ── Meta: раскладка полей ───────────────────────────────────── */
+/*
+ * Поля формы у каждого агентства свои, поэтому соответствие задаётся
+ * здесь, а не угадывается при каждом приходе. Правит тот же, кто правит
+ * остальные настройки портала.
+ */
+
+const META_TARGETS = ["name", "phone", "email", "comment", ""] as const;
+
+export async function setMetaFieldAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "admin", "edit")) return;
+
+  const form = db.metaFormBy(
+    String(formData.get("pageId") ?? ""),
+    String(formData.get("formId") ?? ""),
+  );
+  // Чужую форму не трогаем: идентификаторы приходят из разметки.
+  if (!form || form.tenantId !== session.tenant.id) return;
+
+  const field = String(formData.get("field") ?? "");
+  const target = String(formData.get("target") ?? "") as (typeof META_TARGETS)[number];
+  if (!field || !META_TARGETS.includes(target)) return;
+
+  db.saveMetaForm({
+    ...form,
+    map: { ...form.map, [field]: target },
+    updatedAt: new Date().toISOString().slice(0, 10),
+  });
+  revalidatePath("/", "layout");
+}
+
+export async function setMetaFormOwnerAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "admin", "edit")) return;
+
+  const form = db.metaFormBy(
+    String(formData.get("pageId") ?? ""),
+    String(formData.get("formId") ?? ""),
+  );
+  if (!form || form.tenantId !== session.tenant.id) return;
+
+  const ownerId = String(formData.get("ownerId") ?? "");
+  // Пусто — лиды пойдут на владельца агентства, см. importLead.
+  const valid = ownerId && usersOfTenant(session.tenant.id).some((u) => u.id === ownerId);
+
+  db.saveMetaForm({
+    ...form,
+    ownerId: valid ? ownerId : null,
+    updatedAt: new Date().toISOString().slice(0, 10),
+  });
+  revalidatePath("/", "layout");
+}
+
 /* ── Рабочий день ────────────────────────────────────────────── */
 
 export async function workdayAction(formData: FormData) {

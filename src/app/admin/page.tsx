@@ -6,7 +6,7 @@ import {
 } from "@/components/icons";
 import { translator, type Loc } from "@/lib/i18n";
 import { getSession } from "@/lib/session";
-import { channelsOf, customFieldsOf, departmentsOf, pipelinesOf } from "@/lib/store";
+import { channelsOf, customFieldsOf, departmentsOf, metaFormsOf, pipelinesOf } from "@/lib/store";
 import { S } from "@/lib/strings";
 
 interface Item {
@@ -57,6 +57,12 @@ export default async function AdminHome() {
           title: S.customFields.title,
           hint: S.customFields.hubHint,
           value: String(customFieldsOf(tenant.id).length),
+        },
+        {
+          href: "/admin/meta",
+          title: S.meta.title,
+          hint: S.meta.hubHint,
+          value: String(metaFormsOf(tenant.id).length),
         },
       ],
     },
