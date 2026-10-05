@@ -140,6 +140,7 @@ export type DegreeLevel = "language" | "bachelor" | "master" | "phd";
 export type Ownership = "national" | "public" | "private";
 export type LeadSource =
   | "instagram"
+  | "facebook"
   | "referral"
   | "walk_in"
   | "telegram"
@@ -324,6 +325,64 @@ export interface Channel {
   connectedAt: string | null;
   /** сколько лидов пришло из канала за месяц */
   leadsPerMonth: number;
+}
+
+/* ── Meta: страницы, раскладка полей, журнал ─────────────────── */
+
+/**
+ * Подключённая страница Facebook. Ключ всей маршрутизации: вебхук Meta
+ * приходит одинаковый для всех агентств, и кому отдать лид, определяется
+ * только по pageId.
+ */
+export interface MetaPage {
+  id: string;
+  tenantId: string;
+  /** идентификатор страницы в Meta */
+  pageId: string;
+  pageName: string;
+  /** аккаунт Instagram, привязанный к странице, если есть */
+  igHandle: string | null;
+  /** долгоживущий токен страницы: им забираются сами лиды */
+  token: string;
+  /** канал в «Каналах продаж», который эта страница питает */
+  channelId: string | null;
+  status: "connected" | "needs_reconnect" | "off";
+  connectedAt: string;
+  connectedBy: string;
+}
+
+/** Куда класть поле формы Meta. Пустая строка — не переносить. */
+export type MetaTarget = "name" | "phone" | "email" | "comment" | "";
+
+/**
+ * Раскладка одной формы. У каждого агентства формы свои: одно спрашивает
+ * «телефон», другое — «ваш номер для связи», поэтому соответствие полей
+ * задаётся в Orbis на каждую форму отдельно.
+ */
+export interface MetaFormMapping {
+  id: string;
+  tenantId: string;
+  pageId: string;
+  formId: string;
+  formName: string;
+  /** имя поля в форме Meta → поле лида */
+  map: Record<string, MetaTarget>;
+  /** на кого вешать лиды этой формы; пусто — на владельца агентства */
+  ownerId: string | null;
+  updatedAt: string;
+}
+
+/** Журнал приходов: защита от повторов и место, куда смотреть при разборе. */
+export interface MetaEvent {
+  id: string;
+  tenantId: string | null;
+  leadgenId: string;
+  pageId: string;
+  formId: string;
+  status: "imported" | "duplicate" | "unknown_page" | "no_mapping" | "failed";
+  note: string;
+  leadId: string | null;
+  at: string;
 }
 
 /* ── Структура компании и рабочий день ───────────────────────── */

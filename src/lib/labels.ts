@@ -41,6 +41,7 @@ export const DEADLINE_KIND: Record<DeadlineKind, { label: Loc; dot: string }> = 
 
 export const SOURCE_LABEL: Record<LeadSource, Loc> = {
   instagram: loc("Instagram", "Instagram"),
+  facebook: loc("Facebook", "Facebook"),
   referral: loc("Рекомендация", "Tavsiya"),
   walk_in: loc("Пришёл в офис", "Ofisga keldi"),
   telegram: loc("Telegram", "Telegram"),

@@ -2,6 +2,7 @@ import { CHANNELS } from "./data/channels";
 import { DOCUMENTS } from "./data/documents";
 import { DEALS } from "./data/deals";
 import { LEADS, digits, isActiveLead } from "./data/leads";
+import { META_FORMS, META_PAGES } from "./data/meta";
 import { EVENTS } from "./data/events";
 import { DEPARTMENTS, DEPARTMENT_OF, PROJECTS, WORK_SESSIONS } from "./data/org";
 import { PIPELINES } from "./data/pipelines";
@@ -14,6 +15,7 @@ import { loc, type Loc } from "./i18n";
 import type { Action, Module } from "./rbac";
 import type {
   CalendarEvent, Channel, CustomField, Deal, Department, EventKind, Lead, Pipeline, Project, Role,
+  MetaEvent, MetaFormMapping, MetaPage,
   Stage, Student, StudentDocument, Task, Tenant, TenantRole, TimelineEvent, User, WorkSession,
 } from "./types";
 
@@ -48,6 +50,12 @@ interface State {
    * и дальше роли живут здесь как обычные данные арендатора.
    */
   roles: Record<string, TenantRole[]>;
+  /** подключённые страницы Facebook: ключ маршрутизации вебхука */
+  metaPages: MetaPage[];
+  /** раскладка полей по формам Meta */
+  metaForms: MetaFormMapping[];
+  /** журнал приходов из Meta: защита от повторов и разбор полётов */
+  metaEvents: MetaEvent[];
   /** какие поля показывать на карточке канбана: userId → список полей */
   cardFields: Record<string, string[]>;
   /** сохранённые фильтры: «userId:раздел» → срезы сотрудника */
@@ -67,7 +75,7 @@ interface State {
  * кода, и новое поле оказалось бы undefined — поэтому состояние с чужой
  * версией пересоздаётся целиком.
  */
-const STATE_VERSION = 8;
+const STATE_VERSION = 9;
 
 const globalStore = globalThis as unknown as { __orbisStore?: State };
 
@@ -86,6 +94,9 @@ function createState(): State {
     departmentOf: { ...DEPARTMENT_OF },
     permissions: {},
     roles: {},
+    metaPages: META_PAGES.map((x) => ({ ...x })),
+    metaForms: META_FORMS.map((x) => ({ ...x, map: { ...x.map } })),
+    metaEvents: [],
     cardFields: {},
     filters: {},
     passcodes: {},
@@ -283,6 +294,62 @@ export const storedRoles = (tenantId: string): TenantRole[] | undefined => state
 export function putRoles(tenantId: string, roles: TenantRole[]) {
   state.roles[tenantId] = roles;
 }
+
+/* ── Meta: страницы, формы, журнал ───────────────────────────── */
+
+export const metaPagesOf = (tenantId: string) =>
+  state.metaPages.filter((p) => p.tenantId === tenantId);
+
+/**
+ * Поиск агентства по странице. Вебхук Meta приходит одинаковый для всех,
+ * и это единственное, по чему его можно развести по арендаторам.
+ */
+export const metaPageByPageId = (pageId: string) =>
+  state.metaPages.find((p) => p.pageId === pageId);
+
+export function saveMetaPage(page: MetaPage) {
+  const i = state.metaPages.findIndex((p) => p.pageId === page.pageId);
+  if (i >= 0) state.metaPages[i] = page;
+  else state.metaPages.push(page);
+  return page;
+}
+
+export function removeMetaPage(tenantId: string, pageId: string) {
+  state.metaPages = state.metaPages.filter((p) => !(p.tenantId === tenantId && p.pageId === pageId));
+  state.metaForms = state.metaForms.filter((f) => !(f.tenantId === tenantId && f.pageId === pageId));
+}
+
+export const metaFormsOf = (tenantId: string) =>
+  state.metaForms.filter((f) => f.tenantId === tenantId);
+
+export const metaFormBy = (pageId: string, formId: string) =>
+  state.metaForms.find((f) => f.pageId === pageId && f.formId === formId);
+
+export function saveMetaForm(form: MetaFormMapping) {
+  const i = state.metaForms.findIndex((f) => f.pageId === form.pageId && f.formId === form.formId);
+  if (i >= 0) state.metaForms[i] = form;
+  else state.metaForms.push(form);
+  return form;
+}
+
+/** Этот лид уже приходил? Meta шлёт повторы, пока не получит 200. */
+export const metaEventSeen = (leadgenId: string) =>
+  state.metaEvents.some((e) => e.leadgenId === leadgenId && e.status === "imported");
+
+export function recordMetaEvent(event: Omit<MetaEvent, "id" | "at"> & { at?: string }) {
+  const item: MetaEvent = { ...event, id: nextId("mev"), at: event.at ?? now() };
+  state.metaEvents.push(item);
+  // Журнал нужен для разбора «лид не пришёл», а не как архив: держим хвост.
+  if (state.metaEvents.length > 500) state.metaEvents.splice(0, state.metaEvents.length - 500);
+  return item;
+}
+
+export const metaEventsOf = (tenantId: string) =>
+  state.metaEvents.filter((e) => e.tenantId === tenantId).slice().reverse();
+
+/** Приходы, которые не легли ни на одно агентство — видно только платформе. */
+export const metaEventsOrphan = () =>
+  state.metaEvents.filter((e) => !e.tenantId).slice().reverse();
 
 /* ── код входа в администрирование ───────────────────────────── */
 
