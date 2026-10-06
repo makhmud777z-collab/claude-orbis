@@ -17,6 +17,7 @@ import { saveTenant, saveUser } from "@/lib/db";
 import { acceptInvite, authenticate, createTenant, inviteEmployee } from "@/lib/onboarding";
 import { validateSlug } from "@/lib/tenants";
 import { metaConfigured, subscribePage } from "@/lib/meta/oauth";
+import { ROBOT_ACTIONS, TRIGGER_EVENTS } from "@/lib/automation";
 import {
   NO_STUDENT,
   parseShortlist,
@@ -238,6 +239,14 @@ export async function addTimelineAction(formData: FormData) {
     dueAt,
     done: kind === "activity" ? false : null,
   });
+
+  // Запись в ленте — событие для триггеров: «позвонили» может само увести
+  // карточку из «Новых» в «Квалификацию».
+  if (entity === "lead" || entity === "deal") {
+    if (kind === "comment") db.fireTrigger("comment", entity, entityId, session.tenant.id, session.user.id);
+    if (kind === "activity") db.fireTrigger("activity", entity, entityId, session.tenant.id, session.user.id);
+  }
+
   revalidatePath("/crm/leads");
   revalidatePath("/crm/deals");
   revalidatePath("/crm/contacts");
@@ -565,7 +574,17 @@ export async function setDocumentStatusAction(formData: FormData) {
   if (!["requested", "uploaded", "verified", "rejected"].includes(status)) return;
 
   const result = db.setDocumentStatus(id, status, session.user.id);
+
+  // Документ принят — сделки этого студента могут поехать дальше сами.
+  if (result.ok && status === "verified") {
+    for (const deal of db.allDeals(session.tenant.id)) {
+      if (deal.studentId !== result.doc.studentId) continue;
+      db.fireTrigger("document", "deal", deal.id, session.tenant.id, session.user.id);
+    }
+  }
+
   revalidatePath("/documents");
+  revalidatePath("/crm/deals");
   if (result.ok) revalidatePath(`/crm/contacts/${result.doc.studentId}`);
 }
 
@@ -780,6 +799,131 @@ export async function disconnectMetaPageAction(formData: FormData) {
   // Без этого ?disconnect=… остаётся в адресе и откроет подтверждение
   // заново, стоит странице с тем же номером вернуться.
   redirect("/admin/meta");
+}
+
+/* ── Роботы и триггеры ───────────────────────────────────────── */
+/*
+ * Автоматика — это настройка воронки, а не работа с карточками: правит её
+ * тот же, кто правит стадии. Воронка обязательно проверяется на
+ * принадлежность агентству: идентификаторы приходят из разметки.
+ */
+
+async function automationEditor() {
+  const session = await actor();
+  return allow(session.tenant.id, session.role, "crmSettings", "edit") ? session : null;
+}
+
+/** Воронка этого агентства — или ничего. */
+function ownPipeline(tenantId: string, pipelineId: string) {
+  const pipeline = db.pipelineById(pipelineId);
+  return pipeline && pipeline.tenantId === tenantId ? pipeline : undefined;
+}
+
+export async function saveRobotAction(formData: FormData) {
+  const session = await automationEditor();
+  if (!session) return;
+
+  const pipelineId = String(formData.get("pipelineId") ?? "");
+  const pipeline = ownPipeline(session.tenant.id, pipelineId);
+  if (!pipeline) return;
+
+  const stage = String(formData.get("stage") ?? "");
+  if (!pipeline.stages.some((s) => s.key === stage)) return;
+
+  const action = String(formData.get("action") ?? "");
+  const spec = ROBOT_ACTIONS.find((a) => a.id === action);
+  if (!spec) return;
+
+  const param = String(formData.get("param") ?? "");
+  // «Перевести на стадию» без существующей стадии — робот, который будет
+  // молча падать на каждой карточке. Лучше не сохранять вовсе.
+  if (spec.param === "stage" && !pipeline.stages.some((s) => s.key === param)) return;
+
+  const text = String(formData.get("text") ?? "").trim();
+  if (spec.needsText && !text) return;
+
+  const delayMinutes = Math.max(0, Math.min(43200, Number(formData.get("delayMinutes") ?? 0) || 0));
+  const target = String(formData.get("target") ?? "owner") || "owner";
+  const id = String(formData.get("robotId") ?? "");
+
+  // Правка чужого робота: проверяем не только агентство, но и то, что он
+  // вообще существует.
+  if (id && db.robotById(id)?.tenantId !== session.tenant.id) return;
+
+  db.saveRobot({
+    ...(id ? { id } : {}),
+    tenantId: session.tenant.id,
+    pipelineId,
+    stage,
+    action: spec.id,
+    delayMinutes,
+    target,
+    text,
+    param,
+    enabled: true,
+  });
+  revalidatePath("/admin/automation");
+  revalidatePath("/", "layout");
+}
+
+export async function removeRobotAction(formData: FormData) {
+  const session = await automationEditor();
+  if (!session) return;
+  db.removeRobot(session.tenant.id, String(formData.get("robotId") ?? ""));
+  revalidatePath("/admin/automation");
+  revalidatePath("/", "layout");
+}
+
+export async function toggleRobotAction(formData: FormData) {
+  const session = await automationEditor();
+  if (!session) return;
+  db.toggleRobot(session.tenant.id, String(formData.get("robotId") ?? ""));
+  revalidatePath("/admin/automation");
+  revalidatePath("/", "layout");
+}
+
+export async function saveTriggerAction(formData: FormData) {
+  const session = await automationEditor();
+  if (!session) return;
+
+  const pipelineId = String(formData.get("pipelineId") ?? "");
+  const pipeline = ownPipeline(session.tenant.id, pipelineId);
+  if (!pipeline) return;
+
+  const stage = String(formData.get("stage") ?? "");
+  if (!pipeline.stages.some((s) => s.key === stage)) return;
+
+  const event = String(formData.get("event") ?? "");
+  const spec = TRIGGER_EVENTS.find((e) => e.id === event);
+  // Событие не из этой сущности: «лид стал сделкой» в воронке лидов
+  // не случится никогда.
+  if (!spec || (spec.entity !== "both" && spec.entity !== pipeline.entity)) return;
+
+  db.saveTrigger({
+    tenantId: session.tenant.id,
+    pipelineId,
+    stage,
+    event: spec.id,
+    enabled: true,
+  });
+  revalidatePath("/admin/automation");
+  revalidatePath("/", "layout");
+}
+
+export async function removeTriggerAction(formData: FormData) {
+  const session = await automationEditor();
+  if (!session) return;
+  db.removeTrigger(session.tenant.id, String(formData.get("triggerId") ?? ""));
+  revalidatePath("/admin/automation");
+  revalidatePath("/", "layout");
+}
+
+export async function toggleTriggerAction(formData: FormData) {
+  const session = await automationEditor();
+  if (!session) return;
+  db.toggleTrigger(session.tenant.id, String(formData.get("triggerId") ?? ""));
+  revalidatePath("/admin/automation");
+  revalidatePath("/", "layout");
 }
 
 /* ── Рабочий день ────────────────────────────────────────────── */

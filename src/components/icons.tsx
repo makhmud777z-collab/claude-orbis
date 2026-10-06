@@ -166,6 +166,12 @@ export const IconCheck = (p: IconProps) => (
 export const IconAlert = (p: IconProps) => (
   <Icon {...p}><path d="M12 4.5 2.8 20h18.4L12 4.5Z" /><path d="M12 10v4" /><path d="M12 17.2h.01" /></Icon>
 );
+export const IconRobot = (p: IconProps) => (
+  <Icon {...p}><rect x="4" y="8" width="16" height="12" rx="3" /><path d="M12 4.5v3.5" /><circle cx="12" cy="3.4" r="1.2" /><path d="M9 13h.01" /><path d="M15 13h.01" /><path d="M9.5 16.8h5" /></Icon>
+);
+export const IconBolt = (p: IconProps) => (
+  <Icon {...p}><path d="M13.5 3 5 13.2h5.5L10 21l8.5-10.2H13L13.5 3Z" /></Icon>
+);
 export const IconArrowUpRight = (p: IconProps) => (
   <Icon {...p}><path d="M7 17 17 7" /><path d="M8 7h9v9" /></Icon>
 );

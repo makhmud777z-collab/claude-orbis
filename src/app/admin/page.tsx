@@ -6,7 +6,7 @@ import {
 } from "@/components/icons";
 import { translator, type Loc } from "@/lib/i18n";
 import { getSession } from "@/lib/session";
-import { channelsOf, customFieldsOf, departmentsOf, metaFormsOf, pipelinesOf } from "@/lib/store";
+import { channelsOf, customFieldsOf, departmentsOf, metaFormsOf, pipelinesOf, robotsOf } from "@/lib/store";
 import { S } from "@/lib/strings";
 
 interface Item {
@@ -39,6 +39,12 @@ export default async function AdminHome() {
           title: S.pipelines.title,
           hint: S.pipelines.subtitle,
           value: String(pipelines.length),
+        },
+        {
+          href: "/admin/automation",
+          title: S.automation.title,
+          hint: S.automation.hubHint,
+          value: String(robotsOf(tenant.id).filter((r) => r.enabled).length),
         },
         {
           href: "/admin/channels",

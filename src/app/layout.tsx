@@ -15,7 +15,7 @@ import { DEADLINE_KIND } from "@/lib/labels";
 import { userById } from "@/lib/data/users";
 import { noticesFor } from "@/lib/queries";
 import { getSession } from "@/lib/session";
-import { breakSeconds, openSession, sessionSeconds } from "@/lib/store";
+import { breakSeconds, openSession, sessionSeconds, sweepRobots } from "@/lib/store";
 import { ROOT_DOMAIN } from "@/lib/tenants";
 
 /** /login, /signup, /invite/* показываются без обвязки портала: там ещё нет
@@ -50,6 +50,15 @@ export default async function RootLayout({
 }) {
   const session = await getSession();
   const pathname = (await headers()).get("x-orbis-pathname") ?? "";
+
+  /*
+   * Роботы с задержкой. Настоящего планировщика в портале пока нет, и
+   * откладывать их до перезапуска нельзя — агентство ждёт напоминание
+   * «лид висит час», а не «лид висел час позавчера». Поэтому созревшие
+   * разбираются при первом же обращении к порталу. Когда появится очередь,
+   * эта строка уходит, а sweepRobots становится её обработчиком.
+   */
+  sweepRobots(session.tenant.id);
 
   if (isPublicAuthPath(pathname)) {
     return (

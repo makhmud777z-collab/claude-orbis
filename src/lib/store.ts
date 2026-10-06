@@ -3,6 +3,7 @@ import { DOCUMENTS } from "./data/documents";
 import { DEALS } from "./data/deals";
 import { LEADS, digits, isActiveLead } from "./data/leads";
 import { META_FORMS, META_PAGES } from "./data/meta";
+import { ROBOTS, TRIGGERS } from "./data/automation";
 import { EVENTS } from "./data/events";
 import { DEPARTMENTS, DEPARTMENT_OF, PROJECTS, WORK_SESSIONS } from "./data/org";
 import { PIPELINES } from "./data/pipelines";
@@ -13,9 +14,11 @@ import { USERS } from "./data/users";
 import { TENANTS } from "./tenants";
 import { loc, type Loc } from "./i18n";
 import type { Action, Module } from "./rbac";
+import { actionSpec, TARGET_HEAD, TARGET_OWNER } from "./automation";
 import type {
   CalendarEvent, Channel, CustomField, Deal, Department, EventKind, Lead, Pipeline, Project, Role,
   MetaEvent, MetaFormMapping, MetaPage, MetaPending,
+  Robot, RobotPending, RobotRun, Trigger, TriggerEvent,
   Stage, Student, StudentDocument, Task, Tenant, TenantRole, TimelineEvent, User, WorkSession,
 } from "./types";
 
@@ -61,6 +64,14 @@ interface State {
    * Короткоживущая запись между возвратом и выбором страницы.
    */
   metaPending: Record<string, MetaPending>;
+  /** роботы агентства: что портал делает сам на каждой стадии */
+  robots: Robot[];
+  /** триггеры: какое событие двигает карточку на стадию */
+  triggers: Trigger[];
+  /** роботы с задержкой, ждущие своего часа */
+  robotQueue: RobotPending[];
+  /** журнал срабатываний: место, куда смотрят, когда «робот не сработал» */
+  robotRuns: RobotRun[];
   /** какие поля показывать на карточке канбана: userId → список полей */
   cardFields: Record<string, string[]>;
   /** сохранённые фильтры: «userId:раздел» → срезы сотрудника */
@@ -80,7 +91,7 @@ interface State {
  * кода, и новое поле оказалось бы undefined — поэтому состояние с чужой
  * версией пересоздаётся целиком.
  */
-const STATE_VERSION = 10;
+const STATE_VERSION = 11;
 
 const globalStore = globalThis as unknown as { __orbisStore?: State };
 
@@ -103,6 +114,10 @@ function createState(): State {
     metaForms: META_FORMS.map((x) => ({ ...x, map: { ...x.map } })),
     metaEvents: [],
     metaPending: {},
+    robots: ROBOTS.map((x) => ({ ...x })),
+    triggers: TRIGGERS.map((x) => ({ ...x })),
+    robotQueue: [],
+    robotRuns: [],
     cardFields: {},
     filters: {},
     passcodes: {},
@@ -384,6 +399,315 @@ export function dropMetaPendingPage(tenantId: string, pageId: string) {
   if (!pending.pages.length) delete state.metaPending[tenantId];
 }
 
+/* ── роботы и триггеры ───────────────────────────────────────── */
+/*
+ * Автоматика агентства. Робот отвечает на вопрос «карточка встала на
+ * стадию — что сделать», триггер на обратный: «случилось событие — куда её
+ * поставить».
+ *
+ * Выполнение живёт здесь, рядом с moveCard и addTask, потому что робот —
+ * это те же действия портала, только без человека. Набор действий описан
+ * данными в automation.ts; там же подписи для экрана.
+ */
+
+export const robotsOf = (tenantId: string) =>
+  state.robots.filter((r) => r.tenantId === tenantId);
+
+export const robotsOfPipeline = (pipelineId: string) =>
+  state.robots.filter((r) => r.pipelineId === pipelineId).sort((a, b) => a.order - b.order);
+
+export const robotsOfStage = (pipelineId: string, stage: string) =>
+  state.robots
+    .filter((r) => r.pipelineId === pipelineId && r.stage === stage)
+    .sort((a, b) => a.order - b.order);
+
+export const robotById = (id: string) => state.robots.find((r) => r.id === id);
+
+export function saveRobot(robot: Omit<Robot, "id" | "order"> & { id?: string; order?: number }) {
+  if (robot.id) {
+    const i = state.robots.findIndex((r) => r.id === robot.id);
+    if (i < 0) return undefined;
+    state.robots[i] = { ...state.robots[i], ...robot, id: robot.id };
+    return state.robots[i];
+  }
+  // Новый робот встаёт последним на своей стадии: порядок — это порядок
+  // выполнения, и дописанный шаг логичнее выполнять после уже заведённых.
+  const order = robotsOfStage(robot.pipelineId, robot.stage).length;
+  const item: Robot = { ...robot, id: nextId("rb"), order } as Robot;
+  state.robots.push(item);
+  return item;
+}
+
+export function removeRobot(tenantId: string, id: string) {
+  state.robots = state.robots.filter((r) => !(r.id === id && r.tenantId === tenantId));
+  // Снятый робот не должен выстрелить из очереди через час после удаления.
+  state.robotQueue = state.robotQueue.filter((q) => q.robotId !== id);
+}
+
+export function toggleRobot(tenantId: string, id: string) {
+  const robot = state.robots.find((r) => r.id === id && r.tenantId === tenantId);
+  if (!robot) return;
+  robot.enabled = !robot.enabled;
+  if (!robot.enabled) state.robotQueue = state.robotQueue.filter((q) => q.robotId !== id);
+}
+
+export const triggersOf = (tenantId: string) =>
+  state.triggers.filter((t) => t.tenantId === tenantId);
+
+export const triggersOfPipeline = (pipelineId: string) =>
+  state.triggers.filter((t) => t.pipelineId === pipelineId);
+
+export function saveTrigger(trigger: Omit<Trigger, "id"> & { id?: string }) {
+  if (trigger.id) {
+    const i = state.triggers.findIndex((t) => t.id === trigger.id);
+    if (i < 0) return undefined;
+    state.triggers[i] = { ...state.triggers[i], ...trigger, id: trigger.id };
+    return state.triggers[i];
+  }
+  // Два триггера на одно событие в одной воронке спорили бы между собой за
+  // то, куда уедет карточка. Побеждает последний заведённый.
+  state.triggers = state.triggers.filter(
+    (t) => !(t.pipelineId === trigger.pipelineId && t.event === trigger.event),
+  );
+  const item: Trigger = { ...trigger, id: nextId("tg") };
+  state.triggers.push(item);
+  return item;
+}
+
+export function removeTrigger(tenantId: string, id: string) {
+  state.triggers = state.triggers.filter((t) => !(t.id === id && t.tenantId === tenantId));
+}
+
+export function toggleTrigger(tenantId: string, id: string) {
+  const trigger = state.triggers.find((t) => t.id === id && t.tenantId === tenantId);
+  if (trigger) trigger.enabled = !trigger.enabled;
+}
+
+export const robotRunsOf = (tenantId: string) =>
+  state.robotRuns.filter((r) => r.tenantId === tenantId).slice().reverse();
+
+function recordRun(run: Omit<RobotRun, "id" | "at">) {
+  const item: RobotRun = { ...run, id: nextId("rr"), at: stamp() };
+  state.robotRuns.push(item);
+  // Журнал нужен для разбора «робот не сработал», а не как архив.
+  if (state.robotRuns.length > 300) state.robotRuns.splice(0, state.robotRuns.length - 300);
+  return item;
+}
+
+/* ── выполнение ──────────────────────────────────────────────── */
+
+/**
+ * Глубина цепочки. Робот «перевести на стадию» запускает роботов новой
+ * стадии, а те могут перевести обратно — и портал уйдёт в вечный круг на
+ * первой же карточке. Три шага хватает на осмысленную цепочку и обрывает
+ * петлю до того, как она что-то испортит.
+ */
+const MAX_CHAIN = 3;
+
+const cardOf = (entity: "lead" | "deal", id: string) =>
+  entity === "deal" ? dealById(id) : leadById(id);
+
+/** Руководитель подразделения, в котором числится сотрудник. */
+function headOf(userId: string): string | null {
+  const departmentId = state.departmentOf[userId];
+  const department = state.departments.find((d) => d.id === departmentId);
+  return department?.headId ?? null;
+}
+
+/**
+ * Кому адресовано действие робота. Пустой ответ — не ошибка настройки:
+ * у подразделения может не быть руководителя, и тогда шаг честно
+ * пропускается с причиной, а не выполняется «хоть на кого-нибудь».
+ */
+function resolveTarget(target: string, ownerId: string): string | null {
+  if (target === TARGET_OWNER) return ownerId;
+  if (target === TARGET_HEAD) return headOf(ownerId);
+  return state.departmentOf[target] !== undefined || USERS.some((u) => u.id === target)
+    ? target
+    : null;
+}
+
+function executeRobot(robot: Robot, entity: "lead" | "deal", entityId: string, actorId: string, depth: number) {
+  const card = cardOf(entity, entityId);
+  if (!card) {
+    recordRun({ tenantId: robot.tenantId, robotId: robot.id, triggerId: null, entity, entityId,
+      status: "skipped", note: "Карточки больше нет" });
+    return;
+  }
+
+  // Отложенный робот мог дождаться своего часа уже после того, как карточку
+  // увели дальше. Выполнять его тогда — врать о текущем состоянии.
+  if (card.stage !== robot.stage) {
+    recordRun({ tenantId: robot.tenantId, robotId: robot.id, triggerId: null, entity, entityId,
+      status: "skipped", note: "Карточка уже ушла с этой стадии" });
+    return;
+  }
+
+  const spec = actionSpec(robot.action);
+  const to = spec.needsTarget ? resolveTarget(robot.target, card.ownerId) : card.ownerId;
+  if (spec.needsTarget && !to) {
+    recordRun({ tenantId: robot.tenantId, robotId: robot.id, triggerId: null, entity, entityId,
+      status: "skipped", note: "Некому адресовать: получатель не найден" });
+    return;
+  }
+  const who = to ?? card.ownerId;
+
+  switch (robot.action) {
+    case "task": {
+      addTask({
+        tenantId: robot.tenantId,
+        title: robot.text,
+        description: "",
+        assigneeId: who,
+        creatorId: actorId,
+        dueAt: today(),
+        priority: robot.param === "low" || robot.param === "high" ? robot.param : "normal",
+      });
+      break;
+    }
+    case "notify": {
+      // Колокольчик собирается из истории сотрудника — туда и пишем.
+      addTimeline({
+        tenantId: robot.tenantId, entity: "employee", entityId: who, kind: "reminder",
+        title: loc(robot.text, robot.text), body: null, authorId: actorId,
+        source: null, dueAt: today(), done: false,
+      });
+      break;
+    }
+    case "event": {
+      addEvent({
+        tenantId: robot.tenantId,
+        title: robot.text,
+        kind: (robot.param || "call") as CalendarEvent["kind"],
+        date: today(),
+        startTime: "10:00",
+        endTime: "10:30",
+        ownerId: who,
+        relation: entity === "deal" ? { type: "deal", id: entityId } : null,
+        note: "",
+      });
+      break;
+    }
+    case "assign": {
+      card.ownerId = who;
+      addTimeline({
+        tenantId: robot.tenantId, entity, entityId, kind: "system",
+        title: loc("Ответственный изменён роботом", "Mas’ul robot tomonidan o‘zgartirildi"),
+        body: null, authorId: actorId, source: null, dueAt: null, done: null,
+      });
+      break;
+    }
+    case "note": {
+      addTimeline({
+        tenantId: robot.tenantId, entity, entityId, kind: "system",
+        title: loc(robot.text, robot.text), body: null, authorId: actorId,
+        source: null, dueAt: null, done: null,
+      });
+      break;
+    }
+    case "move": {
+      if (depth >= MAX_CHAIN) {
+        recordRun({ tenantId: robot.tenantId, robotId: robot.id, triggerId: null, entity, entityId,
+          status: "skipped", note: "Цепочка переводов слишком длинная — остановлена" });
+        return;
+      }
+      const moved = moveCard(entity, entityId, robot.param, actorId, robot.tenantId, depth + 1);
+      if (!moved.ok) {
+        recordRun({ tenantId: robot.tenantId, robotId: robot.id, triggerId: null, entity, entityId,
+          status: "failed", note: `Перевод не удался: ${moved.reason}` });
+        return;
+      }
+      break;
+    }
+  }
+
+  recordRun({ tenantId: robot.tenantId, robotId: robot.id, triggerId: null, entity, entityId,
+    status: "done", note: robot.text || "" });
+}
+
+/**
+ * Карточка встала на стадию — запускаем роботов этой стадии.
+ *
+ * Без задержки робот выполняется тут же, с задержкой — встаёт в очередь.
+ * Очереди как таковой пока нет: отложенные разбираются при следующем
+ * обращении к порталу (sweepRobots). Для демонстрации этого достаточно,
+ * для боя сюда встанет настоящий планировщик.
+ */
+export function runStageRobots(
+  entity: "lead" | "deal", entityId: string, pipelineId: string, stage: string,
+  actorId: string, depth = 0,
+) {
+  const card = cardOf(entity, entityId);
+  if (!card) return;
+
+  for (const robot of robotsOfStage(pipelineId, stage)) {
+    if (!robot.enabled) continue;
+    if (robot.delayMinutes > 0) {
+      state.robotQueue.push({
+        id: nextId("rq"),
+        tenantId: robot.tenantId,
+        robotId: robot.id,
+        entity,
+        entityId,
+        stage,
+        dueAt: stamp(new Date(Date.now() + robot.delayMinutes * 60_000)),
+        actorId,
+      });
+      continue;
+    }
+    executeRobot(robot, entity, entityId, actorId, depth);
+  }
+}
+
+/**
+ * Разбор очереди: что успело созреть — выполняем, остальное ждёт дальше.
+ *
+ * Момент времени передаётся отдельно, чтобы проверке не приходилось ждать
+ * час настоящего времени ради робота с часовой задержкой.
+ */
+export function sweepRobots(tenantId: string, atStamp = stamp()) {
+  const due = state.robotQueue.filter((q) => q.tenantId === tenantId && q.dueAt <= atStamp);
+  if (!due.length) return 0;
+
+  state.robotQueue = state.robotQueue.filter((q) => !due.includes(q));
+  for (const item of due) {
+    const robot = robotById(item.robotId);
+    if (!robot || !robot.enabled) continue;
+    executeRobot(robot, item.entity, item.entityId, item.actorId, 0);
+  }
+  return due.length;
+}
+
+/**
+ * Случилось событие — ищем триггер, который на него настроен, и двигаем
+ * карточку на его стадию. Переезд обычный, поэтому роботы новой стадии
+ * запускаются сами собой.
+ */
+export function fireTrigger(
+  event: TriggerEvent, entity: "lead" | "deal", entityId: string, tenantId: string, actorId: string,
+) {
+  const card = cardOf(entity, entityId);
+  if (!card) return;
+
+  const pipelineId = entity === "deal"
+    ? (card as Deal).pipelineId
+    : defaultPipeline(tenantId, "lead")?.id;
+  if (!pipelineId) return;
+
+  const trigger = state.triggers.find(
+    (t) => t.tenantId === tenantId && t.pipelineId === pipelineId && t.event === event && t.enabled,
+  );
+  if (!trigger) return;
+  if (card.stage === trigger.stage) return;
+
+  const moved = moveCard(entity, entityId, trigger.stage, actorId, tenantId, 1);
+  recordRun({
+    tenantId, robotId: null, triggerId: trigger.id, entity, entityId,
+    status: moved.ok ? "done" : "skipped",
+    note: moved.ok ? `Карточка переведена на «${trigger.stage}»` : `Перевод не нужен: ${moved.reason}`,
+  });
+}
+
 /* ── код входа в администрирование ───────────────────────────── */
 
 export const passcodeOverride = (tenantId: string) => state.passcodes[tenantId];
@@ -413,6 +737,8 @@ export function addTimeline(event: Omit<TimelineEvent, "id" | "at"> & { at?: str
 /* ── перенос карточки по стадиям ─────────────────────────────── */
 export function moveCard(
   entity: "lead" | "deal", id: string, toStage: string, actorId: string, tenantId: string,
+  /** глубина цепочки роботов: переводом может командовать сам робот */
+  depth = 0,
 ) {
   const record = entity === "deal" ? dealById(id) : leadById(id);
   if (!record) return { ok: false as const, reason: "not_found" as const };
@@ -434,6 +760,11 @@ export function moveCard(
     ),
     body: null, authorId: actorId, source: null, dueAt: null, done: null,
   });
+
+  // Роботы стадии — часть самого переезда: карточка пришла, портал
+  // отрабатывает. Запуск стоит после записи в историю, чтобы в ленте
+  // сначала была видна причина, а потом её последствия.
+  if (pipeline) runStageRobots(entity, id, pipeline.id, toStage, actorId, depth);
   return { ok: true as const };
 }
 
@@ -637,6 +968,22 @@ export function createLead(input: Omit<Lead, "id" | "createdAt" | "stageEnteredA
     title: loc("Лид создан", "Lid yaratildi"), body: lead.comment || null,
     authorId: lead.ownerId, source: null, dueAt: null, done: null,
   });
+
+  /*
+   * Новая карточка встала на первую стадию — это такой же вход на стадию,
+   * как перенос мышью, и роботы обязаны отработать. Иначе «позвонить
+   * новому лиду» срабатывало бы на всех заявках, кроме новых.
+   */
+  const pipeline = defaultPipeline(lead.tenantId, "lead");
+  if (pipeline) runStageRobots("lead", lead.id, pipeline.id, lead.stage, lead.ownerId);
+
+  // Триггер может увести заявку дальше: «лид из рекламы Meta» — сразу в
+  // работу, не дожидаясь, пока менеджер её заметит.
+  fireTrigger("lead_created", "lead", lead.id, lead.tenantId, lead.ownerId);
+  if (lead.source === "facebook" || lead.source === "instagram") {
+    fireTrigger("meta_lead", "lead", lead.id, lead.tenantId, lead.ownerId);
+  }
+
   return { ok: true as const, lead };
 }
 
@@ -698,6 +1045,13 @@ export function convertLead(leadId: string, actorId: string) {
       : "Созданы контакт и первая сделка.",
     authorId: actorId, source: null, dueAt: null, done: null,
   });
+
+  // Сделка встала на первую стадию своей воронки — роботы отрабатывают так
+  // же, как при обычном переносе. Триггер «лид стал сделкой» может увести
+  // её дальше сразу, минуя «Новую».
+  runStageRobots("deal", deal.id, pipeline.id, deal.stage, actorId);
+  fireTrigger("converted", "deal", deal.id, lead.tenantId, actorId);
+
   return { ok: true as const, studentId, dealId: deal.id, reusedContact: existing?.kind === "contact" };
 }
 

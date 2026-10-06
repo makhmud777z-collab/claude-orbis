@@ -12,7 +12,7 @@ const ROUTES = [
   "/finance",
   "/team", "/team/u_nilufar", "/team/structure", "/team/reports",
   "/admin", "/admin/pipelines", "/admin/channels", "/admin/cards",
-  "/admin/users", "/admin/permissions", "/admin/meta", "/admin/portal", "/admin/demo",
+  "/admin/users", "/admin/permissions", "/admin/meta", "/admin/automation", "/admin/portal", "/admin/demo",
 ];
 const TENANTS = ["seoulway", "agencyx", "hanbridge"];
 

@@ -151,7 +151,12 @@ export function Select({
         ? createPortal(
             <div
               data-select={id}
-              className="card-raised fixed z-[60] overflow-y-auto py-1"
+              /*
+               * Выше диалога (z-70): список выбора часто открывают как раз
+               * внутри диалога, и под ним он не кликается — видно, но
+               * нажать нельзя.
+               */
+              className="card-raised fixed z-[80] overflow-y-auto py-1"
               style={{ top: box.top, left: box.left, width: box.width, maxHeight: box.maxHeight }}
               role="listbox"
             >
