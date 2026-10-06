@@ -16,6 +16,7 @@ import { newId, signSession } from "@/lib/auth";
 import { saveTenant, saveUser } from "@/lib/db";
 import { acceptInvite, authenticate, createTenant, inviteEmployee } from "@/lib/onboarding";
 import { validateSlug } from "@/lib/tenants";
+import { metaConfigured, subscribePage } from "@/lib/meta/oauth";
 import {
   NO_STUDENT,
   parseShortlist,
@@ -692,6 +693,93 @@ export async function setMetaFormOwnerAction(formData: FormData) {
     updatedAt: new Date().toISOString().slice(0, 10),
   });
   revalidatePath("/", "layout");
+}
+
+/* ── Meta: подключение страницы ──────────────────────────────── */
+/*
+ * Страницу выбирают из того, что принёс вход в Facebook: вход отдаёт все
+ * страницы человека, а агентству нужны не все. Выбранную подписываем на
+ * вебхук — без подписки Meta просто не станет присылать лиды.
+ */
+
+export async function connectMetaPageAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "admin", "edit")) return;
+
+  const pending = db.metaPendingOf(session.tenant.id);
+  if (!pending) return;
+
+  const pageId = String(formData.get("pageId") ?? "");
+  const page = pending.pages.find((p) => p.pageId === pageId);
+  if (!page) return;
+
+  // Страница кормит одно агентство: вебхук приходит с одним pageId, и две
+  // записи означали бы, что лид уходит не туда. Чужую не отбираем.
+  const taken = db.metaPageByPageId(page.pageId);
+  if (taken && taken.tenantId !== session.tenant.id) return;
+
+  /*
+   * Подписка — единственное, без чего подключение бессмысленно, но её
+   * отказ не повод терять страницу: записываем со статусом «переподключите»,
+   * и агентство видит, что лиды не пойдут, вместо пустого экрана.
+   */
+  let subscribed = false;
+  if (metaConfigured() && page.token) {
+    try {
+      await subscribePage(page.pageId, page.token);
+      subscribed = true;
+    } catch {
+      subscribed = false;
+    }
+  }
+
+  db.saveMetaPage({
+    id: taken?.id ?? `mp_${page.pageId}`,
+    tenantId: session.tenant.id,
+    pageId: page.pageId,
+    pageName: page.name,
+    igHandle: page.igHandle,
+    token: page.token,
+    channelId: taken?.channelId ?? null,
+    status: subscribed ? "connected" : "needs_reconnect",
+    connectedAt: new Date().toISOString().slice(0, 10),
+    connectedBy: session.user.id,
+  });
+
+  db.dropMetaPendingPage(session.tenant.id, page.pageId);
+  revalidatePath("/", "layout");
+  // Чистый адрес: иначе ?connect=pick висит в строке и после выбора.
+  redirect("/admin/meta");
+}
+
+/** Отказ от остатка списка: человек подключил нужные страницы. */
+export async function dismissMetaPendingAction() {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "admin", "edit")) return;
+
+  db.clearMetaPending(session.tenant.id);
+  revalidatePath("/", "layout");
+  redirect("/admin/meta");
+}
+
+/**
+ * Отключение страницы. Раскладка полей уходит вместе с ней: держать её
+ * без страницы нельзя — вернётся страница, вернутся и формы, а старое
+ * соответствие полей к тому времени уже ничего не значит.
+ */
+export async function disconnectMetaPageAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "admin", "edit")) return;
+
+  const pageId = String(formData.get("pageId") ?? "");
+  const page = db.metaPageByPageId(pageId);
+  if (!page || page.tenantId !== session.tenant.id) return;
+
+  db.removeMetaPage(session.tenant.id, pageId);
+  revalidatePath("/", "layout");
+  // Без этого ?disconnect=… остаётся в адресе и откроет подтверждение
+  // заново, стоит странице с тем же номером вернуться.
+  redirect("/admin/meta");
 }
 
 /* ── Рабочий день ────────────────────────────────────────────── */

@@ -862,11 +862,54 @@ export const S = {
       "Агентство ведёт рекламу в кабинете Meta, а заявки попадают сюда. Здесь задаётся, какое поле формы куда ложится в карточке лида.",
       "Agentlik reklamani Meta kabinetida yuritadi, arizalar esa shu yerga tushadi. Bu yerda forma maydoni lid kartasida qayerga tushishi belgilanadi.",
     ),
+    connect: loc("Подключить страницу", "Sahifani ulash"),
+    connectHint: loc(
+      "Вход в Facebook от имени человека, у которого есть права на страницу агентства. Orbis попросит только чтение лидов — рекламой он не управляет.",
+      "Agentlik sahifasiga huquqi bor odam nomidan Facebook’ga kirish. Orbis faqat lidlarni o‘qishni so‘raydi — reklamani boshqarmaydi.",
+    ),
+    connectDemo: loc(
+      "Приложение Meta не подключено к этому серверу: список страниц ниже — демонстрационный, лиды по нему не пойдут.",
+      "Meta ilovasi bu serverga ulanmagan: quyidagi sahifalar ro‘yxati namoyish uchun, ular bo‘yicha lidlar kelmaydi.",
+    ),
+    pick: loc("Выберите страницы", "Sahifalarni tanlang"),
+    pickHint: loc(
+      "Facebook отдал все страницы этого аккаунта. Подключите те, с которых идёт реклама агентства.",
+      "Facebook bu akkauntning barcha sahifalarini qaytardi. Agentlik reklamasi ketadigan sahifalarni ulang.",
+    ),
+    pickConnect: loc("Подключить", "Ulash"),
+    pickDone: loc("Остальные не нужны", "Qolganlari kerak emas"),
+    disconnect: loc("Отключить", "Uzish"),
+    disconnectConfirm: loc(
+      "Отключить страницу? Раскладка её форм удалится вместе с ней.",
+      "Sahifa uzilsinmi? Uning formalari mosligi ham o‘chadi.",
+    ),
+    taken: loc("Уже подключена другим агентством", "Boshqa agentlikka ulangan"),
+    needReconnect: loc("Переподключите", "Qayta ulang"),
+    needReconnectHint: loc(
+      "Meta не подтвердила подписку на лиды: заявки с этой страницы приходить не будут.",
+      "Meta lidlarga obunani tasdiqlamadi: bu sahifadan arizalar kelmaydi.",
+    ),
+    cDenied: loc(
+      "Вход в Facebook отменён — страницы не подключены.",
+      "Facebook’ga kirish bekor qilindi — sahifalar ulanmadi.",
+    ),
+    cError: loc(
+      "Facebook не отдал список страниц. Попробуйте подключить ещё раз.",
+      "Facebook sahifalar ro‘yxatini bermadi. Yana bir marta ulashga harakat qiling.",
+    ),
+    cEmpty: loc(
+      "У этого аккаунта Facebook нет страниц, которыми он управляет.",
+      "Bu Facebook akkaunti boshqaradigan sahifalar yo‘q.",
+    ),
+    cForbidden: loc(
+      "Прав на подключение страниц больше нет.",
+      "Sahifalarni ulash huquqi qolmagan.",
+    ),
     pages: loc("Подключённые страницы", "Ulangan sahifalar"),
     noPages: loc("Ни одна страница пока не подключена", "Hali birorta sahifa ulanmagan"),
     noPagesHint: loc(
-      "Страницы подключаются в разделе «Каналы продаж» — после этого здесь появятся их формы.",
-      "Sahifalar «Sotuv kanallari» bo‘limida ulanadi — shundan so‘ng ularning formalari shu yerda paydo bo‘ladi.",
+      "Подключите страницу, с которой идёт реклама агентства, — после этого здесь появятся её формы.",
+      "Agentlik reklamasi ketadigan sahifani ulang — shundan so‘ng uning formalari shu yerda paydo bo‘ladi.",
     ),
     forms: loc("Формы", "Formalar"),
     noForms: loc("Формы появятся после первого лида", "Formalar birinchi liddan keyin paydo bo‘ladi"),

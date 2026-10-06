@@ -351,6 +351,34 @@ export interface MetaPage {
   connectedBy: string;
 }
 
+/**
+ * Страница, которую человек только что принёс из Facebook, но ещё не выбрал.
+ *
+ * Вход в Facebook отдаёт сразу все страницы человека, а агентству нужны не
+ * все: поэтому между возвратом и подключением стоит экран выбора. Список
+ * держится в памяти до выбора и живёт недолго — в нём лежат токены страниц.
+ */
+export interface MetaPendingPage {
+  pageId: string;
+  name: string;
+  token: string;
+  igHandle: string | null;
+}
+
+/** Незавершённое подключение: что принёс возврат из Facebook и кому. */
+export interface MetaPending {
+  tenantId: string;
+  /** кто начал подключение: подключать будет он же */
+  userId: string;
+  at: string;
+  pages: MetaPendingPage[];
+  /**
+   * Приложение Meta не настроено, и список собран из демо-данных. Экран
+   * обязан сказать это прямо: иначе агентство решит, что лиды уже идут.
+   */
+  demo?: boolean;
+}
+
 /** Куда класть поле формы Meta. Пустая строка — не переносить. */
 export type MetaTarget = "name" | "phone" | "email" | "comment" | "";
 

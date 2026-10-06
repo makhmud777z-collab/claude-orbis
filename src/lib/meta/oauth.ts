@@ -1,4 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { ROOT_DOMAIN, TENANTS } from "../tenants";
+import type { MetaPendingPage } from "../types";
 
 /**
  * Подключение страницы агентства через вход в Facebook.
@@ -34,12 +36,22 @@ export const SCOPES = [
 export interface StatePayload {
   tenantId: string;
   userId: string;
+  /**
+   * Куда вернуть человека после возврата из Facebook.
+   *
+   * Адрес возврата у приложения Meta один на всю платформу, а агентства
+   * живут на своих поддоменах: без этого поля возврат высадил бы человека
+   * на корневом домене, где он никто.
+   */
+  origin: string;
   nonce: string;
 }
 
-export function signState(tenantId: string, userId: string): string {
+export function signState(tenantId: string, userId: string, origin: string): string {
   const nonce = randomBytes(8).toString("base64url");
-  const body = Buffer.from(JSON.stringify({ tenantId, userId, nonce })).toString("base64url");
+  const body = Buffer.from(JSON.stringify({ tenantId, userId, origin, nonce })).toString(
+    "base64url",
+  );
   const sig = createHmac("sha256", STATE_SECRET).update(body).digest("base64url");
   return `${body}.${sig}`;
 }
@@ -58,11 +70,43 @@ export function verifyState(state: string | null): StatePayload | null {
 
   try {
     const parsed = JSON.parse(Buffer.from(body, "base64url").toString()) as StatePayload;
-    return parsed.tenantId && parsed.userId ? parsed : null;
+    if (!parsed.tenantId || !parsed.userId) return null;
+    // Подпись наша, но сам адрес пришёл из заголовка Host запроса, который
+    // подставляет тот, кто начал вход. Поэтому возврат — только на свои
+    // хосты: иначе это открытый переадресатор с нашей подписью.
+    return ownOrigin(parsed.origin) ? parsed : null;
   } catch {
     return null;
   }
 }
+
+/**
+ * Свой ли это адрес. Свои — поддомены платформы, собственные домены
+ * агентств и localhost для разработки.
+ */
+export function ownOrigin(origin: string | undefined): boolean {
+  if (!origin) return false;
+  let host: string;
+  try {
+    host = new URL(origin).hostname;
+  } catch {
+    return false;
+  }
+  const root = ROOT_DOMAIN.split(":")[0];
+  if (host === root || host.endsWith(`.${root}`)) return true;
+  // В разработке агентство живёт на seoulway.localhost — тот же поддомен,
+  // только база другая, см. slugFromHost.
+  if (host === "localhost" || host === "127.0.0.1" || host.endsWith(".localhost")) return true;
+  return TENANTS.some((t) => t.customDomain === host);
+}
+
+/**
+ * Адрес возврата. Он обязан совпасть до символа с тем, что вписан в
+ * настройках приложения Meta, поэтому берётся не из запроса, а задаётся
+ * один раз на всю платформу.
+ */
+export const redirectUri = () =>
+  process.env.META_REDIRECT_URI || `https://${ROOT_DOMAIN}/api/meta/connect`;
 
 /** Куда отправить человека, чтобы он вошёл в Facebook и дал права. */
 export function authUrl(redirectUri: string, state: string): string {
@@ -76,12 +120,8 @@ export function authUrl(redirectUri: string, state: string): string {
   return `https://www.facebook.com/v21.0/dialog/oauth?${params}`;
 }
 
-export interface PageCandidate {
-  pageId: string;
-  name: string;
-  token: string;
-  igHandle: string | null;
-}
+/** Страница из ответа Facebook: тот же вид, в каком её ждёт экран выбора. */
+export type PageCandidate = MetaPendingPage;
 
 /**
  * Обмен кода на токены и список страниц.

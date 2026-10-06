@@ -15,7 +15,7 @@ import { loc, type Loc } from "./i18n";
 import type { Action, Module } from "./rbac";
 import type {
   CalendarEvent, Channel, CustomField, Deal, Department, EventKind, Lead, Pipeline, Project, Role,
-  MetaEvent, MetaFormMapping, MetaPage,
+  MetaEvent, MetaFormMapping, MetaPage, MetaPending,
   Stage, Student, StudentDocument, Task, Tenant, TenantRole, TimelineEvent, User, WorkSession,
 } from "./types";
 
@@ -56,6 +56,11 @@ interface State {
   metaForms: MetaFormMapping[];
   /** журнал приходов из Meta: защита от повторов и разбор полётов */
   metaEvents: MetaEvent[];
+  /**
+   * Незавершённые подключения: tenantId → страницы, принесённые из Facebook.
+   * Короткоживущая запись между возвратом и выбором страницы.
+   */
+  metaPending: Record<string, MetaPending>;
   /** какие поля показывать на карточке канбана: userId → список полей */
   cardFields: Record<string, string[]>;
   /** сохранённые фильтры: «userId:раздел» → срезы сотрудника */
@@ -75,7 +80,7 @@ interface State {
  * кода, и новое поле оказалось бы undefined — поэтому состояние с чужой
  * версией пересоздаётся целиком.
  */
-const STATE_VERSION = 9;
+const STATE_VERSION = 10;
 
 const globalStore = globalThis as unknown as { __orbisStore?: State };
 
@@ -97,6 +102,7 @@ function createState(): State {
     metaPages: META_PAGES.map((x) => ({ ...x })),
     metaForms: META_FORMS.map((x) => ({ ...x, map: { ...x.map } })),
     metaEvents: [],
+    metaPending: {},
     cardFields: {},
     filters: {},
     passcodes: {},
@@ -350,6 +356,33 @@ export const metaEventsOf = (tenantId: string) =>
 /** Приходы, которые не легли ни на одно агентство — видно только платформе. */
 export const metaEventsOrphan = () =>
   state.metaEvents.filter((e) => !e.tenantId).slice().reverse();
+
+/* ── Meta: незавершённое подключение ─────────────────────────── */
+/*
+ * Между возвратом из Facebook и выбором страницы список надо где-то
+ * держать: в ссылке его не пронесёшь — там токены страниц. Запись на
+ * агентство одна, новое подключение затирает прежнюю.
+ */
+
+export const metaPendingOf = (tenantId: string): MetaPending | undefined =>
+  state.metaPending[tenantId];
+
+export function putMetaPending(pending: MetaPending) {
+  state.metaPending[pending.tenantId] = pending;
+  return pending;
+}
+
+export function clearMetaPending(tenantId: string) {
+  delete state.metaPending[tenantId];
+}
+
+/** Убрать из списка одну страницу: её уже подключили или отклонили. */
+export function dropMetaPendingPage(tenantId: string, pageId: string) {
+  const pending = state.metaPending[tenantId];
+  if (!pending) return;
+  pending.pages = pending.pages.filter((p) => p.pageId !== pageId);
+  if (!pending.pages.length) delete state.metaPending[tenantId];
+}
 
 /* ── код входа в администрирование ───────────────────────────── */
 
