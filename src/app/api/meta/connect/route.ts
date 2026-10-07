@@ -80,9 +80,12 @@ export async function GET(request: Request) {
       return back(payload.origin, { connect: "forbidden" });
     }
 
+    let fbUserId: string | null = null;
     let pages: PageCandidate[];
     try {
-      pages = await exchangeCode(code, redirectUri());
+      const result = await exchangeCode(code, redirectUri());
+      fbUserId = result.fbUserId;
+      pages = result.pages;
     } catch (error) {
       // Что именно сказал Facebook, человеку не поможет: экран предложит
       // повторить вход, подробности остаются в логе сервера.
@@ -95,6 +98,7 @@ export async function GET(request: Request) {
     putMetaPending({
       tenantId: payload.tenantId,
       userId: payload.userId,
+      fbUserId,
       at: new Date().toISOString(),
       pages,
     });

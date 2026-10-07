@@ -130,11 +130,21 @@ export type PageCandidate = MetaPendingPage;
  * сами — отдельно продлевать их не нужно, но они умирают, если человек
  * сменил пароль или забрал у приложения права.
  */
+export interface ExchangeResult {
+  /**
+   * Кто вошёл — идентификатор человека в рамках нашего приложения.
+   * Нужен не для красоты: по нему Meta потом просит удалить данные, и без
+   * него заявку «удалите мои данные» не с чем сопоставить.
+   */
+  fbUserId: string | null;
+  pages: PageCandidate[];
+}
+
 export async function exchangeCode(
   code: string,
   redirectUri: string,
   http: typeof fetch = fetch,
-): Promise<PageCandidate[]> {
+): Promise<ExchangeResult> {
   const tokenUrl = `${GRAPH}/oauth/access_token?${new URLSearchParams({
     client_id: APP_ID,
     client_secret: APP_SECRET,
@@ -159,9 +169,25 @@ export async function exchangeCode(
     ? ((await longRes.json()) as { access_token?: string }).access_token
     : short.access_token;
 
+  const token = long ?? short.access_token;
+
+  // Кто именно вошёл. Отдельным запросом: /me/accounts отдаёт страницы,
+  // но не человека, который ими управляет.
+  let fbUserId: string | null = null;
+  try {
+    const meRes = await http(`${GRAPH}/me?${new URLSearchParams({ fields: "id", access_token: token })}`, {
+      cache: "no-store",
+    });
+    if (meRes.ok) fbUserId = ((await meRes.json()) as { id?: string }).id ?? null;
+  } catch {
+    // Не узнали — не повод рушить подключение: страницы важнее. Заявку на
+    // удаление тогда разберут вручную по журналу.
+    fbUserId = null;
+  }
+
   const pagesUrl = `${GRAPH}/me/accounts?${new URLSearchParams({
     fields: "id,name,access_token,instagram_business_account{username}",
-    access_token: long ?? short.access_token,
+    access_token: token,
   })}`;
   const pagesRes = await http(pagesUrl, { cache: "no-store" });
   if (!pagesRes.ok) throw new Error(`Список страниц: ${pagesRes.status} ${await pagesRes.text()}`);
@@ -173,7 +199,7 @@ export async function exchangeCode(
     }[];
   };
 
-  return (json.data ?? []).map((p) => ({
+  const pages = (json.data ?? []).map((p) => ({
     pageId: p.id,
     name: p.name,
     token: p.access_token,
@@ -181,6 +207,8 @@ export async function exchangeCode(
       ? `@${p.instagram_business_account.username}`
       : null,
   }));
+
+  return { fbUserId, pages };
 }
 
 /**

@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { CHANNELS } from "./data/channels";
 import { DOCUMENTS } from "./data/documents";
 import { DEALS } from "./data/deals";
@@ -17,7 +18,7 @@ import type { Action, Module } from "./rbac";
 import { actionSpec, TARGET_HEAD, TARGET_OWNER } from "./automation";
 import type {
   CalendarEvent, Channel, CustomField, Deal, Department, EventKind, Lead, Pipeline, Project, Role,
-  MetaEvent, MetaFormMapping, MetaPage, MetaPending,
+  MetaDeletion, MetaEvent, MetaFormMapping, MetaPage, MetaPending,
   Robot, RobotPending, RobotRun, Trigger, TriggerEvent,
   Stage, Student, StudentDocument, Task, Tenant, TenantRole, TimelineEvent, User, WorkSession,
 } from "./types";
@@ -64,6 +65,8 @@ interface State {
    * Короткоживущая запись между возвратом и выбором страницы.
    */
   metaPending: Record<string, MetaPending>;
+  /** заявки на удаление данных из Facebook: чем ответили и что сняли */
+  metaDeletions: MetaDeletion[];
   /** роботы агентства: что портал делает сам на каждой стадии */
   robots: Robot[];
   /** триггеры: какое событие двигает карточку на стадию */
@@ -91,7 +94,7 @@ interface State {
  * кода, и новое поле оказалось бы undefined — поэтому состояние с чужой
  * версией пересоздаётся целиком.
  */
-const STATE_VERSION = 11;
+const STATE_VERSION = 12;
 
 const globalStore = globalThis as unknown as { __orbisStore?: State };
 
@@ -114,6 +117,7 @@ function createState(): State {
     metaForms: META_FORMS.map((x) => ({ ...x, map: { ...x.map } })),
     metaEvents: [],
     metaPending: {},
+    metaDeletions: [],
     robots: ROBOTS.map((x) => ({ ...x })),
     triggers: TRIGGERS.map((x) => ({ ...x })),
     robotQueue: [],
@@ -371,6 +375,47 @@ export const metaEventsOf = (tenantId: string) =>
 /** Приходы, которые не легли ни на одно агентство — видно только платформе. */
 export const metaEventsOrphan = () =>
   state.metaEvents.filter((e) => !e.tenantId).slice().reverse();
+
+/* ── Meta: удаление данных ───────────────────────────────────── */
+/*
+ * Человек, давший доступ к странице, вправе забрать его обратно — и Meta
+ * этого требует, а не просто рекомендует. Снимаем все подключения, которые
+ * держатся на его согласии: без них лиды приходить перестанут, и это
+ * правильно — согласия больше нет.
+ */
+
+/** Страницы, подключённые этим аккаунтом Facebook, по всем агентствам. */
+export const metaPagesByFbUser = (fbUserId: string) =>
+  state.metaPages.filter((p) => p.connectedByFbId === fbUserId);
+
+export function forgetFbUser(fbUserId: string, kind: MetaDeletion["kind"]) {
+  const pages = metaPagesByFbUser(fbUserId);
+  for (const page of pages) removeMetaPage(page.tenantId, page.pageId);
+
+  // Незавершённые подключения этого же человека тоже держат его токены.
+  for (const [tenantId, pending] of Object.entries(state.metaPending)) {
+    if (pending.fbUserId === fbUserId) delete state.metaPending[tenantId];
+  }
+
+  const record: MetaDeletion = {
+    id: nextId("mdel"),
+    fbUserId,
+    // Код человек увидит на странице проверки — он должен быть коротким,
+    // читаемым вслух и не угадываемым.
+    code: randomBytes(6).toString("hex").toUpperCase(),
+    removed: pages.length,
+    kind,
+    at: stamp(),
+  };
+  state.metaDeletions.push(record);
+  if (state.metaDeletions.length > 500) {
+    state.metaDeletions.splice(0, state.metaDeletions.length - 500);
+  }
+  return record;
+}
+
+export const metaDeletionByCode = (code: string) =>
+  state.metaDeletions.find((d) => d.code === code);
 
 /* ── Meta: незавершённое подключение ─────────────────────────── */
 /*

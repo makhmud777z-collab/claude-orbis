@@ -763,6 +763,7 @@ export async function connectMetaPageAction(formData: FormData) {
     status: subscribed ? "connected" : "needs_reconnect",
     connectedAt: new Date().toISOString().slice(0, 10),
     connectedBy: session.user.id,
+    connectedByFbId: pending.fbUserId ?? null,
   });
 
   db.dropMetaPendingPage(session.tenant.id, page.pageId);

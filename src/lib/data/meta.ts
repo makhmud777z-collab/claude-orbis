@@ -20,6 +20,7 @@ export const META_PAGES: MetaPage[] = [
     status: "connected",
     connectedAt: "2026-01-15",
     connectedBy: "u_aziz",
+    connectedByFbId: null,
   },
   {
     id: "mp_ax",
@@ -32,6 +33,7 @@ export const META_PAGES: MetaPage[] = [
     status: "connected",
     connectedAt: "2026-03-10",
     connectedBy: "u_x_director",
+    connectedByFbId: null,
   },
 ];
 

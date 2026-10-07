@@ -7,6 +7,7 @@
 /** Проверка пути лида без Meta: забор данных подменяем, остальное настоящее. */
 import { applyMapping, guessMapping, importLead } from "../../src/lib/meta/import";
 import { authUrl, exchangeCode, ownOrigin, signState, subscribePage, verifyState } from "../../src/lib/meta/oauth";
+import { parseSignedRequest, signRequest } from "../../src/lib/meta/signed-request";
 import { parseLeadgen, sign, signatureValid } from "../../src/lib/meta/webhook";
 import * as db from "../../src/lib/store";
 
@@ -129,6 +130,7 @@ async function main() {
     seen.push(url.split("?")[0].replace("https://graph.facebook.com/v21.0", ""));
     if (url.includes("fb_exchange_token")) return Response.json({ access_token: "LONG" });
     if (url.includes("/oauth/access_token")) return Response.json({ access_token: "SHORT" });
+    if (url.includes("/me?") || url.endsWith("/me")) return Response.json({ id: "FB-USER-1" });
     if (url.includes("/me/accounts")) {
       ok(url.includes("access_token=LONG"), "страницы запрошены долгим токеном");
       return Response.json({
@@ -141,8 +143,10 @@ async function main() {
     return new Response("not found", { status: 404 });
   };
 
-  const found = await exchangeCode("CODE", "https://orbisystem.us/api/meta/connect", graph);
+  const result = await exchangeCode("CODE", "https://orbisystem.us/api/meta/connect", graph);
+  const found = result.pages;
   ok(found.length === 2, "список страниц разобран", `получено ${found.length}`);
+  ok(result.fbUserId === "FB-USER-1", "аккаунт Facebook опознан", String(result.fbUserId));
   ok(found[0]?.pageId === "111" && found[0]?.token === "PAGE-1", "токен страницы, а не человека");
   ok(found[0]?.igHandle === "@seoulway.uz", "Instagram страницы подхвачен", String(found[0]?.igHandle));
   ok(found[1]?.igHandle === null, "страница без Instagram не ломает разбор");
@@ -189,6 +193,50 @@ async function main() {
   ok(entry.searchParams.get("state") === token, "метка доехала до адреса входа");
   ok(entry.searchParams.get("redirect_uri") === "https://orbisystem.us/api/meta/connect", "адрес возврата передан");
   ok((entry.searchParams.get("scope") ?? "").includes("leads_retrieval"), "право на забор лидов запрошено");
+
+  console.log("\nУДАЛЕНИЕ ДАННЫХ: ПОДПИСАННЫЙ ЗАПРОС");
+  // META_APP_SECRET выставлен в начале проверки — тем же ключом и подписываем.
+  const secret = "s3cret";
+  const good = signRequest({ user_id: "FB-DEL-1" }, secret);
+  const signedBack = parseSignedRequest(good, secret);
+  ok(signedBack?.user_id === "FB-DEL-1", "аккаунт вернулся из подписанного запроса", String(signedBack?.user_id));
+  ok(parseSignedRequest(good, "другой-ключ") === null, "чужим ключом не разбирается");
+  ok(parseSignedRequest(good.replace(/^./, "x"), secret) === null, "подделанная подпись отвергнута");
+  ok(parseSignedRequest("мусор", secret) === null && parseSignedRequest(null, secret) === null,
+    "мусор и пустота отвергнуты");
+  ok(parseSignedRequest(signRequest({ user_id: "X", algorithm: "NONE" }, secret), secret) === null,
+    "чужой алгоритм подписи отвергнут");
+
+  console.log("\nУДАЛЕНИЕ ДАННЫХ: ЧТО СНИМАЕТСЯ");
+  db.saveMetaPage({
+    id: "mp_del", tenantId: "t_seoulway", pageId: "777000111", pageName: "Страница на удаление",
+    igHandle: null, token: "PAGE-DEL", channelId: null, status: "connected",
+    connectedAt: "2026-10-01", connectedBy: "u_aziz", connectedByFbId: "FB-DEL-1",
+  });
+  db.saveMetaForm({
+    id: "mf_del", tenantId: "t_seoulway", pageId: "777000111", formId: "9100",
+    formName: "Форма на удаление", map: { phone: "phone" }, ownerId: null, updatedAt: "2026-10-01",
+  });
+  db.putMetaPending({
+    tenantId: "t_agencyx", userId: "u_x_director", fbUserId: "FB-DEL-1",
+    at: new Date().toISOString(),
+    pages: [{ pageId: "777000222", name: "Ещё не выбранная", token: "T", igHandle: null }],
+  });
+
+  ok(db.metaPagesByFbUser("FB-DEL-1").length === 1, "страница найдена по аккаунту Facebook");
+  const receipt = db.forgetFbUser("FB-DEL-1", "deletion");
+  ok(receipt.removed === 1, "снято ровно одно подключение", String(receipt.removed));
+  ok(receipt.code.length >= 8, "код заявки выдан", receipt.code);
+  ok(!db.metaPageByPageId("777000111"), "страница отключена");
+  ok(!db.metaFormBy("777000111", "9100"), "раскладка её формы удалена вместе с ней");
+  ok(db.metaPendingOf("t_agencyx") === undefined, "незавершённое подключение того же человека тоже снято");
+  ok(db.metaDeletionByCode(receipt.code)?.fbUserId === "FB-DEL-1", "заявка находится по коду");
+  ok(db.metaDeletionByCode("НЕТТАКОГО") === undefined, "чужой код ничего не находит");
+
+  // Чужие подключения трогать нельзя: у них своё согласие.
+  const others = db.metaPagesOf("t_seoulway").length;
+  db.forgetFbUser("FB-DEL-НЕИЗВЕСТНЫЙ", "deauthorize");
+  ok(db.metaPagesOf("t_seoulway").length === others, "неизвестный аккаунт ничего не ломает");
 
   console.log(fail ? `\nПРОВАЛОВ: ${fail}` : "\nВСЁ ЧИСТО");
 }

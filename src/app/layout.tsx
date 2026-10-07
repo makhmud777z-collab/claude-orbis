@@ -18,10 +18,23 @@ import { getSession } from "@/lib/session";
 import { breakSeconds, openSession, sessionSeconds, sweepRobots } from "@/lib/store";
 import { ROOT_DOMAIN } from "@/lib/tenants";
 
-/** /login, /signup, /invite/* показываются без обвязки портала: там ещё нет
- * ни сотрудника, ни его меню — раньше эти роуты просто не существовали. */
-function isPublicAuthPath(pathname: string): boolean {
-  return pathname === "/login" || pathname.startsWith("/signup") || pathname.startsWith("/invite/");
+/**
+ * Страницы без обвязки портала.
+ *
+ * Вход, регистрация и приглашение — потому что сотрудника ещё нет, и меню
+ * показывать некому. Политика и удаление данных — потому что их читает не
+ * сотрудник вовсе: проверяющий Meta и человек, оставивший заявку в рекламе.
+ * Эти две обязаны открываться у кого угодно без входа, иначе приложение не
+ * проходит проверку Meta.
+ */
+function isPublicPath(pathname: string): boolean {
+  return (
+    pathname === "/login" ||
+    pathname === "/privacy" ||
+    pathname === "/data-deletion" ||
+    pathname.startsWith("/signup") ||
+    pathname.startsWith("/invite/")
+  );
 }
 
 const inter = Inter({
@@ -60,7 +73,7 @@ export default async function RootLayout({
    */
   sweepRobots(session.tenant.id);
 
-  if (isPublicAuthPath(pathname)) {
+  if (isPublicPath(pathname)) {
     return (
       <html lang={session.locale} data-theme={session.theme} className={inter.variable}>
         <body className="grain min-h-screen bg-canvas text-ink antialiased">{children}</body>

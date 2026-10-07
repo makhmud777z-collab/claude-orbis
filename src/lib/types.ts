@@ -349,6 +349,12 @@ export interface MetaPage {
   status: "connected" | "needs_reconnect" | "off";
   connectedAt: string;
   connectedBy: string;
+  /**
+   * Чей аккаунт Facebook дал доступ. По нему разбирается заявка «удалите
+   * мои данные»: Meta присылает только этот идентификатор, и без него
+   * искать, что именно отключать, не по чему.
+   */
+  connectedByFbId: string | null;
 }
 
 /**
@@ -368,6 +374,8 @@ export interface MetaPendingPage {
 /** Незавершённое подключение: что принёс возврат из Facebook и кому. */
 export interface MetaPending {
   tenantId: string;
+  /** аккаунт Facebook, который вошёл: едет дальше в подключённую страницу */
+  fbUserId?: string | null;
   /** кто начал подключение: подключать будет он же */
   userId: string;
   at: string;
@@ -410,6 +418,25 @@ export interface MetaEvent {
   status: "imported" | "duplicate" | "unknown_page" | "no_mapping" | "failed";
   note: string;
   leadId: string | null;
+  at: string;
+}
+
+/**
+ * Заявка на удаление данных из Facebook.
+ *
+ * Meta требует, чтобы человек мог стереть то, что мы о нём храним, и чтобы
+ * у заявки был код, по которому он проверит исполнение. Храним сам факт и
+ * что было сделано — иначе на вопрос «вы правда удалили?» ответить нечем.
+ */
+export interface MetaDeletion {
+  id: string;
+  /** идентификатор человека в рамках нашего приложения */
+  fbUserId: string;
+  /** код, который человек увидит и сможет проверить */
+  code: string;
+  /** сколько подключений страниц сняли по заявке */
+  removed: number;
+  kind: "deletion" | "deauthorize";
   at: string;
 }
 
