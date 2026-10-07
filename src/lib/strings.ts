@@ -20,6 +20,7 @@ export const P = {
   cards: { ru: ["карточка", "карточки", "карточек"] as [string, string, string], uz: ["karta", "karta", "karta"] as [string, string, string] },
   departments: { ru: ["отдел", "отдела", "отделов"] as [string, string, string], uz: ["bo‘lim", "bo‘lim", "bo‘lim"] as [string, string, string] },
   metaForms: { ru: ["форма", "формы", "форм"] as [string, string, string], uz: ["forma", "forma", "forma"] as [string, string, string] },
+  checklistItems: { ru: ["пункт", "пункта", "пунктов"] as [string, string, string], uz: ["band", "band", "band"] as [string, string, string] },
   robots: { ru: ["робот", "робота", "роботов"] as [string, string, string], uz: ["robot", "robot", "robot"] as [string, string, string] },
   triggers: { ru: ["триггер", "триггера", "триггеров"] as [string, string, string], uz: ["trigger", "trigger", "trigger"] as [string, string, string] },
   roles: { ru: ["роль", "роли", "ролей"] as [string, string, string], uz: ["rol", "rol", "rol"] as [string, string, string] },
@@ -964,7 +965,10 @@ export const S = {
     up: loc("Выше", "Yuqoriga"),
     down: loc("Ниже", "Pastga"),
     usedHint: loc("уже заведён в досье:", "dosyelarda mavjud:"),
-    count: loc("пунктов", "band"),
+    dup: loc(
+      "Такой документ уже есть в списке — добавлять второй незачем.",
+      "Bunday hujjat ro‘yxatda bor — ikkinchisini qo‘shish shart emas.",
+    ),
   },
 
   automation: {

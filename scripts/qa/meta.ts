@@ -8,7 +8,7 @@
 import { applyMapping, guessMapping, importLead } from "../../src/lib/meta/import";
 import { authUrl, exchangeCode, ownOrigin, signState, subscribePage, verifyState } from "../../src/lib/meta/oauth";
 import { parseSignedRequest, signRequest } from "../../src/lib/meta/signed-request";
-import { parseLeadgen, sign, signatureValid } from "../../src/lib/meta/webhook";
+import { GraphError, parseLeadgen, sign, signatureValid } from "../../src/lib/meta/webhook";
 import * as db from "../../src/lib/store";
 
 let fail = 0;
@@ -194,6 +194,16 @@ async function main() {
   ok(entry.searchParams.get("redirect_uri") === "https://orbisystem.us/api/meta/connect", "адрес возврата передан");
   ok((entry.searchParams.get("scope") ?? "").includes("leads_retrieval"), "право на забор лидов запрошено");
 
+  console.log("\nКОД ОШИБКИ GRAPH API");
+  // По тексту «доступ отозван» и «слишком часто спрашиваете» неразличимы:
+  // Meta ставит OAuthException на оба. Решает только числовой код.
+  const revoked = new GraphError(400, JSON.stringify({ error: { code: 190, type: "OAuthException", message: "Session expired" } }));
+  const tooFast = new GraphError(400, JSON.stringify({ error: { code: 4, type: "OAuthException", message: "Application request limit reached" } }));
+  ok(revoked.code === 190, "код отозванного доступа разобран", String(revoked.code));
+  ok(tooFast.code === 4, "код временного отказа разобран", String(tooFast.code));
+  ok(revoked.message.includes("190"), "код виден в тексте для журнала", revoked.message.slice(0, 44));
+  ok(new GraphError(500, "<html>500</html>").code === null, "ответ не-JSON не ломает разбор");
+
   console.log("\nУМЕРШИЙ ТОКЕН СТРАНИЦЫ");
   // Самое тихое место интеграции: доступ отозван, лиды не идут, а страница
   // продолжает светиться «Подключено».
@@ -201,22 +211,42 @@ async function main() {
   db.saveMetaPage({ ...live, status: "connected" });
   const dead = await importLead(
     { leadgenId: "L-dead-1", pageId: "102938475610293", formId: "7001", adgroupId: null, createdAt: null },
-    async () => { throw new Error("Graph API 400: OAuth error 190 — session has expired"); },
+    async () => { throw revoked; },
   );
   ok(dead.status === "failed", "приход записан как неудачный");
   ok(db.metaPageByPageId("102938475610293")?.status === "needs_reconnect",
     "страница помечена «переподключите»", String(db.metaPageByPageId("102938475610293")?.status));
   ok(dead.note.includes("переподключите"), "в журнале сказано, что делать", dead.note.slice(0, 50));
 
-  // А временный сбой переподключения не требует: Meta моргнула, доступ цел.
-  db.saveMetaPage({ ...live, status: "connected" });
+  // Превышение частоты запросов — тот же OAuthException, но проходит само.
+  const stillDead = db.metaPageByPageId("102938475610293")!;
   const blip = await importLead(
     { leadgenId: "L-dead-2", pageId: "102938475610293", formId: "7001", adgroupId: null, createdAt: null },
-    async () => { throw new Error("Graph API 500: Internal error"); },
+    async () => { throw tooFast; },
   );
   ok(blip.status === "failed", "временный сбой тоже записан");
+  ok(!blip.note.includes("переподключите"), "но переподключать не зовёт", blip.note.slice(0, 44));
+
+  db.saveMetaPage({ ...stillDead, status: "connected" });
+  const net = await importLead(
+    { leadgenId: "L-dead-3", pageId: "102938475610293", formId: "7001", adgroupId: null, createdAt: null },
+    async () => { throw new Error("fetch failed"); },
+  );
+  ok(net.status === "failed" && db.metaPageByPageId("102938475610293")?.status === "connected",
+    "обрыв сети страницу не калечит");
+
+  // Ложная тревога не должна висеть вечно: пришедший лид снимает метку.
+  db.saveMetaPage({ ...stillDead, status: "needs_reconnect" });
+  const healed = await importLead(
+    { leadgenId: "L-heal-1", pageId: "102938475610293", formId: "7001", adgroupId: null, createdAt: null },
+    async () => [
+      { name: "full_name", values: ["Проверка лечения"] },
+      { name: "phone_number", values: ["+998 91 404-80-16"] },
+    ],
+  );
+  ok(healed.status === "imported", "лид после восстановления доступа принят", healed.note);
   ok(db.metaPageByPageId("102938475610293")?.status === "connected",
-    "но страница осталась подключённой", String(db.metaPageByPageId("102938475610293")?.status));
+    "метка «переподключите» снята сама", String(db.metaPageByPageId("102938475610293")?.status));
 
   console.log("\nУДАЛЕНИЕ ДАННЫХ: ПОДПИСАННЫЙ ЗАПРОС");
   // META_APP_SECRET выставлен в начале проверки — тем же ключом и подписываем.

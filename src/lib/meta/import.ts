@@ -1,3 +1,4 @@
+import { GraphError } from "./webhook";
 import * as db from "../store";
 import { usersOfTenant } from "../data/users";
 import type { MetaField, LeadgenEvent } from "./webhook";
@@ -75,16 +76,24 @@ export interface ImportResult {
  * только живой рекламой.
  */
 /**
+ * Коды Graph API, после которых страница сама не починится.
+ *
+ * 190 — токен недействителен, 463 — истёк, 467 — отозван. Всё остальное,
+ * включая «OAuthException» при превышении частоты запросов, проходит само:
+ * переводить из-за этого страницу в «переподключите» значило бы пугать
+ * агентство на ровном месте и держать красную строку вечно.
+ */
+const DEAD_TOKEN_CODES = new Set([190, 463, 467]);
+
+/**
  * Отличает «доступ отозван» от «Meta моргнула».
  *
- * Код 190 и 10 — это «токен недействителен» и «нет прав»: такое само не
- * пройдёт, страницу надо подключать заново. Сетевая ошибка или 500 —
- * пройдёт, и переводить из-за них страницу в «переподключите» значило бы
- * пугать агентство на ровном месте.
+ * Решает только числовой код: по тексту это неразличимо — Meta ставит
+ * «OAuthException» и на отозванный доступ, и на временный отказ. Ошибка
+ * без кода (сеть, таймаут) считается временной.
  */
-function tokenDead(note: string): boolean {
-  return /\b(190|463|467)\b/.test(note) || /OAuth|session has expired|access token/i.test(note)
-    || /Graph API 401|Graph API 403/.test(note);
+function tokenDead(err: unknown): boolean {
+  return err instanceof GraphError && err.code !== null && DEAD_TOKEN_CODES.has(err.code);
 }
 
 export async function importLead(
@@ -118,7 +127,7 @@ export async function importLead(
      * понять это можно только дочитав журнал до конца. Переводим страницу
      * в «переподключите» — на экране это красная строка, а не тишина.
      */
-    if (tokenDead(note)) {
+    if (tokenDead(err)) {
       db.saveMetaPage({ ...page, status: "needs_reconnect" });
       return {
         status: "failed", leadId: null, tenantId: page.tenantId,
@@ -128,6 +137,14 @@ export async function importLead(
 
     return { status: "failed", leadId: null, tenantId: page.tenantId, note };
   }
+
+  /*
+   * Лид забрался — значит доступ жив. Если страница числилась
+   * «переподключите», снимаем метку: иначе одна ложная тревога оставляла
+   * бы красную строку навсегда, пока агентство не переподключит страницу,
+   * которая и так работает.
+   */
+  if (page.status === "needs_reconnect") db.saveMetaPage({ ...page, status: "connected" });
 
   const names = fields.map((f) => f.name);
   let form: MetaFormMapping | undefined = db.metaFormBy(event.pageId, event.formId);

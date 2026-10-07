@@ -942,14 +942,19 @@ export async function addChecklistItemAction(formData: FormData) {
   const uz = String(formData.get("uz") ?? "").trim();
   if (!ru) return;
 
-  db.addChecklistItem(
+  const added = db.addChecklistItem(
     session.tenant.id,
     // Узбекское название необязательно: без него пункт покажется русским
     // на обоих языках — это честнее, чем не дать его завести вовсе.
     loc(ru, uz || ru),
     formData.get("apostille") === "on",
   );
+
   revalidatePath("/", "layout");
+  // Отказ нельзя проглатывать: диалог уже закрылся, и без этого человек
+  // решит, что документ добавлен, а его в списке не окажется.
+  if (!added) redirect(`/admin/checklist?dup=${encodeURIComponent(ru)}`);
+  redirect("/admin/checklist");
 }
 
 export async function updateChecklistItemAction(formData: FormData) {
@@ -961,11 +966,16 @@ export async function updateChecklistItemAction(formData: FormData) {
   const uz = String(formData.get("uz") ?? "").trim();
   if (!id || !ru) return;
 
-  db.updateChecklistItem(session.tenant.id, id, {
+  const saved = db.updateChecklistItem(session.tenant.id, id, {
     kind: loc(ru, uz || ru),
     needsApostille: formData.get("apostille") === "on",
   });
+
   revalidatePath("/", "layout");
+  if (!saved.ok && saved.reason === "duplicate") {
+    redirect(`/admin/checklist?dup=${encodeURIComponent(ru)}`);
+  }
+  redirect("/admin/checklist");
 }
 
 export async function toggleChecklistApostilleAction(formData: FormData) {

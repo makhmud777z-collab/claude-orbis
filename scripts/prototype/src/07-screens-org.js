@@ -492,17 +492,31 @@ function screenAdmin() {
   if (!S.adminUnlocked) return screenAdminLock();
   const pipelines = [...pipelinesOf("lead"), ...pipelinesOf("deal")];
   const channels = channelsOf();
+  /*
+   * Группы идут в том порядке, в каком агентство к ним приходит: путь
+   * карточки по воронке, работа со студентом, откуда берутся заявки, люди,
+   * сам портал. Пояснение под заголовком — потому что «CRM» ничего не
+   * говорит тому, кто ищет, где поменять набор документов.
+   */
   const groups = [
-    { label: loc("CRM", "CRM"), icon: "board", items: [
+    { label: loc("Продажи и воронки", "Sotuv va voronkalar"),
+      hint: loc("как карточка идёт по воронке", "karta voronka bo‘ylab qanday ketadi"),
+      icon: "board", items: [
       { go: "pipelines", title: loc("Воронки", "Voronkalar"),
         hint: loc("стадии, порядок, цвета и финалы", "bosqichlar, tartib, ranglar"), value: String(pipelines.length) },
-      { go: "channels", title: loc("Каналы продаж", "Sotuv kanallari"),
-        hint: loc("откуда приходят обращения", "murojaatlar qayerdan keladi"),
-        value: `${channels.filter((c) => c.status === "connected").length} / ${channels.length}` },
       { go: "cards", title: loc("Карточка просмотра", "Ko‘rish kartasi"),
         hint: loc("какие поля показывать на канбане", "kanbanda qaysi maydonlar"), value: String(S.cardFields.length) },
     ] },
-    { label: loc("Люди и доступы", "Odamlar va huquqlar"), icon: "people", items: [
+    { label: loc("Откуда приходят заявки", "Arizalar qayerdan keladi"),
+      hint: loc("каналы продаж и реклама Meta", "sotuv kanallari va Meta reklamasi"),
+      icon: "board", items: [
+      { go: "channels", title: loc("Каналы продаж", "Sotuv kanallari"),
+        hint: loc("откуда приходят обращения", "murojaatlar qayerdan keladi"),
+        value: `${channels.filter((c) => c.status === "connected").length} / ${channels.length}` },
+    ] },
+    { label: loc("Люди и доступы", "Odamlar va huquqlar"),
+      hint: loc("кто работает в портале и что кому видно", "portalda kim ishlaydi va kimga nima ko‘rinadi"),
+      icon: "people", items: [
       { go: "users", title: loc("Пользователи", "Foydalanuvchilar"),
         hint: loc("мест по тарифу", "tarif bo‘yicha o‘rin"), value: `${tenant().seatsUsed} / ${tenant().seatsLimit}` },
       { go: "permissions", title: loc("Права доступа", "Kirish huquqlari"),
@@ -511,7 +525,9 @@ function screenAdmin() {
         hint: loc("подразделения, руководители, кто кому подчиняется", "bo‘limlar, rahbarlar, kim kimga bo‘ysunadi"),
         value: String(allDepartments().length) },
     ] },
-    { label: loc("Портал", "Portal"), icon: "gear", items: [
+    { label: loc("Портал агентства", "Agentlik portali"),
+      hint: loc("адрес, реквизиты, код входа в этот раздел", "manzil, rekvizitlar, kirish kodi"),
+      icon: "gear", items: [
       { go: "portal", title: loc("Настройки портала", "Portal sozlamalari"),
         hint: loc("домен, брендинг, филиалы, тариф", "domen, brending, filiallar, tarif"), value: tenant().slug },
       { go: "demo", title: loc("Демо-режим", "Demo rejim"),
@@ -526,11 +542,16 @@ function screenAdmin() {
       `<button class="btn btn-secondary" data-act="lock">${icon("lock", 14)} ${t(loc("Закрыть настройки", "Sozlamalarni yopish"))}</button>`)}
 
     ${groups.map((g) => `
-      ${sectionTitle(t(g.label))}
+      <div style="display:flex;gap:12px;align-items:flex-start;margin:0 0 14px">
+        <span style="width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px;
+          background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent)">${icon(g.icon, 16)}</span>
+        <span style="min-width:0">
+          <span class="t-headline" style="display:block">${esc(t(g.label))}</span>
+          <span class="t-caption faint" style="display:block;margin-top:2px">${esc(t(g.hint))}</span>
+        </span>
+      </div>
       <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
         ${g.items.map((x) => `<a class="card card-hover" href="#" data-go="${x.go}" style="display:flex;gap:14px;align-items:center;padding:16px 18px">
-          <span style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex:none;
-            background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent)">${icon(g.icon, 18)}</span>
           <span style="flex:1;min-width:0">
             <span class="t-body-sm" style="display:block">${esc(t(x.title))}</span>
             <span class="t-micro faint" style="display:block;margin-top:2px">${esc(t(x.hint))}</span>

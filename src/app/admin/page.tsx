@@ -6,6 +6,7 @@ import {
   IconSettings, IconTeam,
 } from "@/components/icons";
 import { translator, type Loc } from "@/lib/i18n";
+import { visibleModules, type Module } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
 import {
   channelsOf, checklistOf, customFieldsOf, departmentsOf, metaPagesOf,
@@ -19,6 +20,12 @@ interface Item {
   hint: Loc;
   /** что показать справа: счётчик настроенного, а не слово «настроить» */
   value: string;
+  /**
+   * Модуль, которым закрыт экран. Если роли он не виден, плитки на пульте
+   * быть не должно: иначе человек нажимает и упирается в «нет доступа» —
+   * то самое обещание, которого экран за ней как раз не даёт.
+   */
+  module?: Module;
 }
 
 interface Group {
@@ -50,6 +57,9 @@ export default async function AdminHome() {
   const robots = robotsOf(tenant.id);
   const pages = metaPagesOf(tenant.id);
 
+  // Что роли вообще видно: пульт не должен обещать экраны, закрытые правами.
+  const open = new Set(visibleModules(tenant.id, session.role));
+
   const groups: Group[] = [
     {
       label: S.admin.groupCrm,
@@ -58,12 +68,14 @@ export default async function AdminHome() {
       items: [
         {
           href: "/admin/pipelines",
+          module: "crmSettings",
           title: S.pipelines.title,
           hint: S.pipelines.subtitle,
           value: String(pipelines.length),
         },
         {
           href: "/admin/automation",
+          module: "crmSettings",
           title: S.automation.title,
           hint: S.automation.hubHint,
           value: `${robots.filter((r) => r.enabled).length} + ${triggersOf(tenant.id).length}`,
@@ -108,6 +120,7 @@ export default async function AdminHome() {
         },
         {
           href: "/admin/channels",
+          module: "crmSettings",
           title: S.channels.title,
           hint: S.channels.subtitle,
           value: `${channels.filter((c) => c.status === "connected").length} / ${channels.length}`,
@@ -146,6 +159,7 @@ export default async function AdminHome() {
       items: [
         {
           href: "/admin/portal",
+          module: "settings",
           title: S.admin.portal,
           hint: S.settings.addressHint,
           value: tenant.slug,
@@ -175,7 +189,14 @@ export default async function AdminHome() {
         }
       />
 
-      {groups.map((group) => (
+      {groups
+        .map((group) => ({
+          ...group,
+          items: group.items.filter((item) => !item.module || open.has(item.module)),
+        }))
+        // Группа без единой доступной плитки — пустой заголовок, и только.
+        .filter((group) => group.items.length > 0)
+        .map((group) => (
         <section key={group.label.ru} className="mb-9 last:mb-0">
           {/*
             Подпись группы с пояснением: «CRM» ни о чём не говорит человеку,
@@ -214,7 +235,7 @@ export default async function AdminHome() {
             ))}
           </div>
         </section>
-      ))}
+        ))}
     </>
   );
 }

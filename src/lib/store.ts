@@ -803,10 +803,35 @@ export function addChecklistItem(tenantId: string, kind: Loc, needsApostille: bo
 export function updateChecklistItem(
   tenantId: string, id: string, patch: Partial<Pick<ChecklistItem, "kind" | "needsApostille">>,
 ) {
-  const item = materialize(tenantId).find((x) => x.id === id);
-  if (!item) return;
-  if (patch.kind) item.kind = patch.kind;
+  const list = materialize(tenantId);
+  const item = list.find((x) => x.id === id);
+  if (!item) return { ok: false as const, reason: "not_found" as const };
+
+  if (patch.kind) {
+    const next = checklistKey(patch.kind);
+    // Два пункта с одинаковым названием куратор не различит, а запрос
+    // документа всегда попадал бы в первый из них.
+    if (list.some((x) => x.id !== id && checklistKey(x.kind) === next)) {
+      return { ok: false as const, reason: "duplicate" as const };
+    }
+
+    /*
+     * Пункты досье связаны с чек-листом названием — другого ключа нет.
+     * Переименование без этой строки отрывало бы уже собранные документы:
+     * куратор видел бы «Аттестат» в досье и «Диплом» в списке, а запрос
+     * заводил бы второй пункт на тот же бумажный документ.
+     */
+    const was = checklistKey(item.kind);
+    if (was !== next) {
+      for (const doc of state.documents) {
+        if (doc.tenantId === tenantId && checklistKey(doc.kind) === was) doc.kind = { ...patch.kind };
+      }
+    }
+    item.kind = patch.kind;
+  }
+
   if (patch.needsApostille !== undefined) item.needsApostille = patch.needsApostille;
+  return { ok: true as const };
 }
 
 export function removeChecklistItem(tenantId: string, id: string) {

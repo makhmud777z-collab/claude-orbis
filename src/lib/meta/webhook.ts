@@ -96,11 +96,48 @@ export interface MetaField {
 }
 
 /** Запрос за самим лидом. Токен — той страницы, с которой лид пришёл. */
+/**
+ * Код ошибки Graph API, вынутый из тела ответа.
+ *
+ * Разбирать текст ошибки глазами нельзя: «OAuthException» Meta ставит и на
+ * отозванный доступ, и на превышение частоты запросов, после которого всё
+ * само чинится. Решает только числовой код, и дальше по пути он должен
+ * ехать отдельно от человеческого текста.
+ */
+export class GraphError extends Error {
+  readonly code: number | null;
+  readonly status: number;
+
+  constructor(status: number, body: string) {
+    const parsed = GraphError.read(body);
+    super(
+      parsed.message
+        ? `Graph API ${status} (код ${parsed.code ?? "—"}): ${parsed.message}`
+        : `Graph API ${status}: ${body.slice(0, 200)}`,
+    );
+    this.name = "GraphError";
+    this.status = status;
+    this.code = parsed.code;
+  }
+
+  private static read(body: string): { code: number | null; message: string } {
+    try {
+      const json = JSON.parse(body) as { error?: { code?: number; message?: string } };
+      return {
+        code: typeof json.error?.code === "number" ? json.error.code : null,
+        message: json.error?.message ?? "",
+      };
+    } catch {
+      return { code: null, message: "" };
+    }
+  }
+}
+
 export async function fetchLead(leadgenId: string, pageToken: string): Promise<MetaField[]> {
   const url = `https://graph.facebook.com/v21.0/${encodeURIComponent(leadgenId)}`
     + `?fields=field_data,created_time&access_token=${encodeURIComponent(pageToken)}`;
   const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error(`Graph API ${res.status}: ${await res.text()}`);
+  if (!res.ok) throw new GraphError(res.status, await res.text());
   const json = (await res.json()) as { field_data?: MetaField[] };
   return json.field_data ?? [];
 }
