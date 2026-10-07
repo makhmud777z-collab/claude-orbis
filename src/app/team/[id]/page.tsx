@@ -77,7 +77,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
       />
 
       <div className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-[360px_1fr]">
-        <div className="space-y-5">
+        <div className="stagger-in space-y-5">
           <div className="card p-5">
             <div className="flex items-center gap-3">
               <Avatar name={user.name} size={44} />
@@ -128,7 +128,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
             <div className="card-head">
               <span className="t-caption">{t(S.team.placeInCompany)}</span>
             </div>
-            <div className="px-5 py-2">
+            <div className="stagger-in px-5 py-2">
             <Field
               label={t(S.team.department)}
               value={
@@ -153,7 +153,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
             <div className="card-head">
               <span className="t-caption">{t(S.staffReports.title)}</span>
             </div>
-            <div className="px-5 py-2">
+            <div className="stagger-in px-5 py-2">
             <Field label={t(S.staffReports.days)} value={sessions.length} />
             <Field
               label={t(S.staffReports.hours)}
@@ -176,7 +176,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
           </div>
         </div>
 
-        <div className="min-w-0 space-y-8">
+        <div className="stagger-in min-w-0 space-y-8">
           <section>
             <SectionTitle
               action={
@@ -187,7 +187,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
             >
               {t(S.team.workdayToday)}
             </SectionTitle>
-            <div className="card divide-y divide-hairline-soft">
+            <div className="stagger-in card divide-y divide-hairline-soft">
               {sessions.length ? (
                 sessions.slice(0, 8).map((s) => (
                   // На телефоне строка отметки переносится, а не режется.
@@ -218,7 +218,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
 
           <section>
             <SectionTitle>{t(S.nav.tasks)}</SectionTitle>
-            <div className="card divide-y divide-hairline-soft">
+            <div className="stagger-in card divide-y divide-hairline-soft">
               {tasks.length ? (
                 tasks.slice(0, 8).map((task) => {
                   const status = TASK_STATUS[task.status];
@@ -250,7 +250,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
             >
               {t(S.crm.deals)}
             </SectionTitle>
-            <div className="card divide-y divide-hairline-soft">
+            <div className="stagger-in card divide-y divide-hairline-soft">
               {deals.length ? (
                 deals.slice(0, 8).map((deal) => {
                   const stage = stageOf(pipelineById(deal.pipelineId), deal.stage);

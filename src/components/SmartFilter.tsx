@@ -179,7 +179,14 @@ export function SmartFilter({
   const hidden = fields.filter((f) => !visible.includes(f.key));
 
   return (
-    <div className="relative mb-5" ref={box}>
+    /*
+     * Свой слой, а не надежда на порядок отрисовки. Раскрытая панель висит
+     * над содержимым раздела absolute-блоком, и пока соседи ниже по странице
+     * не создавали собственных слоёв, она перекрывала их сама собой. Стоит
+     * любому из них получить слой — и панель уходит под карточки. z-20
+     * держит её выше содержимого и ниже липкой шапки (z-30).
+     */
+    <div className="relative z-20 mb-5" ref={box}>
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"

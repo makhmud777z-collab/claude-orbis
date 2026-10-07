@@ -57,7 +57,7 @@ export function TasksBoard({ tasks, locale }: { tasks: TaskCard[]; locale: Local
               </div>
             </header>
 
-            <div className="flex flex-1 flex-col gap-2.5 p-2.5">
+            <div className="stagger-in flex flex-1 flex-col gap-2.5 p-2.5">
               {items.map((task) => (
                 <TaskItem key={task.id} task={task} locale={locale} />
               ))}

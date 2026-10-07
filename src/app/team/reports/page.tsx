@@ -88,7 +88,7 @@ export default async function StaffReportsPage() {
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="stagger-in">
               {rows.map((row) => (
                 <tr key={row.user.id} className="border-b border-hairline-soft last:border-b-0">
                   <td className="px-5 py-3.5">

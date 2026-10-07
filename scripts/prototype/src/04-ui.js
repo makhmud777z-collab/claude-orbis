@@ -48,8 +48,7 @@ const crumbs = (current) => {
   const parent = from ? from.split("/")[0] : (ROUTE_PARENT[S.route] ?? "dashboard");
   return `
     <nav class="t-caption" style="display:flex;align-items:center;gap:6px;margin:0 0 14px;color:var(--ink-faint)">
-      <a href="#" data-act="back" data-value="${esc(ROUTE_PARENT[S.route] ?? "dashboard")}"
-         style="display:inline-flex;align-items:center;gap:4px;margin-left:-8px;padding:4px 8px;border-radius:999px;color:var(--ink-muted);font-weight:500">
+      <a href="#" class="btn btn-secondary btn-xs crumb-back" data-act="back" data-value="${esc(ROUTE_PARENT[S.route] ?? "dashboard")}">
         <span style="display:inline-flex;transform:rotate(180deg)">${icon("chevron", 14)}</span>${esc(routeLabel(parent))}</a>
       ${current ? `<span style="display:inline-flex">${icon("chevron", 13)}</span><span class="muted">${esc(current)}</span>` : ""}
     </nav>`;

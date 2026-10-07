@@ -95,7 +95,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
-        <div className="min-w-0 space-y-5">
+        <div className="stagger-in min-w-0 space-y-5">
           <EditableFields
             entity="deal"
             id={deal.id}
@@ -185,7 +185,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
               </span>
             </div>
             <Progress percent={dossier.percent} />
-            <ul className="mt-3 space-y-1.5">
+            <ul className="stagger-in mt-3 space-y-1.5">
               {docs.slice(0, 8).map((doc) => {
                 const meta = DOCUMENT_STATUS[doc.status];
                 return (
@@ -205,7 +205,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
           {tasks.length ? (
             <div className="card p-4">
               <div className="t-headline mb-3">{t(S.applications.tasksOfApplication)}</div>
-              <ul className="space-y-2">
+              <ul className="stagger-in space-y-2">
                 {tasks.map((task) => (
                   <li key={task.id} className="t-caption flex items-center gap-2.5">
                     <Avatar name={userById(task.assigneeId)?.name ?? "—"} size={20} />

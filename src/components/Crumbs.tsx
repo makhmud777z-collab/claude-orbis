@@ -52,7 +52,12 @@ export function Crumbs({
   }, []);
 
   return (
-    <nav className="t-caption mb-4 flex items-center gap-1.5 text-ink-faint">
+    <nav className="t-caption mb-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-ink-faint">
+      {/*
+        Настоящая кнопка, а не строчка в хлебных крошках. Бледный текст
+        сверху страницы человек не ищет и не находит: «назад» должно быть
+        видно как элемент управления — с рамкой, фоном и местом под палец.
+      */}
       <Link
         href={back}
         onClick={(e) => {
@@ -61,7 +66,7 @@ export function Crumbs({
           e.preventDefault();
           router.back();
         }}
-        className="-ml-2 inline-flex items-center gap-1 rounded-full px-2 py-1 font-medium text-ink-muted transition-colors hover:bg-surface-1 hover:text-ink"
+        className="btn btn-secondary btn-sm crumb-back"
       >
         <IconChevronRight size={14} style={{ transform: "rotate(180deg)" }} />
         {backLabel}

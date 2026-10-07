@@ -62,7 +62,7 @@ export default async function SettingsPage() {
       />
 
       <div className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-[1fr_360px]">
-        <div className="min-w-0 space-y-5">
+        <div className="stagger-in min-w-0 space-y-5">
           <DomainCard
             slug={tenant.slug}
             rootDomain={ROOT_DOMAIN}
@@ -74,7 +74,7 @@ export default async function SettingsPage() {
 
           <div className="card p-6">
             <SectionTitle>{t(S.settings.rolesTitle)}</SectionTitle>
-            <div className="divide-y divide-hairline-soft">
+            <div className="stagger-in divide-y divide-hairline-soft">
               {rolesOf(session.tenant.id).map((r) => (
                 <div key={r.id} className="flex flex-wrap items-center gap-4 py-3.5">
                   <div className="min-w-[200px] flex-1">
@@ -100,7 +100,7 @@ export default async function SettingsPage() {
 
           <div className="card p-6">
             <SectionTitle>{t(S.settings.integrations)}</SectionTitle>
-            <div className="divide-y divide-hairline-soft">
+            <div className="stagger-in divide-y divide-hairline-soft">
               {INTEGRATIONS.map((i) => (
                 <div key={i.name.ru} className="flex items-center gap-4 py-3.5">
                   <StatusDot color="var(--color-status-hold)" />
@@ -115,7 +115,7 @@ export default async function SettingsPage() {
           </div>
         </div>
 
-        <div className="space-y-5">
+        <div className="stagger-in space-y-5">
           <AgencyProfileCard
             name={tenant.name}
             legalName={tenant.legalName}

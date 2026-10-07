@@ -120,7 +120,7 @@ export function MetaForms({
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="stagger-in">
                   {form.fields.map((field) => (
                     <tr
                       key={field.name}

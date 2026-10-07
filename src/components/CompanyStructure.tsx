@@ -226,7 +226,7 @@ export function CompanyStructure({
         {children.length && isOpen ? (
           <>
             <span className="tree-stem" />
-            <div className="tree-children">
+            <div className="stagger-in tree-children">
               {children.map((child) => (
                 <div key={child.id} className="tree-child">
                   {branch(child, depth + 1)}
@@ -339,7 +339,7 @@ export function CompanyStructure({
               </button>
             ) : null}
           </div>
-          <div className="max-h-[38vh] space-y-1 overflow-y-auto pr-1">
+          <div className="stagger-in max-h-[38vh] space-y-1 overflow-y-auto pr-1">
             {visible.map((person) => (
               <Person
                 key={person.id}
