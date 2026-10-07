@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { CHANNELS } from "./data/channels";
 import { DOCUMENTS } from "./data/documents";
+import { checklistKey, DOCUMENT_CHECKLIST } from "./labels";
 import { DEALS } from "./data/deals";
 import { LEADS, digits, isActiveLead } from "./data/leads";
 import { META_FORMS, META_PAGES } from "./data/meta";
@@ -18,7 +19,7 @@ import type { Action, Module } from "./rbac";
 import { actionSpec, TARGET_HEAD, TARGET_OWNER } from "./automation";
 import type {
   CalendarEvent, Channel, CustomField, Deal, Department, EventKind, Lead, Pipeline, Project, Role,
-  MetaDeletion, MetaEvent, MetaFormMapping, MetaPage, MetaPending,
+  ChecklistItem, MetaDeletion, MetaEvent, MetaFormMapping, MetaPage, MetaPending,
   Robot, RobotPending, RobotRun, Trigger, TriggerEvent,
   Stage, Student, StudentDocument, Task, Tenant, TenantRole, TimelineEvent, User, WorkSession,
 } from "./types";
@@ -67,6 +68,12 @@ interface State {
   metaPending: Record<string, MetaPending>;
   /** заявки на удаление данных из Facebook: чем ответили и что сняли */
   metaDeletions: MetaDeletion[];
+  /**
+   * Чек-лист документов агентства. Пусто, пока агентство его не правило:
+   * тогда отдаётся стартовый набор. Первая правка материализует список,
+   * и дальше он живёт как обычные данные арендатора.
+   */
+  checklist: Record<string, ChecklistItem[]>;
   /** роботы агентства: что портал делает сам на каждой стадии */
   robots: Robot[];
   /** триггеры: какое событие двигает карточку на стадию */
@@ -94,7 +101,7 @@ interface State {
  * кода, и новое поле оказалось бы undefined — поэтому состояние с чужой
  * версией пересоздаётся целиком.
  */
-const STATE_VERSION = 12;
+const STATE_VERSION = 13;
 
 const globalStore = globalThis as unknown as { __orbisStore?: State };
 
@@ -118,6 +125,7 @@ function createState(): State {
     metaEvents: [],
     metaPending: {},
     metaDeletions: [],
+    checklist: {},
     robots: ROBOTS.map((x) => ({ ...x })),
     triggers: TRIGGERS.map((x) => ({ ...x })),
     robotQueue: [],
@@ -751,6 +759,69 @@ export function fireTrigger(
     status: moved.ok ? "done" : "skipped",
     note: moved.ok ? `Карточка переведена на «${trigger.stage}»` : `Перевод не нужен: ${moved.reason}`,
   });
+}
+
+/* ── чек-лист документов ─────────────────────────────────────── */
+/*
+ * Какие документы агентство собирает со студента. Стартовый набор —
+ * шаблон под корейское направление; агентство правит его под себя, и с
+ * этого момента список становится его данными.
+ */
+
+const seedChecklist = (tenantId: string): ChecklistItem[] =>
+  DOCUMENT_CHECKLIST.map((item, i) => ({
+    id: `ck_${tenantId}_${i}`,
+    tenantId,
+    kind: { ...item.kind },
+    needsApostille: item.needsApostille,
+    order: i,
+  }));
+
+export const checklistOf = (tenantId: string): ChecklistItem[] =>
+  (state.checklist[tenantId] ?? seedChecklist(tenantId)).slice().sort((a, b) => a.order - b.order);
+
+/** Первая правка материализует весь список — дальше он живёт как данные. */
+function materialize(tenantId: string): ChecklistItem[] {
+  if (!state.checklist[tenantId]) state.checklist[tenantId] = seedChecklist(tenantId);
+  return state.checklist[tenantId];
+}
+
+export function addChecklistItem(tenantId: string, kind: Loc, needsApostille: boolean) {
+  const list = materialize(tenantId);
+  // Один и тот же документ дважды в чек-листе — это два пункта досье с
+  // одинаковым названием, которые куратор не различит.
+  if (list.some((x) => checklistKey(x.kind) === checklistKey(kind))) return undefined;
+
+  const item: ChecklistItem = {
+    id: nextId("ck"), tenantId, kind, needsApostille,
+    order: list.length ? Math.max(...list.map((x) => x.order)) + 1 : 0,
+  };
+  list.push(item);
+  return item;
+}
+
+export function updateChecklistItem(
+  tenantId: string, id: string, patch: Partial<Pick<ChecklistItem, "kind" | "needsApostille">>,
+) {
+  const item = materialize(tenantId).find((x) => x.id === id);
+  if (!item) return;
+  if (patch.kind) item.kind = patch.kind;
+  if (patch.needsApostille !== undefined) item.needsApostille = patch.needsApostille;
+}
+
+export function removeChecklistItem(tenantId: string, id: string) {
+  state.checklist[tenantId] = materialize(tenantId).filter((x) => x.id !== id);
+}
+
+export function moveChecklistItem(tenantId: string, id: string, delta: number) {
+  const list = checklistOf(tenantId);
+  const i = list.findIndex((x) => x.id === id);
+  const to = i + delta;
+  if (i < 0 || to < 0 || to >= list.length) return;
+  const [moved] = list.splice(i, 1);
+  list.splice(to, 0, moved);
+  list.forEach((x, index) => { x.order = index; });
+  state.checklist[tenantId] = list;
 }
 
 /* ── код входа в администрирование ───────────────────────────── */

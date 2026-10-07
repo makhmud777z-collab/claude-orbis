@@ -2,6 +2,7 @@ import { PipelineEditor, type PipelineDraft } from "@/components/PipelineEditor"
 import { Crumbs, PageHeader } from "@/components/ui";
 import { formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
+import { moduleGate } from "@/components/guard";
 import { allow } from "@/lib/rbac";
 import { getSession } from "@/lib/session";
 import { dealsOfPipeline, pipelinesOf, stageUsage } from "@/lib/store";
@@ -11,6 +12,11 @@ import { P, S } from "@/lib/strings";
 export default async function PipelinesPage() {
   const session = await getSession();
   const t = translator(session.locale);
+  // Настройки воронок — тот же модуль, что у каналов и роботов. Без этого
+  // роль с «Администрированием», но без «Настроек CRM» видела редактор
+  // стадий, хотя сохранить ничего не могла: экран обещал то, чего нет.
+  const gate = moduleGate(session, "crmSettings", t(S.pipelines.title));
+  if (gate) return gate;
   const f = formatters(session.locale);
 
   const pipelines: PipelineDraft[] = [

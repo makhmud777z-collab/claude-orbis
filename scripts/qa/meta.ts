@@ -194,6 +194,30 @@ async function main() {
   ok(entry.searchParams.get("redirect_uri") === "https://orbisystem.us/api/meta/connect", "адрес возврата передан");
   ok((entry.searchParams.get("scope") ?? "").includes("leads_retrieval"), "право на забор лидов запрошено");
 
+  console.log("\nУМЕРШИЙ ТОКЕН СТРАНИЦЫ");
+  // Самое тихое место интеграции: доступ отозван, лиды не идут, а страница
+  // продолжает светиться «Подключено».
+  const live = db.metaPageByPageId("102938475610293")!;
+  db.saveMetaPage({ ...live, status: "connected" });
+  const dead = await importLead(
+    { leadgenId: "L-dead-1", pageId: "102938475610293", formId: "7001", adgroupId: null, createdAt: null },
+    async () => { throw new Error("Graph API 400: OAuth error 190 — session has expired"); },
+  );
+  ok(dead.status === "failed", "приход записан как неудачный");
+  ok(db.metaPageByPageId("102938475610293")?.status === "needs_reconnect",
+    "страница помечена «переподключите»", String(db.metaPageByPageId("102938475610293")?.status));
+  ok(dead.note.includes("переподключите"), "в журнале сказано, что делать", dead.note.slice(0, 50));
+
+  // А временный сбой переподключения не требует: Meta моргнула, доступ цел.
+  db.saveMetaPage({ ...live, status: "connected" });
+  const blip = await importLead(
+    { leadgenId: "L-dead-2", pageId: "102938475610293", formId: "7001", adgroupId: null, createdAt: null },
+    async () => { throw new Error("Graph API 500: Internal error"); },
+  );
+  ok(blip.status === "failed", "временный сбой тоже записан");
+  ok(db.metaPageByPageId("102938475610293")?.status === "connected",
+    "но страница осталась подключённой", String(db.metaPageByPageId("102938475610293")?.status));
+
   console.log("\nУДАЛЕНИЕ ДАННЫХ: ПОДПИСАННЫЙ ЗАПРОС");
   // META_APP_SECRET выставлен в начале проверки — тем же ключом и подписываем.
   const secret = "s3cret";

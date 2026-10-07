@@ -9,7 +9,7 @@ import * as rbac from "@/lib/rbac";
 import { usersOfTenant } from "@/lib/data/users";
 import * as db from "@/lib/store";
 import type { CalendarEvent, Lead, Role, StudentDocument, TimelineEvent } from "@/lib/types";
-import { checklistKey, DOCUMENT_CHECKLIST } from "@/lib/labels";
+import { checklistKey } from "@/lib/labels";
 import { ADMIN_COOKIE, adminUnlocked, passcodeMatches } from "@/lib/admin-lock";
 import { getSession } from "@/lib/session";
 import { newId, signSession } from "@/lib/auth";
@@ -549,7 +549,8 @@ export async function requestDocumentAction(formData: FormData) {
 
   const studentId = String(formData.get("studentId") ?? "");
   const key = String(formData.get("kind") ?? "");
-  const item = DOCUMENT_CHECKLIST.find((x) => checklistKey(x.kind) === key);
+  // Чек-лист агентства, а не список в коде: агентства собирают разное.
+  const item = db.checklistOf(session.tenant.id).find((x) => checklistKey(x.kind) === key);
   if (!studentId || !item) return;
 
   db.requestDocument({
@@ -924,6 +925,77 @@ export async function toggleTriggerAction(formData: FormData) {
   if (!session) return;
   db.toggleTrigger(session.tenant.id, String(formData.get("triggerId") ?? ""));
   revalidatePath("/admin/automation");
+  revalidatePath("/", "layout");
+}
+
+/* ── Чек-лист документов ─────────────────────────────────────── */
+/*
+ * Какие документы агентство собирает со студента. Правит тот же, кто
+ * правит остальные настройки портала.
+ */
+
+export async function addChecklistItemAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "admin", "edit")) return;
+
+  const ru = String(formData.get("ru") ?? "").trim();
+  const uz = String(formData.get("uz") ?? "").trim();
+  if (!ru) return;
+
+  db.addChecklistItem(
+    session.tenant.id,
+    // Узбекское название необязательно: без него пункт покажется русским
+    // на обоих языках — это честнее, чем не дать его завести вовсе.
+    loc(ru, uz || ru),
+    formData.get("apostille") === "on",
+  );
+  revalidatePath("/", "layout");
+}
+
+export async function updateChecklistItemAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "admin", "edit")) return;
+
+  const id = String(formData.get("itemId") ?? "");
+  const ru = String(formData.get("ru") ?? "").trim();
+  const uz = String(formData.get("uz") ?? "").trim();
+  if (!id || !ru) return;
+
+  db.updateChecklistItem(session.tenant.id, id, {
+    kind: loc(ru, uz || ru),
+    needsApostille: formData.get("apostille") === "on",
+  });
+  revalidatePath("/", "layout");
+}
+
+export async function toggleChecklistApostilleAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "admin", "edit")) return;
+
+  const id = String(formData.get("itemId") ?? "");
+  const item = db.checklistOf(session.tenant.id).find((x) => x.id === id);
+  if (!item) return;
+
+  db.updateChecklistItem(session.tenant.id, id, { needsApostille: !item.needsApostille });
+  revalidatePath("/", "layout");
+}
+
+export async function removeChecklistItemAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "admin", "edit")) return;
+
+  db.removeChecklistItem(session.tenant.id, String(formData.get("itemId") ?? ""));
+  revalidatePath("/", "layout");
+}
+
+export async function moveChecklistItemAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "admin", "edit")) return;
+
+  const delta = Number(formData.get("delta") ?? 0);
+  if (delta !== 1 && delta !== -1) return;
+
+  db.moveChecklistItem(session.tenant.id, String(formData.get("itemId") ?? ""), delta);
   revalidatePath("/", "layout");
 }
 

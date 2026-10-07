@@ -74,6 +74,19 @@ export interface ImportResult {
  * и в симуляторе — готовый набор полей. Иначе проверить путь можно было бы
  * только живой рекламой.
  */
+/**
+ * Отличает «доступ отозван» от «Meta моргнула».
+ *
+ * Код 190 и 10 — это «токен недействителен» и «нет прав»: такое само не
+ * пройдёт, страницу надо подключать заново. Сетевая ошибка или 500 —
+ * пройдёт, и переводить из-за них страницу в «переподключите» значило бы
+ * пугать агентство на ровном месте.
+ */
+function tokenDead(note: string): boolean {
+  return /\b(190|463|467)\b/.test(note) || /OAuth|session has expired|access token/i.test(note)
+    || /Graph API 401|Graph API 403/.test(note);
+}
+
 export async function importLead(
   event: LeadgenEvent,
   load: (leadgenId: string, token: string) => Promise<MetaField[]>,
@@ -97,10 +110,23 @@ export async function importLead(
   try {
     fields = await load(event.leadgenId, page.token);
   } catch (err) {
-    return {
-      status: "failed", leadId: null, tenantId: page.tenantId,
-      note: err instanceof Error ? err.message : "Не удалось забрать лид",
-    };
+    const note = err instanceof Error ? err.message : "Не удалось забрать лид";
+
+    /*
+     * Умерший токен нельзя оставлять под зелёной надписью «Подключено».
+     * Агентство видит подключённую страницу, лиды при этом не идут, и
+     * понять это можно только дочитав журнал до конца. Переводим страницу
+     * в «переподключите» — на экране это красная строка, а не тишина.
+     */
+    if (tokenDead(note)) {
+      db.saveMetaPage({ ...page, status: "needs_reconnect" });
+      return {
+        status: "failed", leadId: null, tenantId: page.tenantId,
+        note: `Доступ к странице больше не действует — переподключите её. ${note}`,
+      };
+    }
+
+    return { status: "failed", leadId: null, tenantId: page.tenantId, note };
   }
 
   const names = fields.map((f) => f.name);

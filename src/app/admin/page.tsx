@@ -1,24 +1,43 @@
 import Link from "next/link";
 import { lockAdminAction } from "@/app/actions";
-import { Crumbs, PageHeader, SectionTitle } from "@/components/ui";
+import { Crumbs, PageHeader } from "@/components/ui";
 import {
-  IconApplications, IconChevronRight, IconLock, IconSettings, IconTeam,
+  IconApplications, IconChevronRight, IconDocuments, IconLock, IconRobot,
+  IconSettings, IconTeam,
 } from "@/components/icons";
 import { translator, type Loc } from "@/lib/i18n";
 import { getSession } from "@/lib/session";
-import { channelsOf, customFieldsOf, departmentsOf, metaFormsOf, pipelinesOf, robotsOf } from "@/lib/store";
+import {
+  channelsOf, checklistOf, customFieldsOf, departmentsOf, metaPagesOf,
+  pipelinesOf, robotsOf, triggersOf,
+} from "@/lib/store";
 import { S } from "@/lib/strings";
 
 interface Item {
   href: string;
   title: Loc;
   hint: Loc;
+  /** что показать справа: счётчик настроенного, а не слово «настроить» */
   value: string;
 }
 
+interface Group {
+  label: Loc;
+  hint: Loc;
+  icon: typeof IconSettings;
+  items: Item[];
+}
+
 /**
- * Пульт портала. Плитками, а не списком: настройка — редкое действие,
- * и важнее увидеть, что вообще можно настроить, чем плотно уместить всё.
+ * Пульт портала.
+ *
+ * Группы идут в том порядке, в каком агентство к ним приходит: сначала
+ * путь заявки по воронке, потом работа со студентом, потом откуда заявки
+ * берутся, потом люди, и в конце сам портал. Раньше всё лежало тремя
+ * кучами без подписей, и «чек-лист документов» было негде искать.
+ *
+ * У каждой плитки справа счётчик настроенного — так видно, где ещё пусто,
+ * не заходя внутрь.
  */
 export default async function AdminHome() {
   const session = await getSession();
@@ -28,10 +47,13 @@ export default async function AdminHome() {
   const pipelines = [...pipelinesOf(tenant.id, "lead"), ...pipelinesOf(tenant.id, "deal")];
   const channels = channelsOf(tenant.id);
   const departments = departmentsOf(tenant.id);
+  const robots = robotsOf(tenant.id);
+  const pages = metaPagesOf(tenant.id);
 
-  const groups: { label: Loc; icon: typeof IconSettings; items: Item[] }[] = [
+  const groups: Group[] = [
     {
       label: S.admin.groupCrm,
+      hint: S.admin.groupCrmHint,
       icon: IconApplications,
       items: [
         {
@@ -44,13 +66,7 @@ export default async function AdminHome() {
           href: "/admin/automation",
           title: S.automation.title,
           hint: S.automation.hubHint,
-          value: String(robotsOf(tenant.id).filter((r) => r.enabled).length),
-        },
-        {
-          href: "/admin/channels",
-          title: S.channels.title,
-          hint: S.channels.subtitle,
-          value: `${channels.filter((c) => c.status === "connected").length} / ${channels.length}`,
+          value: `${robots.filter((r) => r.enabled).length} + ${triggersOf(tenant.id).length}`,
         },
         {
           href: "/admin/cards",
@@ -58,35 +74,88 @@ export default async function AdminHome() {
           hint: S.pipelines.cardViewHint,
           value: "—",
         },
+      ],
+    },
+    {
+      label: S.admin.groupWork,
+      hint: S.admin.groupWorkHint,
+      icon: IconDocuments,
+      items: [
+        {
+          href: "/admin/checklist",
+          title: S.checklist.title,
+          hint: S.checklist.hubHint,
+          value: String(checklistOf(tenant.id).length),
+        },
         {
           href: "/admin/fields",
           title: S.customFields.title,
           hint: S.customFields.hubHint,
           value: String(customFieldsOf(tenant.id).length),
         },
+      ],
+    },
+    {
+      label: S.admin.groupLeads,
+      hint: S.admin.groupLeadsHint,
+      icon: IconRobot,
+      items: [
         {
           href: "/admin/meta",
           title: S.meta.title,
           hint: S.meta.hubHint,
-          value: String(metaFormsOf(tenant.id).length),
+          value: String(pages.length),
+        },
+        {
+          href: "/admin/channels",
+          title: S.channels.title,
+          hint: S.channels.subtitle,
+          value: `${channels.filter((c) => c.status === "connected").length} / ${channels.length}`,
         },
       ],
     },
     {
       label: S.admin.groupPeople,
+      hint: S.admin.groupPeopleHint,
       icon: IconTeam,
       items: [
-        { href: "/admin/users", title: S.admin.users, hint: S.admin.seats, value: `${tenant.seatsUsed} / ${tenant.seatsLimit}` },
-        { href: "/admin/permissions", title: S.admin.permissions, hint: S.admin.permissionsHint, value: "—" },
-        { href: "/team/structure", title: S.admin.structure, hint: S.admin.structureHint, value: String(departments.length) },
+        {
+          href: "/admin/users",
+          title: S.admin.users,
+          hint: S.admin.seats,
+          value: `${tenant.seatsUsed} / ${tenant.seatsLimit}`,
+        },
+        {
+          href: "/admin/permissions",
+          title: S.admin.permissions,
+          hint: S.admin.permissionsHint,
+          value: "—",
+        },
+        {
+          href: "/team/structure",
+          title: S.admin.structure,
+          hint: S.admin.structureHint,
+          value: String(departments.length),
+        },
       ],
     },
     {
       label: S.admin.groupPortal,
+      hint: S.admin.groupPortalHint,
       icon: IconSettings,
       items: [
-        { href: "/admin/portal", title: S.admin.portal, hint: S.settings.addressHint, value: tenant.slug },
-        { href: "/admin/demo", title: S.admin.demo, hint: S.admin.demoHint, value: session.user.name.split(" ")[0] },
+        {
+          href: "/admin/portal",
+          title: S.admin.portal,
+          hint: S.settings.addressHint,
+          value: tenant.slug,
+        },
+        {
+          href: "/admin/demo",
+          title: S.admin.demo,
+          hint: S.admin.demoHint,
+          value: session.user.name.split(" ")[0],
+        },
       ],
     },
   ];
@@ -107,24 +176,34 @@ export default async function AdminHome() {
       />
 
       {groups.map((group) => (
-        <section key={group.label.ru}>
-          <SectionTitle>{t(group.label)}</SectionTitle>
-          <div className="stagger-in grid grid-cols-1 gap-4 md:grid-cols-2">
+        <section key={group.label.ru} className="mb-9 last:mb-0">
+          {/*
+            Подпись группы с пояснением: «CRM» ни о чём не говорит человеку,
+            который ищет, где поменять набор документов.
+          */}
+          <div className="mb-3.5 flex items-start gap-3">
+            <span
+              className="mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-[9px]"
+              style={{
+                background: "color-mix(in srgb, var(--color-accent) 10%, transparent)",
+                color: "var(--color-accent)",
+              }}
+            >
+              <group.icon size={16} />
+            </span>
+            <div className="min-w-0">
+              <h2 className="t-headline">{t(group.label)}</h2>
+              <p className="t-caption mt-0.5 text-ink-faint">{t(group.hint)}</p>
+            </div>
+          </div>
+
+          <div className="stagger-in grid grid-cols-1 gap-3 md:grid-cols-2">
             {group.items.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 className="card card-hover flex items-center gap-4 px-5 py-4"
               >
-                <span
-                  className="flex h-10 w-10 flex-none items-center justify-center rounded-[10px]"
-                  style={{
-                    background: "color-mix(in srgb, var(--color-accent) 10%, transparent)",
-                    color: "var(--color-accent)",
-                  }}
-                >
-                  <group.icon size={18} />
-                </span>
                 <span className="min-w-0 flex-1">
                   <span className="t-body-sm block">{t(item.title)}</span>
                   <span className="t-micro mt-0.5 block text-ink-faint">{t(item.hint)}</span>

@@ -8,7 +8,8 @@ import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } fro
 import { formatters } from "@/lib/format";
 import { translator, type Translate } from "@/lib/i18n";
 import { allow } from "@/lib/rbac";
-import { checklistKey, DOCUMENT_CHECKLIST } from "@/lib/labels";
+import { checklistKey } from "@/lib/labels";
+import { checklistOf } from "@/lib/store";
 import { documentFields, simplePresets } from "@/lib/section-filters";
 import { P, S } from "@/lib/strings";
 import { scopedDocuments, scopedContacts, scopedTeam } from "@/lib/queries";
@@ -86,7 +87,7 @@ export default async function DocumentsPage({
     label: s.fullName,
     hint: s.phone,
   }));
-  const kindOptions = DOCUMENT_CHECKLIST.map((item) => ({
+  const kindOptions = checklistOf(session.tenant.id).map((item) => ({
     value: checklistKey(item.kind),
     label: t(item.kind),
   }));

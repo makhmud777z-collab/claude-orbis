@@ -946,6 +946,27 @@ export const S = {
     stFailed: loc("Ошибка", "Xato"),
   },
 
+  checklist: {
+    title: loc("Чек-лист документов", "Hujjatlar ro‘yxati"),
+    subtitle: loc("что собирают со студента", "talabadan nima yig‘iladi"),
+    hubHint: loc("пункты досье и порядок сбора", "dosye bandlari va yig‘ish tartibi"),
+    intro: loc(
+      "Этот список агентство собирает со студента. Порядок пунктов — порядок, в котором их просят: он виден в досье и в запросе документа.",
+      "Bu ro‘yxatni agentlik talabadan yig‘adi. Bandlar tartibi — ularni so‘rash tartibi: u dosyeda va hujjat so‘rovida ko‘rinadi.",
+    ),
+    add: loc("Добавить документ", "Hujjat qo‘shish"),
+    edit: loc("Изменить документ", "Hujjatni o‘zgartirish"),
+    nameRu: loc("Название по-русски", "Nomi ruscha"),
+    nameUz: loc("Название по-узбекски", "Nomi o‘zbekcha"),
+    nameUzHint: loc("можно не заполнять", "to‘ldirmasa ham bo‘ladi"),
+    apostille: loc("Нужен апостиль", "Apostil kerak"),
+    apostilleHint: loc("первое, о чём спрашивает семья", "oila birinchi so‘raydigan narsa"),
+    up: loc("Выше", "Yuqoriga"),
+    down: loc("Ниже", "Pastga"),
+    usedHint: loc("уже заведён в досье:", "dosyelarda mavjud:"),
+    count: loc("пунктов", "band"),
+  },
+
   automation: {
     title: loc("Роботы и триггеры", "Robotlar va triggerlar"),
     subtitle: loc("что портал делает сам", "portal o‘zi nima qiladi"),
@@ -1052,9 +1073,31 @@ export const S = {
       "Показ портала: агентство и сотрудник, от лица которого вы смотрите систему.",
       "Portalni ko‘rsatish: agentlik va siz kimning nomidan ko‘rayotganingiz.",
     ),
-    groupCrm: loc("CRM", "CRM"),
+    groupCrm: loc("Продажи и воронки", "Sotuv va voronkalar"),
+    groupCrmHint: loc(
+      "как карточка идёт по воронке и что портал делает за людей",
+      "karta voronka bo‘ylab qanday ketadi va portal odamlar o‘rniga nima qiladi",
+    ),
+    groupWork: loc("Работа со студентом", "Talaba bilan ish"),
+    groupWorkHint: loc(
+      "что собирают со студента и какие поля ведут",
+      "talabadan nima yig‘iladi va qaysi maydonlar yuritiladi",
+    ),
+    groupLeads: loc("Откуда приходят заявки", "Arizalar qayerdan keladi"),
+    groupLeadsHint: loc(
+      "каналы продаж и реклама Meta",
+      "sotuv kanallari va Meta reklamasi",
+    ),
     groupPeople: loc("Люди и доступы", "Odamlar va huquqlar"),
-    groupPortal: loc("Портал", "Portal"),
+    groupPeopleHint: loc(
+      "кто работает в портале и что кому видно",
+      "portalda kim ishlaydi va kimga nima ko‘rinadi",
+    ),
+    groupPortal: loc("Портал агентства", "Agentlik portali"),
+    groupPortalHint: loc(
+      "адрес, реквизиты, код входа в этот раздел",
+      "manzil, rekvizitlar, bu bo‘limga kirish kodi",
+    ),
     structure: loc("Оргструктура", "Tashkiliy tuzilma"),
     structureHint: loc(
       "подразделения, руководители, кто кому подчиняется",
