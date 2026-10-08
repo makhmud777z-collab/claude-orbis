@@ -800,6 +800,8 @@ export const S = {
     todayTotal: loc("Сегодня отработано", "Bugun ishlangan"),
     breakTotal: loc("Перерывы за день", "Kunlik tanaffuslar"),
     theme: loc("Тема оформления", "Mavzu"),
+    accent: loc("Цвет портала", "Portal rangi"),
+    backdrop: loc("Фон портала", "Portal foni"),
     myProfile: loc("Мой профиль", "Mening profilim"),
     logout: loc("Выйти", "Chiqish"),
   },

@@ -118,7 +118,7 @@ export default async function UniversityPage({
       />
 
       <div className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-[1fr_340px]">
-        <div className="stagger-in space-y-8">
+        <div className="space-y-8">
           <section>
             <SectionTitle>{t(S.universities.programsTitle)}</SectionTitle>
             <div className="stagger-in card divide-y divide-hairline-soft">
@@ -203,7 +203,7 @@ export default async function UniversityPage({
           ) : null}
         </div>
 
-        <div className="stagger-in space-y-5">
+        <div className="space-y-5">
           <div className="card p-5">
             <div className="t-caption mb-3 uppercase tracking-[0.07em] text-ink-faint">
               {t(S.universities.requirements)}

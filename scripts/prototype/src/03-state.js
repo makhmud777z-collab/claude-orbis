@@ -28,6 +28,8 @@ const S = {
   lead: { name: "", phone: "", checked: false },
   noteKind: "activity",
   theme: "light",      // светлая по умолчанию, как в Битриксе
+  accent: "indigo",    // цвет портала: один акцент на весь интерфейс
+  backdrop: "none",    // фон портала: холст под карточками, на данные не влияет
   filters: {},         // scope → {q, values, fields, preset}
   filterOpen: null,    // какой раздел раскрыл панель фильтра
   saved: {},           // userId:scope → [{name, state}]
@@ -70,6 +72,10 @@ function saveNav() {
 try {
   const savedTheme = localStorage.getItem("orbis-theme");
   if (savedTheme === "dark" || savedTheme === "light") S.theme = savedTheme;
+  const savedAccent = localStorage.getItem("orbis-accent");
+  if (ACCENTS.some((a) => a.key === savedAccent)) S.accent = savedAccent;
+  const savedBackdrop = localStorage.getItem("orbis-backdrop");
+  if (BACKDROPS.some((b) => b.key === savedBackdrop)) S.backdrop = savedBackdrop;
 } catch { /* приватное окно — тема на сессию */ }
 try {
   const saved = localStorage.getItem("orbis-shortlist");

@@ -337,7 +337,7 @@ function MonthGrid({
           </div>
         ))}
       </div>
-      <div className="stagger-in grid grid-cols-7">
+      <div className="grid grid-cols-7">
         {cells.map((day) => {
           const key = iso(day);
           const list = byDate.get(key) ?? [];

@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isLocale, loc } from "@/lib/i18n";
+import { DEFAULT_ACCENT, isAccent } from "@/lib/accent";
+import { DEFAULT_BACKDROP, isBackdrop } from "@/lib/backdrop";
 import { allow, type Action, type Module } from "@/lib/rbac";
 import * as rbac from "@/lib/rbac";
 import { usersOfTenant } from "@/lib/data/users";
@@ -1112,6 +1114,34 @@ export async function switchTheme(formData: FormData) {
   const value = String(formData.get("theme") ?? "");
   const store = await cookies();
   store.set("orbis_theme", value === "dark" ? "dark" : "light", {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  revalidatePath("/", "layout");
+}
+
+/**
+ * Цвет портала. Рядом с темой, в том же меню профиля: и то и другое —
+ * настройка сотрудника под себя, а не настройка агентства.
+ */
+export async function switchAccent(formData: FormData) {
+  const value = String(formData.get("accent") ?? "");
+  const store = await cookies();
+  store.set("orbis_accent", isAccent(value) ? value : DEFAULT_ACCENT, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  revalidatePath("/", "layout");
+}
+
+/**
+ * Фон портала. Меняет только холст под карточками: ни одна цифра, ни один
+ * список от выбора фона не зависят — это оформление, а не настройка.
+ */
+export async function switchBackdrop(formData: FormData) {
+  const value = String(formData.get("backdrop") ?? "");
+  const store = await cookies();
+  store.set("orbis_backdrop", isBackdrop(value) ? value : DEFAULT_BACKDROP, {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
   });

@@ -92,11 +92,10 @@ export function Sidebar({
   return (
     <>
     <aside
-      className="sticky top-0 hidden h-screen flex-none flex-col border-r border-hairline py-5 lg:flex"
+      className="rail-surface sticky top-0 hidden h-screen flex-none flex-col border-r border-hairline-soft py-5 lg:flex"
       style={{
         width: collapsed ? 72 : 244,
         paddingInline: collapsed ? 12 : 16,
-        background: "var(--color-rail)",
         transition: "width 160ms ease, padding 160ms ease",
       }}
     >

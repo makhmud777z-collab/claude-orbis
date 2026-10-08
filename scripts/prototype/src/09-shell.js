@@ -181,7 +181,7 @@ function renderTopbar() {
         <span class="clock" data-clock>${esc(clockText(sessionSeconds(w)))}</span>
         ${w.onBreak ? `<span class="t-micro faint">${t(loc("перерыв", "tanaffus"))}</span>` : ""}
       </span>`
-      : `<button class="workday" data-act="work" data-value="start">${icon("play", 13)} ${t(loc("Начать рабочий день", "Ish kunini boshlash"))}</button>`}
+      : `<button class="workday start" data-act="work" data-value="start">${icon("play", 13)} ${t(loc("Начать рабочий день", "Ish kunini boshlash"))}</button>`}
 
     ${renderNotices()}
 
@@ -217,6 +217,26 @@ function renderTopbar() {
         <span style="display:flex;gap:6px;margin-bottom:16px">
           ${[["light", "sun", loc("Светлая", "Yorug‘")], ["dark", "moon", loc("Тёмная", "Qorong‘i")]].map(([key, ic, label]) =>
             `<button class="btn ${S.theme === key ? "btn-primary" : "btn-secondary"}" style="flex:1" data-act="theme" data-value="${key}">${icon(ic, 14)} ${esc(t(label))}</button>`).join("")}
+        </span>
+
+        <span class="t-micro faint" style="display:block;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">${t(loc("Цвет портала", "Portal rangi"))}</span>
+        <span style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+          ${ACCENTS.map((a) => {
+            const color = S.theme === "dark" ? a.dark : a.light;
+            const on = a.key === S.accent;
+            return `<button class="accent-dot" data-act="accent" data-value="${esc(a.key)}" title="${esc(t(loc(a.ru, a.uz)))}"
+              style="background:${color}${on ? `;box-shadow:0 0 0 2px var(--surface-1),0 0 0 4px ${color}` : ""}"></button>`;
+          }).join("")}
+        </span>
+
+        <span class="t-micro faint" style="display:block;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">${t(loc("Фон портала", "Portal foni"))}</span>
+        <span style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:16px">
+          ${BACKDROPS.map((b) => {
+            const layers = S.theme === "dark" ? b.dark : b.light;
+            const on = b.key === S.backdrop;
+            return `<button class="backdrop-dot" data-act="backdrop" data-value="${esc(b.key)}" title="${esc(t(loc(b.ru, b.uz)))}"
+              style="background:${layers || "var(--canvas)"}${layers ? ";background-size:160px 120px" : ""}${on ? ";box-shadow:0 0 0 2px var(--surface-1),0 0 0 4px var(--accent)" : ""}"></button>`;
+          }).join("")}
         </span>
 
         <span class="t-micro faint" style="display:block;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">${t(loc("Язык портала", "Portal tili"))}</span>
@@ -546,6 +566,15 @@ function render() {
   document.getElementById("scrim").hidden = !S.menu;
   document.documentElement.lang = S.locale;
   document.documentElement.dataset.theme = S.theme;
+
+  // Цвет и фон портала ставятся теми же переменными, что в продукте.
+  const accent = ACCENTS.find((a) => a.key === S.accent) ?? ACCENTS[0];
+  const backdrop = BACKDROPS.find((b) => b.key === S.backdrop) ?? BACKDROPS[0];
+  const layers = S.theme === "dark" ? backdrop.dark : backdrop.light;
+  document.documentElement.style.setProperty("--accent", S.theme === "dark" ? accent.dark : accent.light);
+  document.documentElement.style.setProperty("--orbis-backdrop", layers || "none");
+  if (layers) document.documentElement.dataset.backdrop = S.backdrop;
+  else delete document.documentElement.dataset.backdrop;
   afterRender();
 }
 
@@ -839,6 +868,8 @@ const ACTIONS = {
     }
   },
   theme: (v) => { S.theme = v; try { localStorage.setItem("orbis-theme", v); } catch { /* приватное окно */ } },
+  accent: (v) => { S.accent = v; try { localStorage.setItem("orbis-accent", v); } catch { /* приватное окно */ } },
+  backdrop: (v) => { S.backdrop = v; try { localStorage.setItem("orbis-backdrop", v); } catch { /* приватное окно */ } },
   move: (v) => { const [entity, id, stage] = v.split(":"); moveCard(entity, id, stage); },
   pipeline: () => { S.popover = null; },
   view: (v) => { S.view = v; },

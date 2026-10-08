@@ -542,6 +542,7 @@ function screenAdmin() {
       `<button class="btn btn-secondary" data-act="lock">${icon("lock", 14)} ${t(loc("Закрыть настройки", "Sozlamalarni yopish"))}</button>`)}
 
     ${groups.map((g) => `
+      <section style="margin:0 0 34px">
       <div style="display:flex;gap:12px;align-items:flex-start;margin:0 0 14px">
         <span style="width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:none;margin-top:2px;
           background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--accent)">${icon(g.icon, 16)}</span>
@@ -550,8 +551,14 @@ function screenAdmin() {
           <span class="t-caption faint" style="display:block;margin-top:2px">${esc(t(g.hint))}</span>
         </span>
       </div>
-      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
-        ${g.items.map((x) => `<a class="card card-hover" href="#" data-go="${x.go}" style="display:flex;gap:14px;align-items:center;padding:16px 18px">
+      <!--
+        Ровно две колонки, а не auto-fit: при auto-fit группа из одной
+        плитки растягивалась во всю ширину экрана и выглядела полосой, а
+        соседние группы получали разное число колонок — сетка переставала
+        читаться как сетка.
+      -->
+      <div class="admin-tiles">
+        ${g.items.map((x) => `<a class="card card-hover" href="#" data-go="${x.go}" style="display:flex;gap:14px;align-items:center;padding:18px 20px">
           <span style="flex:1;min-width:0">
             <span class="t-body-sm" style="display:block">${esc(t(x.title))}</span>
             <span class="t-micro faint" style="display:block;margin-top:2px">${esc(t(x.hint))}</span>
@@ -559,7 +566,8 @@ function screenAdmin() {
           <span class="t-caption num muted nowrap">${esc(x.value)}</span>
           ${icon("right", 15)}
         </a>`).join("")}
-      </div>`).join("")}`;
+      </div>
+      </section>`).join("")}`;
 }
 
 /** Показ портала: выбор агентства и сотрудника — это настройка, а не шапка. */

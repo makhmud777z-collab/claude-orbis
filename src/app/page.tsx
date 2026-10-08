@@ -193,7 +193,7 @@ export default async function DashboardPage() {
         </SectionTitle>
         {/* Восемь стадий в один ряд требуют ~1500px: раньше они вставали
             в ряд уже с 1280px, и подписи ломались посреди слова. */}
-        <div className="stagger-in card grid grid-cols-2 divide-y divide-hairline-soft sm:grid-cols-4 sm:divide-y-0 2xl:grid-cols-8">
+        <div className="card grid grid-cols-2 divide-y divide-hairline-soft sm:grid-cols-4 sm:divide-y-0 2xl:grid-cols-8">
           {byStage.map(({ stage, label, dot, count }) => (
             <Link
               key={stage}

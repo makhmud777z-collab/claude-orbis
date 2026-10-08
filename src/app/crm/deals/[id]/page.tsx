@@ -95,7 +95,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
-        <div className="stagger-in min-w-0 space-y-5">
+        <div className="min-w-0 space-y-5">
           <EditableFields
             entity="deal"
             id={deal.id}

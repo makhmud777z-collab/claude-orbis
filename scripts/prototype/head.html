@@ -7,16 +7,16 @@
      в меню профиля. Ниже светлая (по умолчанию), тёмная переопределяет
      те же переменные в :root[data-theme="dark"]. */
   :root {
-    --canvas: #eef1f6;
+    --canvas: #f1f2f7;
     --surface-1: #ffffff;
-    --surface-2: #f5f7fa;
-    --surface-3: #e9edf3;
-    --hairline: #d7dee8;
-    --hairline-soft: #e6eaf1;
-    --ink: #16202b;
-    --ink-muted: #5b6b7c;
-    --ink-faint: #8a98a8;
-    --accent: #0a6ed1;
+    --surface-2: #f7f8fc;
+    --surface-3: #edeff6;
+    --hairline: #e2e5ef;
+    --hairline-soft: #edeff6;
+    --ink: #141a28;
+    --ink-muted: #5c6880;
+    --ink-faint: #8b95aa;
+    --accent: #4c5ce0;
     --deal: #159556;
     --progress: #c08a12;
     --risk: #d92f52;
@@ -28,8 +28,8 @@
     --topbar-bg: rgb(255 255 255 / .86);
     --scrim: rgb(16 24 40 / .38);
     --thumb: #c6cfdb;
-    --shadow-card: 0 1px 2px rgb(16 24 40 / .05), 0 1px 3px rgb(16 24 40 / .04);
-    --shadow-raised: 0 8px 24px rgb(16 24 40 / .1), 0 2px 6px rgb(16 24 40 / .05);
+    --shadow-card: 0 1px 2px rgb(20 26 40 / .04), 0 6px 18px rgb(20 26 40 / .05);
+    --shadow-raised: 0 4px 10px rgb(20 26 40 / .06), 0 18px 46px rgb(20 26 40 / .13);
     --edge-top: inset 0 1px 0 0 rgb(255 255 255 / .6);
     --rail: 244px;
     color-scheme: light;
@@ -62,7 +62,7 @@
     --ink: #f2f4f7;
     --ink-muted: #9aa4b2;
     --ink-faint: #6b7580;
-    --accent: #3b9dff;
+    --accent: #7b88ff;
     --deal: #2bc46c;
     --progress: #e0b341;
     --risk: #ff5577;
@@ -118,7 +118,7 @@
   /* ── поверхности ─────────────────────────────────────────── */
   /* Блок обязан отличаться от блока: поверхность + волосяная граница +
      тень + подсветка верхней грани. Трёх признаков разом хватает глазу. */
-  .card { background: var(--surface-1); border: 1px solid var(--hairline); border-radius: 15px; box-shadow: var(--shadow-card), var(--edge-top); }
+  .card { background: var(--surface-1); border: 1px solid var(--hairline-soft); border-radius: 18px; box-shadow: var(--shadow-card); }
   .card-head { background: var(--surface-2); border-bottom: 1px solid var(--hairline-soft); border-radius: 15px 15px 0 0; padding: 12px 16px; }
   .card-hover { transition: background-color .14s ease, border-color .14s ease, box-shadow .14s ease; }
   .card-hover:hover { background: var(--surface-2); border-color: var(--hairline); box-shadow: var(--shadow-raised), var(--edge-top); }
@@ -310,14 +310,22 @@
   .filter-bar input::placeholder { color: var(--ink-faint); }
   /* overflow: hidden здесь стоять не может — он обрезает выпадающие списки
      полей прямо внутри панели. Скругление даём самим углам сетки. */
+  /*
+   * Блок фильтра держит свой слой, а не надеется на порядок отрисовки.
+   * Слой нужен именно на внешней обёртке: z-index внутри неё считается
+   * относительно неё самой, и панель всё равно уходила под доску, которая
+   * идёт следующим блоком раздела.
+   */
+  .filter { position: relative; z-index: 20; }
   .filter-panel {
+    position: relative;
     display: grid; grid-template-columns: 210px 1fr; gap: 0;
     margin-top: 10px; background: var(--surface-1); border: 1px solid var(--hairline);
-    border-radius: 15px; box-shadow: var(--shadow-raised), var(--edge-top);
+    border-radius: 18px; box-shadow: var(--shadow-raised);
   }
   .filter-presets {
     background: var(--surface-2); border-right: 1px solid var(--hairline-soft); padding: 12px 10px;
-    border-radius: 15px 0 0 15px;
+    border-radius: 18px 0 0 18px;
   }
   .filter-preset {
     display: flex; width: 100%; align-items: center; gap: 8px; padding: 8px 10px;
@@ -339,6 +347,9 @@
     border-radius: 100px; border: 1px solid var(--hairline); background: var(--surface-1);
     font-size: 12px; cursor: pointer; box-shadow: var(--shadow-card);
   }
+  /* Начало дня — главное действие шапки: его ищут каждое утро. */
+  .workday.start { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+  .workday.start:hover { filter: brightness(1.08); }
   .workday.live { border-color: color-mix(in srgb, var(--deal) 45%, transparent); }
   .live-dot { position: relative; width: 7px; height: 7px; border-radius: 999px; background: var(--deal); flex: none; }
   .live-dot::after {
@@ -406,6 +417,45 @@
   @keyframes orbis-fade { from { opacity: 0; } to { opacity: 1; } }
   @keyframes orbis-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
   @keyframes orbis-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+
+  /*
+   * Фон портала. Закреплён: при прокрутке длинного списка он стоит на
+   * месте. Поверх него карточки, рельса и шапка становятся матовым
+   * стеклом — иначе фон виден только по краям экрана.
+   */
+  :root[data-backdrop] body {
+    background-image: var(--orbis-backdrop);
+    background-attachment: fixed;
+    background-size: cover;
+  }
+  :root[data-backdrop] .card:not(.filter-panel) {
+    background: color-mix(in srgb, var(--surface-1) 78%, transparent);
+    backdrop-filter: blur(16px) saturate(1.1);
+  }
+  :root[data-backdrop] .rail,
+  :root[data-backdrop] .topbar {
+    background: color-mix(in srgb, var(--rail-bg) 46%, transparent);
+    backdrop-filter: blur(20px) saturate(1.1);
+  }
+
+  /* Кружок цвета и плитка фона в меню профиля. */
+  .accent-dot {
+    width: 28px; height: 28px; border-radius: 100px; border: 0; cursor: pointer;
+    transition: transform .14s cubic-bezier(.22,1,.36,1), box-shadow .14s ease;
+  }
+  .accent-dot:hover { transform: scale(1.1); }
+  .accent-dot:active { transform: scale(.94); }
+  .backdrop-dot {
+    width: 100%; height: 32px; border-radius: 9px; border: 1px solid var(--hairline);
+    cursor: pointer; background-position: center;
+    transition: transform .14s cubic-bezier(.22,1,.36,1), box-shadow .14s ease;
+  }
+  .backdrop-dot:hover { transform: scale(1.06); }
+  .backdrop-dot:active { transform: scale(.96); }
+
+  /* Пульт администрирования: две колонки на широком, одна на узком. */
+  .admin-tiles { display: grid; gap: 12px; grid-template-columns: 1fr; }
+  @media (min-width: 900px) { .admin-tiles { grid-template-columns: 1fr 1fr; } }
 
   .pop, .filter-panel { animation: orbis-rise .14s cubic-bezier(.22,1,.36,1); }
   .modal { animation: orbis-pop .18s cubic-bezier(.22,1,.36,1); }

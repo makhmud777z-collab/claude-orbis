@@ -53,7 +53,12 @@ export function WorkdayPill({ workday, locale }: { workday: WorkdayState; locale
     return (
       <form action={workdayAction}>
         <input type="hidden" name="what" value="start" />
-        <button className="btn btn-secondary btn-sm hidden sm:inline-flex" type="submit">
+        {/*
+          Главная кнопка, а не «ещё одна серая». Начало дня — единственное
+          действие, которое сотрудник делает в шапке каждое утро: оно должно
+          находиться с первого взгляда, а не узнаваться по подписи.
+        */}
+        <button className="btn btn-primary btn-sm hidden sm:inline-flex" type="submit">
           <IconPlay size={13} />
           {t(S.workday.start)}
         </button>

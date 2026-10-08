@@ -62,7 +62,7 @@ export default async function SettingsPage() {
       />
 
       <div className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-[1fr_360px]">
-        <div className="stagger-in min-w-0 space-y-5">
+        <div className="min-w-0 space-y-5">
           <DomainCard
             slug={tenant.slug}
             rootDomain={ROOT_DOMAIN}
@@ -115,7 +115,7 @@ export default async function SettingsPage() {
           </div>
         </div>
 
-        <div className="stagger-in space-y-5">
+        <div className="space-y-5">
           <AgencyProfileCard
             name={tenant.name}
             legalName={tenant.legalName}

@@ -4,6 +4,8 @@ import { hydrate } from "./db";
 import { USERS, usersOfTenant } from "./data/users";
 import { isLocale, type Locale } from "./i18n";
 import { isTheme, type Theme } from "./theme";
+import { DEFAULT_ACCENT, isAccent, type Accent } from "./accent";
+import { DEFAULT_BACKDROP, isBackdrop, type Backdrop } from "./backdrop";
 import { scopeOf, type Scope } from "./rbac";
 import { TENANTS, tenantBySlug } from "./tenants";
 import type { Role, Tenant, User } from "./types";
@@ -31,6 +33,10 @@ export interface Session {
   locale: Locale;
   /** тема оформления: каждый сотрудник настраивает портал под себя */
   theme: Theme;
+  /** цвет портала: один акцент на весь интерфейс, выбирается в меню профиля */
+  accent: Accent;
+  /** фон портала: холст под карточками, на данные не влияет */
+  backdrop: Backdrop;
   /**
    * Сотрудник подтверждён подписанной кукой (реальный вход или демо-переключатель,
    * который её тоже подписывает). false — куки не было или она не прошла проверку:
@@ -66,6 +72,8 @@ export async function getSession(): Promise<Session> {
 
   const requestedLocale = c.get("orbis_locale")?.value;
   const requestedTheme = c.get("orbis_theme")?.value;
+  const requestedAccent = c.get("orbis_accent")?.value;
+  const requestedBackdrop = c.get("orbis_backdrop")?.value;
 
   return {
     tenant,
@@ -75,6 +83,8 @@ export async function getSession(): Promise<Session> {
     host: h.get("x-orbis-host") ?? "",
     locale: isLocale(requestedLocale) ? requestedLocale : tenant.locale,
     theme: isTheme(requestedTheme) ? requestedTheme : "light",
+    accent: isAccent(requestedAccent) ? requestedAccent : DEFAULT_ACCENT,
+    backdrop: isBackdrop(requestedBackdrop) ? requestedBackdrop : DEFAULT_BACKDROP,
     authenticated: Boolean(verifiedUser),
   };
 }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { logoutAction, switchLocale, switchTheme } from "@/app/actions";
+import { logoutAction, switchAccent, switchBackdrop, switchLocale, switchTheme } from "@/app/actions";
 import { IconChevron, IconLock, IconLogout, IconMoon, IconSearch, IconSun } from "./icons";
 import { Notifications, type NoticeItem } from "./Notifications";
 import { Avatar } from "./ui";
@@ -13,6 +13,8 @@ import type { Module } from "@/lib/rbac";
 import { LOCALES, translator, type Loc, type Locale } from "@/lib/i18n";
 import { S } from "@/lib/strings";
 import { THEMES, type Theme } from "@/lib/theme";
+import { ACCENTS, type Accent } from "@/lib/accent";
+import { BACKDROPS, backdropValue, type Backdrop } from "@/lib/backdrop";
 import type { Tenant, User } from "@/lib/types";
 
 /**
@@ -29,6 +31,8 @@ export function Topbar({
   home,
   workday,
   theme,
+  accent,
+  backdrop,
   canAdmin,
   notices,
   showLogout,
@@ -40,6 +44,10 @@ export function Topbar({
   home: string;
   workday: WorkdayState;
   theme: Theme;
+  /** цвет портала: выбирается здесь же, рядом с темой */
+  accent: Accent;
+  /** фон портала: холст под карточками */
+  backdrop: Backdrop;
   /** ссылка в закрытый раздел видна только тому, у кого есть право */
   canAdmin: boolean;
   /** то, что требует внимания сегодня: просроченные сроки и задачи */
@@ -59,7 +67,7 @@ export function Topbar({
    */
   useEffect(() => {
     setOpen(false);
-  }, [workday.started, workday.onBreak, theme, locale]);
+  }, [workday.started, workday.onBreak, theme, accent, backdrop, locale]);
 
   // Клик мимо меню закрывает его — иначе панель висит поверх работы.
   useEffect(() => {
@@ -83,8 +91,7 @@ export function Topbar({
       : "var(--color-ink-faint)";
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-hairline px-5 backdrop-blur-xl"
-      style={{ background: "color-mix(in srgb, var(--color-rail) 88%, transparent)" }}>
+    <header className="rail-surface sticky top-0 z-30 flex h-16 items-center gap-2.5 border-b border-hairline-soft px-5">
       <MobileNav modules={modules} locale={locale} tenantName={user.name} home={home} />
 
       <label className="relative hidden max-w-[320px] flex-1 items-center sm:flex">
@@ -106,16 +113,16 @@ export function Topbar({
 
       <div className="flex-1" />
 
-      <form action={switchLocale} className="mr-1 hidden items-center gap-0.5 rounded-full bg-surface-1 p-0.5 sm:flex">
+      <form action={switchLocale} className="topbar-control hidden items-center gap-0.5 rounded-full p-0.5 sm:flex">
         {LOCALES.map((l) => (
           <button
             key={l.key}
             name="locale"
             value={l.key}
-            className="t-micro rounded-full px-2.5 py-1.5 transition-colors"
+            className="t-micro rounded-full px-2.5 py-1.5 font-medium transition-colors"
             style={{
-              background: l.key === locale ? "var(--color-surface-2)" : "transparent",
-              color: l.key === locale ? "var(--color-ink)" : "var(--color-ink-faint)",
+              background: l.key === locale ? "var(--color-accent)" : "transparent",
+              color: l.key === locale ? "#fff" : "var(--color-ink-muted)",
             }}
           >
             {l.short}
@@ -133,7 +140,7 @@ export function Topbar({
         <button
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2 transition-colors hover:bg-surface-1"
+          className="topbar-control flex items-center gap-2.5 rounded-full py-1 pl-1 pr-2.5"
         >
           <span className="relative">
             <Avatar name={user.name} size={28} />
@@ -171,6 +178,72 @@ export function Topbar({
                   {t(item.label)}
                 </button>
               ))}
+            </form>
+
+            {/*
+              Цвет портала. Кружками, а не списком названий: человек
+              выбирает глазами, и подпись «Индиго» сама по себе ничего не
+              говорит. Выбранный обведён кольцом — на кружке галочка
+              теряется.
+            */}
+            <div className="t-micro mb-2 uppercase tracking-[0.08em] text-ink-faint">
+              {t(S.workday.accent)}
+            </div>
+            <form action={switchAccent} className="mb-4 flex flex-wrap gap-2">
+              {ACCENTS.map((item) => {
+                const color = theme === "dark" ? item.dark : item.light;
+                const active = item.key === accent;
+                return (
+                  <button
+                    key={item.key}
+                    name="accent"
+                    value={item.key}
+                    title={t(item.label)}
+                    aria-label={t(item.label)}
+                    aria-pressed={active}
+                    className="accent-dot"
+                    style={{
+                      background: color,
+                      boxShadow: active
+                        ? `0 0 0 2px var(--color-surface-1), 0 0 0 4px ${color}`
+                        : undefined,
+                    }}
+                  />
+                );
+              })}
+            </form>
+
+            {/*
+              Фон портала. Каждый образец — тот же градиент, сжатый до
+              плитки: выбирают глазами, а не по названию. «Без фона» первым,
+              потому что это состояние по умолчанию и к нему возвращаются.
+            */}
+            <div className="t-micro mb-2 uppercase tracking-[0.08em] text-ink-faint">
+              {t(S.workday.backdrop)}
+            </div>
+            <form action={switchBackdrop} className="mb-4 grid grid-cols-5 gap-1.5">
+              {BACKDROPS.map((item) => {
+                const layers = backdropValue(item.key, theme);
+                const active = item.key === backdrop;
+                return (
+                  <button
+                    key={item.key}
+                    name="backdrop"
+                    value={item.key}
+                    title={t(item.label)}
+                    aria-label={t(item.label)}
+                    aria-pressed={active}
+                    className="backdrop-dot"
+                    style={{
+                      background: layers || "var(--color-canvas)",
+                      backgroundSize: layers ? "160px 120px" : undefined,
+                      boxShadow: active
+                        ? "0 0 0 2px var(--color-surface-1), 0 0 0 4px var(--color-accent)"
+                        : undefined,
+                    }}
+                  />
+                );
+              })}
             </form>
 
             <div className="t-micro mb-2 uppercase tracking-[0.08em] text-ink-faint">

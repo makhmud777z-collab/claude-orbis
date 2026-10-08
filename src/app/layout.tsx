@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import "./globals.css";
+import { PageTransition } from "@/components/PageTransition";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { openModules } from "@/components/guard";
@@ -17,6 +18,8 @@ import { noticesFor } from "@/lib/queries";
 import { getSession } from "@/lib/session";
 import { breakSeconds, openSession, sessionSeconds, sweepRobots } from "@/lib/store";
 import { ROOT_DOMAIN } from "@/lib/tenants";
+import { accentValue } from "@/lib/accent";
+import { backdropValue } from "@/lib/backdrop";
 
 /**
  * Страницы без обвязки портала.
@@ -75,7 +78,12 @@ export default async function RootLayout({
 
   if (isPublicPath(pathname)) {
     return (
-      <html lang={session.locale} data-theme={session.theme} className={inter.variable}>
+      <html
+        lang={session.locale}
+        data-theme={session.theme}
+        className={inter.variable}
+        style={{ "--color-accent": accentValue(session.accent, session.theme) } as React.CSSProperties}
+      >
         <body className="grain min-h-screen bg-canvas text-ink antialiased">{children}</body>
       </html>
     );
@@ -102,7 +110,27 @@ export default async function RootLayout({
   const f = formatters(session.locale);
 
   return (
-    <html lang={session.locale} data-theme={session.theme} className={inter.variable}>
+    /*
+     * Цвет портала ставится прямо на <html> вместе с темой: переменную
+     * видит вся страница, включая всплывающие окна в портале документа, а
+     * сервер подставляет её сразу — страница не мигает чужим цветом.
+     */
+    <html
+      lang={session.locale}
+      data-theme={session.theme}
+      /*
+       * Фон на <html>, а не на <body>: отсюда его видят и карточки, которым
+       * признак включает полупрозрачность, и отдельный слой под ними.
+       */
+      data-backdrop={session.backdrop === "none" ? undefined : session.backdrop}
+      className={inter.variable}
+      style={
+        {
+          "--color-accent": accentValue(session.accent, session.theme),
+          "--orbis-backdrop": backdropValue(session.backdrop, session.theme) || "none",
+        } as React.CSSProperties
+      }
+    >
       <body className="grain min-h-screen bg-canvas text-ink antialiased">
         <div className="flex min-h-screen">
           <Sidebar
@@ -132,6 +160,8 @@ export default async function RootLayout({
               modules={modules}
               home={home}
               theme={session.theme}
+              accent={session.accent}
+              backdrop={session.backdrop}
               workday={{
                 started: Boolean(work),
                 onBreak: Boolean(work?.onBreakSince),
@@ -140,7 +170,7 @@ export default async function RootLayout({
                 breakSeconds: work ? breakSeconds(work) : 0,
               }}
             />
-            <main className="page-in min-w-0 flex-1 px-5 py-7 lg:px-8">{children}</main>
+            <PageTransition>{children}</PageTransition>
           </div>
         </div>
       </body>

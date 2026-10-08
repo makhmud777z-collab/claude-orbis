@@ -11,21 +11,29 @@
    ────────────────────────────────────────────────────────────── */
 
 @theme {
-  /* surfaces */
-  --color-canvas: #eef1f6;
+  /*
+   * Поверхности. Холст тёплый и светлый, карточка белая и почти без
+   * рамки: границу держит мягкая тень, а не линия. От этого плотные
+   * экраны CRM перестают выглядеть таблицей в таблице.
+   */
+  --color-canvas: #f1f2f7;
   --color-surface-1: #ffffff;
-  --color-surface-2: #f5f7fa;
-  --color-surface-3: #e9edf3;
-  --color-hairline: #d7dee8;
-  --color-hairline-soft: #e6eaf1;
+  --color-surface-2: #f7f8fc;
+  --color-surface-3: #edeff6;
+  --color-hairline: #e2e5ef;
+  --color-hairline-soft: #edeff6;
 
   /* ink */
-  --color-ink: #16202b;
-  --color-ink-muted: #5b6b7c;
-  --color-ink-faint: #8a98a8;
+  --color-ink: #141a28;
+  --color-ink-muted: #5c6880;
+  --color-ink-faint: #8b95aa;
 
-  /* single chromatic accent — links, focus, selection only */
-  --color-accent: #0a6ed1;
+  /*
+   * Один акцент на весь портал: ссылки, фокус, выделение, главная кнопка.
+   * Значение переопределяется на <html> — сотрудник выбирает цвет портала
+   * в меню профиля, см. --orbis-accent в layout.
+   */
+  --color-accent: #4c5ce0;
 
   /* status hues — carried by 6px dots and 1px rings, never by fills */
   --color-status-new: #ea6a1e;
@@ -37,21 +45,27 @@
   --color-status-violet: #5a3fdc;
   --color-status-magenta: #b62fcb;
 
-  /* глубина: тень карточки и подсветка её верхней грани */
-  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.05), 0 1px 3px rgb(16 24 40 / 0.04);
-  --shadow-raised: 0 8px 24px rgb(16 24 40 / 0.1), 0 2px 6px rgb(16 24 40 / 0.05);
+  /*
+   * Глубина. Тень шире и мягче прежней: карточка держится на ней, а не на
+   * рамке, и экран читается слоями, а не сеткой линий.
+   */
+  --shadow-card: 0 1px 2px rgb(20 26 40 / 0.04), 0 6px 18px rgb(20 26 40 / 0.05);
+  --shadow-raised: 0 4px 10px rgb(20 26 40 / 0.06), 0 18px 46px rgb(20 26 40 / 0.13);
   --edge-top: inset 0 1px 0 0 rgb(255 255 255 / 0.6);
   --color-rail: #ffffff;
   --color-scrim: rgb(16 24 40 / 0.38);
   --grain-opacity: 0;
 
-  /* radius */
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 15px;
-  --radius-xl: 20px;
-  --radius-xxl: 30px;
+  /*
+   * Скругления. Крупнее прежних: карточка с радиусом 18 и мягкой тенью
+   * читается как отдельный предмет на холсте, а не как ячейка таблицы.
+   */
+  --radius-xs: 6px;
+  --radius-sm: 9px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-xxl: 32px;
   --radius-pill: 100px;
 
   /* 5px-based spacing rhythm */
@@ -68,18 +82,18 @@
    * зато появляется светлая грань сверху и зерно поверх холста.
    */
   :root[data-theme="dark"] {
-    --color-canvas: #0b0b0d;
-    --color-surface-1: #16171a;
-    --color-surface-2: #1e2024;
-    --color-surface-3: #26292e;
-    --color-hairline: #2e3138;
-    --color-hairline-soft: #212429;
+    --color-canvas: #0a0b10;
+    --color-surface-1: #15171e;
+    --color-surface-2: #1c1f28;
+    --color-surface-3: #252934;
+    --color-hairline: #2b303c;
+    --color-hairline-soft: #1f232c;
 
-    --color-ink: #f2f4f7;
-    --color-ink-muted: #9aa4b2;
-    --color-ink-faint: #6b7580;
+    --color-ink: #f1f3f8;
+    --color-ink-muted: #99a3b8;
+    --color-ink-faint: #6b748a;
 
-    --color-accent: #3b9dff;
+    --color-accent: #7b88ff;
 
     --color-status-new: #ff7a3d;
     --color-status-open: #3b9dff;
@@ -90,8 +104,8 @@
     --color-status-violet: #7c60ff;
     --color-status-magenta: #d44df0;
 
-    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
-    --shadow-raised: 0 12px 34px rgb(0 0 0 / 0.45);
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.45), 0 6px 18px rgb(0 0 0 / 0.28);
+    --shadow-raised: 0 4px 10px rgb(0 0 0 / 0.4), 0 20px 50px rgb(0 0 0 / 0.5);
     --edge-top: inset 0 1px 0 0 rgb(255 255 255 / 0.05);
     --color-rail: #111214;
     --color-scrim: rgb(0 0 0 / 0.72);
@@ -226,17 +240,22 @@
    * в сплошное полотно и от него устают глаза. Поэтому у неё три признака
    * сразу: своя поверхность, видимая граница и мягкая тень.
    */
+  /*
+   * Карточка. Рамка почти не видна — границу держит мягкая тень. Из-за
+   * этого плотный экран CRM перестаёт выглядеть сеткой линий: карточки
+   * лежат на холсте слоями, как в приложении, а не как ячейки таблицы.
+   */
   .card {
     background: var(--color-surface-1);
-    border: 1px solid var(--color-hairline);
+    border: 1px solid var(--color-hairline-soft);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-card), var(--edge-top);
+    box-shadow: var(--shadow-card);
   }
   .card-raised {
     background: var(--color-surface-1);
-    border: 1px solid var(--color-hairline);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-raised), var(--edge-top);
+    border: 1px solid var(--color-hairline-soft);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-raised);
   }
   .card-hover {
     transition:
@@ -247,11 +266,11 @@
       opacity 140ms ease;
   }
   .card-hover:hover {
-    border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-hairline));
-    box-shadow: var(--shadow-raised), var(--edge-top);
+    border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-hairline));
+    box-shadow: var(--shadow-raised);
     /* карточка чуть приподнимается — ровно настолько, чтобы палец понял,
        что по ней можно нажать, и не настолько, чтобы прыгал текст */
-    transform: translateY(-1px);
+    transform: translateY(-2px);
   }
   .card-hover:active {
     transform: translateY(0);
@@ -263,7 +282,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 13px 16px;
+    padding: 14px 20px;
     border-bottom: 1px solid var(--color-hairline-soft);
     background: var(--color-surface-2);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
@@ -328,33 +347,18 @@
     animation: orbis-fade 160ms ease;
   }
   /* содержимое страницы проявляется, а не возникает рывком */
-  .page-in {
-    animation: orbis-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
   /*
-   * Содержимое страницы въезжает каскадом: сначала путь назад, потом
-   * заголовок, потом блоки. Правило висит на <main>, поэтому работает на
-   * каждой странице портала — включая те, где разметку никто специально
-   * под анимацию не размечал. Раньше движение было только там, где кто-то
-   * вручную поставил .stagger-in, и половина портала открывалась рывком.
+   * Появление страницы. Одно движение на весь экран — содержимое въезжает
+   * целиком, а не каждый блок по отдельности: раньше каскад шёл по всем
+   * прямым детям <main>, и открытие раздела превращалось в волну из
+   * десятка срабатываний.
+   *
+   * Запуск привязан к адресу раздела (см. PageTransition): повторный клик
+   * по тому разделу, в котором человек уже стоит, ничего не проигрывает.
    */
-  .page-in > * {
-    /*
-     * backwards, а не both: пока анимация числится завершённой, элемент
-     * продолжает создавать слой наложения, и всплывающее внутри него
-     * рискует уйти под соседний блок. Конечное состояние и так совпадает
-     * с обычным — непрозрачный и без сдвига, — поэтому forwards не нужен.
-     */
-    animation: orbis-in 240ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  .page-in {
+    animation: orbis-in 320ms cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .page-in > *:nth-child(1) { animation-delay: 0ms; }
-  .page-in > *:nth-child(2) { animation-delay: 40ms; }
-  .page-in > *:nth-child(3) { animation-delay: 80ms; }
-  .page-in > *:nth-child(4) { animation-delay: 120ms; }
-  .page-in > *:nth-child(5) { animation-delay: 160ms; }
-  /* Дальше задержку не копим: шестой блок уже ниже сгиба, и ждать его
-     появления человек не должен. */
-  .page-in > *:nth-child(n + 6) { animation-delay: 190ms; }
   /* Кольцо-подсветка колонки канбана под перетаскиваемой карточкой:
      пульсирует только рамка поверх содержимого, а не вся колонка
      с карточками — иначе на секунду перестаёшь видеть, куда бросаешь. */
@@ -404,6 +408,103 @@
   .btn-icon:active {
     transform: scale(0.92);
   }
+  /*
+   * Фон портала.
+   *
+   * Рисуется на самом <html> и закреплён: при прокрутке длинного списка
+   * он стоит на месте, а не уезжает вместе с содержимым. Отдельного
+   * элемента под него нет — он не должен попадать ни в поток, ни в
+   * обработку кликов.
+   */
+  :root[data-backdrop] body {
+    background-image: var(--orbis-backdrop);
+    background-attachment: fixed;
+    background-size: cover;
+  }
+
+  /*
+   * Поверх фона карточки становятся матовым стеклом. Непрозрачные карточки
+   * закрыли бы фон целиком — и выбор превратился бы в полоску по краям
+   * экрана. Прозрачность умеренная: под карточками читают телефоны и суммы,
+   * и контраст текста важнее красоты фона.
+   */
+  :root[data-backdrop] .card,
+  :root[data-backdrop] .card-raised {
+    background: color-mix(in srgb, var(--color-surface-1) 78%, transparent);
+    backdrop-filter: blur(16px) saturate(1.1);
+  }
+  :root[data-backdrop] .card-head,
+  :root[data-backdrop] .topbar-control,
+  :root[data-backdrop] .field {
+    background: color-mix(in srgb, var(--color-surface-1) 70%, transparent);
+  }
+
+  /*
+   * Рельса и шапка — те же стёкла. Без этого они остаются двумя сплошными
+   * белыми полосами, и фон виден только в середине экрана.
+   */
+  .rail-surface {
+    background: var(--color-rail);
+  }
+  :root[data-backdrop] .rail-surface {
+    background: color-mix(in srgb, var(--color-rail) 46%, transparent);
+    backdrop-filter: blur(20px) saturate(1.1);
+  }
+
+  /* Образец фона в меню выбора: тот же градиент, сжатый до кружка. */
+  .backdrop-dot {
+    width: 44px;
+    height: 32px;
+    border-radius: 9px;
+    border: 1px solid var(--color-hairline);
+    cursor: pointer;
+    background-size: 160px 120px;
+    background-position: center;
+    transition: transform 140ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 140ms ease;
+  }
+  .backdrop-dot:hover {
+    transform: scale(1.06);
+  }
+  .backdrop-dot:active {
+    transform: scale(0.96);
+  }
+
+  /*
+   * Элементы управления в шапке. Раньше они были прозрачными и проявлялись
+   * только под курсором: сотрудник не видел, что язык, уведомления и
+   * профиль вообще нажимаются, — на светлом фоне это выглядело подписями.
+   * Теперь у каждого своя поверхность и рамка, как у кнопки.
+   */
+  .topbar-control {
+    background: var(--color-surface-1);
+    border: 1px solid var(--color-hairline);
+    box-shadow: var(--shadow-card);
+    transition:
+      background-color 140ms ease,
+      border-color 140ms ease,
+      box-shadow 140ms ease;
+  }
+  .topbar-control:hover {
+    border-color: color-mix(in srgb, var(--color-accent) 32%, var(--color-hairline));
+    box-shadow: var(--shadow-raised);
+  }
+
+  /* Кружок выбора цвета портала: цель под палец, а не точка 12 пикселей. */
+  .accent-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 100px;
+    border: 0;
+    cursor: pointer;
+    transition: transform 140ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 140ms ease;
+  }
+  .accent-dot:hover {
+    transform: scale(1.1);
+  }
+  .accent-dot:active {
+    transform: scale(0.94);
+  }
+
   .chip {
     transition:
       background-color 140ms ease,
@@ -422,25 +523,25 @@
    * не должна доигрывать секунду после того, как человек начал читать.
    */
   .stagger-in > * {
-    animation: orbis-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: orbis-in 260ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
   }
   .stagger-in > *:nth-child(1) { animation-delay: 0ms; }
-  .stagger-in > *:nth-child(2) { animation-delay: 28ms; }
-  .stagger-in > *:nth-child(3) { animation-delay: 56ms; }
-  .stagger-in > *:nth-child(4) { animation-delay: 84ms; }
-  .stagger-in > *:nth-child(5) { animation-delay: 112ms; }
-  .stagger-in > *:nth-child(6) { animation-delay: 140ms; }
-  .stagger-in > *:nth-child(7) { animation-delay: 168ms; }
-  .stagger-in > *:nth-child(8) { animation-delay: 196ms; }
-  .stagger-in > *:nth-child(9) { animation-delay: 224ms; }
-  .stagger-in > *:nth-child(10) { animation-delay: 252ms; }
-  .stagger-in > *:nth-child(11) { animation-delay: 280ms; }
-  .stagger-in > *:nth-child(n + 12) { animation-delay: 308ms; }
+  .stagger-in > *:nth-child(2) { animation-delay: 34ms; }
+  .stagger-in > *:nth-child(3) { animation-delay: 68ms; }
+  .stagger-in > *:nth-child(4) { animation-delay: 102ms; }
+  .stagger-in > *:nth-child(5) { animation-delay: 136ms; }
+  .stagger-in > *:nth-child(6) { animation-delay: 170ms; }
+  .stagger-in > *:nth-child(7) { animation-delay: 204ms; }
+  .stagger-in > *:nth-child(8) { animation-delay: 238ms; }
+  .stagger-in > *:nth-child(9) { animation-delay: 272ms; }
+  .stagger-in > *:nth-child(10) { animation-delay: 306ms; }
+  .stagger-in > *:nth-child(11) { animation-delay: 340ms; }
+  .stagger-in > *:nth-child(n + 12) { animation-delay: 374ms; }
 
   /* Одиночный блок, который должен появиться отдельно от общего потока
      страницы: сводка над таблицей, баннер, карточка-итог. */
   .rise-in {
-    animation: orbis-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: orbis-in 300ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
   }
 
   /* Строка таблицы: подсветка под курсором и отклик на нажатие — строка

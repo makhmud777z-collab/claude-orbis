@@ -226,7 +226,7 @@ export function CompanyStructure({
         {children.length && isOpen ? (
           <>
             <span className="tree-stem" />
-            <div className="stagger-in tree-children">
+            <div className="tree-children">
               {children.map((child) => (
                 <div key={child.id} className="tree-child">
                   {branch(child, depth + 1)}

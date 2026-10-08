@@ -48,6 +48,25 @@ for (const route of [...routes, ...adminRoutes]) {
   check(!/undefined|NaN|\[object Object\]/.test(text), `экран ${route}: ${text.match(/.{0,40}(undefined|NaN|\[object Object\]).{0,40}/)?.[0]?.replace(/\n/g, " ")}`);
 }
 
+/**
+ * Ждать появления результата, а не отмерять миллисекунды.
+ *
+ * Фиксированные паузы ломаются от любого изменения длительности анимаций:
+ * проверка начинает то проходить, то падать на одних и тех же файлах, и
+ * доверять ей перестаёшь. Здесь условие опрашивается, пока не сойдётся.
+ */
+async function until(fn, label, timeout = 4000) {
+  const started = Date.now();
+  for (;;) {
+    if (await fn()) return true;
+    if (Date.now() - started > timeout) {
+      check(false, `не дождались: ${label}`);
+      return false;
+    }
+    await page.waitForTimeout(60);
+  }
+}
+
 /* карточки открываются */
 await page.evaluate(() => window.go("deals"));
 await page.waitForTimeout(80);
@@ -61,9 +80,10 @@ await page.waitForTimeout(80);
 const first = page.locator(".kan-col").nth(0).locator(".kan-card").first();
 const before = await page.locator(".kan-col").nth(0).locator(".kan-card").count();
 await first.dragTo(page.locator(".kan-col").nth(2));
-await page.waitForTimeout(200);
-const after = await page.locator(".kan-col").nth(0).locator(".kan-card").count();
-check(after === before - 1, `перенос карточки не сработал: было ${before}, стало ${after}`);
+await until(
+  async () => (await page.locator(".kan-col").nth(0).locator(".kan-card").count()) === before - 1,
+  `перенос карточки: было ${before}, столько и осталось`,
+);
 
 /* дубль лида не даёт сохранить */
 await page.evaluate(() => window.go("leads"));
@@ -180,13 +200,21 @@ for (const [name, open] of dialogs) {
 await page.evaluate(() => { window.go("leads"); window.handle("f.open:leads", ""); window.handle("f.field:leads:source", ""); });
 await page.waitForTimeout(200);
 await page.locator(".filter-fields .select").last().click();
-await page.waitForTimeout(250);
+await until(async () => Boolean(await page.locator(".filter-fields .pop").count()), "список фильтра не открылся");
 const popState = await page.evaluate(() => {
   const pop = document.querySelector(".filter-fields .pop");
   if (!pop) return "нет списка";
   const r = pop.getBoundingClientRect();
   const el = document.elementFromPoint(r.left + r.width / 2, r.bottom - 8);
-  return pop.contains(el) ? "ok" : "перекрыт";
+  if (pop.contains(el)) return "ok";
+  const chain = [];
+  let n = el;
+  while (n && n !== document.body) {
+    const st = getComputedStyle(n);
+    chain.push(`${n.tagName}.${String(n.className).split(" ")[0]} z=${st.zIndex} bf=${st.backdropFilter} pos=${st.position}`);
+    n = n.parentElement;
+  }
+  return "перекрыт: " + chain.slice(0, 4).join(" < ");
 });
 check(popState === "ok", `выпадающий список в фильтре перекрыт: ${popState}`);
 await page.keyboard.press("Escape");

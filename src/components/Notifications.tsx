@@ -48,7 +48,7 @@ export function Notifications({ items, locale }: { items: NoticeItem[]; locale: 
   return (
     <div className="relative" ref={box}>
       <button
-        className="btn-icon relative"
+        className="btn-icon topbar-control relative"
         aria-label={t(S.common.notifications)}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
@@ -56,7 +56,9 @@ export function Notifications({ items, locale }: { items: NoticeItem[]; locale: 
         <IconBell size={17} />
         {overdue ? (
           <span
-            className="absolute right-1.5 top-1.5 flex h-[15px] min-w-[15px] items-center justify-center rounded-full px-1 text-[9px] font-bold text-white"
+            // Счётчик вынесен за край кнопки: сидя внутри, он закрывал
+            // собой колокольчик, и кнопка читалась как красная точка.
+            className="absolute -right-1 -top-1 flex h-[17px] min-w-[17px] items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
             style={{ background: "var(--color-status-risk)" }}
           >
             {overdue > 9 ? "9+" : overdue}

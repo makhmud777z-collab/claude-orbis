@@ -125,7 +125,7 @@ export default async function ContactPage({
       />
 
       <div className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-[340px_1fr]">
-        <div className="stagger-in space-y-5">
+        <div className="space-y-5">
           <EditableFields
             entity="contact"
             id={student.id}
@@ -167,7 +167,7 @@ export default async function ContactPage({
             canEdit={canEdit}
           />
 
-          <div className="stagger-in card p-5">
+          <div className="card p-5">
             <Field label={t(S.students.education)} value={student.profile.education} />
             <Field label={t(S.students.gradYear)} value={student.profile.graduationYear} />
             <Field label={t(S.students.colCurator)} value={owner?.name ?? "—"} />
@@ -193,7 +193,7 @@ export default async function ContactPage({
             canWrite={canEdit}
           />
 
-          <div className="stagger-in card p-5">
+          <div className="card p-5">
             <div className="t-caption mb-3 uppercase tracking-[0.07em] text-ink-faint">
               {t(S.students.portfolio)}
             </div>
@@ -260,7 +260,7 @@ export default async function ContactPage({
           </div>
         </div>
 
-        <div className="stagger-in space-y-8">
+        <div className="space-y-8">
           <section>
             <SectionTitle
               action={
@@ -271,9 +271,9 @@ export default async function ContactPage({
             >
               {t(S.students.dossierTitle)}
             </SectionTitle>
-            <div className="stagger-in card p-5">
+            <div className="card p-5">
               <Progress percent={dossier.percent} />
-              <div className="stagger-in mt-4 grid min-w-0 grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
+              <div className="mt-4 grid min-w-0 grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
                 {docs.map((d) => {
                   const st = DOCUMENT_STATUS[d.status];
                   return (
