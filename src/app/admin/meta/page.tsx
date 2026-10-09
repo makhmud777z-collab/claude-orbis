@@ -102,7 +102,7 @@ export default async function MetaPage({
         страниц: человек только что вернулся сюда именно за этим выбором.
       */}
       {pending ? (
-        <section className="rise-in card mb-8 overflow-hidden">
+        <section className="card mb-8 overflow-hidden">
           <header className="border-b border-hairline-soft bg-surface-2 px-5 py-3.5">
             <div className="t-body-sm font-semibold">{t(S.meta.pick)}</div>
             <div className="t-caption mt-1 text-ink-muted">{t(S.meta.pickHint)}</div>
@@ -121,7 +121,7 @@ export default async function MetaPage({
             </div>
           ) : null}
 
-          <div className="stagger-in">
+          <div >
             {pending.pages.map((page) => {
               // Страница кормит одно агентство: если её уже забрали, кнопку
               // не показываем вовсе, чтобы не предлагать невозможное.
@@ -166,7 +166,7 @@ export default async function MetaPage({
           <EmptyState title={t(S.meta.noPages)} hint={t(S.meta.noPagesHint)} />
         </div>
       ) : (
-        <div className="stagger-in mb-8 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mb-8 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {pages.map((page) => (
             <article key={page.pageId} className="card p-4">
               <div className="t-body-sm truncate">{page.pageName}</div>
@@ -246,7 +246,7 @@ export default async function MetaPage({
             <div className="card overflow-hidden">
               <div className="scroll-x">
                 <table className="w-full min-w-[720px] border-collapse">
-                  <tbody className="stagger-in">
+                  <tbody >
                     {events.map((event) => {
                       const meta = EVENT_META[event.status];
                       return (

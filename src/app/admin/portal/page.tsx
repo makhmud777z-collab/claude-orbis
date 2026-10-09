@@ -74,7 +74,7 @@ export default async function SettingsPage() {
 
           <div className="card p-6">
             <SectionTitle>{t(S.settings.rolesTitle)}</SectionTitle>
-            <div className="stagger-in divide-y divide-hairline-soft">
+            <div className="divide-y divide-hairline-soft">
               {rolesOf(session.tenant.id).map((r) => (
                 <div key={r.id} className="flex flex-wrap items-center gap-4 py-3.5">
                   <div className="min-w-[200px] flex-1">
@@ -100,7 +100,7 @@ export default async function SettingsPage() {
 
           <div className="card p-6">
             <SectionTitle>{t(S.settings.integrations)}</SectionTitle>
-            <div className="stagger-in divide-y divide-hairline-soft">
+            <div className="divide-y divide-hairline-soft">
               {INTEGRATIONS.map((i) => (
                 <div key={i.name.ru} className="flex items-center gap-4 py-3.5">
                   <StatusDot color="var(--color-status-hold)" />

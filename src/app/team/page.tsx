@@ -83,7 +83,7 @@ export default async function TeamPage({
 
       {!team.length ? <EmptyState title={t(FILTER_TEXT.nothing)} /> : null}
 
-      <div className="stagger-in grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {team.map((u) => {
           const role = roles.find((r) => r.id === u.role);
           const work = openSession(u.id);

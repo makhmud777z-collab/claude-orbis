@@ -1,4 +1,12 @@
 /* ── состояние ───────────────────────────────────────────── */
+/** Колонки списка по умолчанию: то, за чем в раздел заходят чаще всего. */
+const DEFAULT_LIST_FIELDS = {
+  leads: ["stage", "owner", "created", "contacts"],
+  deals: ["stage", "owner", "amount", "deadline", "contacts"],
+  tasks: ["status", "assignee", "due", "priority"],
+  projects: ["status", "lead", "due", "progress"],
+};
+
 const S = {
   tenant: "t_seoulway",
   userId: "u_aziz",
@@ -51,7 +59,12 @@ const S = {
   deptNames: {},       // departmentId → переименование
   deptParent: {},      // departmentId → новый родитель после удаления
   deptHidden: [],      // удалённые подразделения
-  view: "board",       // канбан или список в лидах и сделках
+  // Канбан или список — на каждый раздел свой, как в продукте: человек
+  // смотрит сделки доской, а задачи списком, и одно не сбивает другое.
+  views: { leads: "board", deals: "board", tasks: "board", projects: "board" },
+  listFields: structuredClone(DEFAULT_LIST_FIELDS),
+  taskMoved: {},       // taskId → статус после переноса по доске
+  projectMoved: {},    // projectId → статус после переноса по доске
   docStatus: {},       // documentId → новый статус после проверки
   docExtra: {},        // studentId → запрошенные пункты досье
   taskExtra: [],       // задачи, поставленные в прототипе
@@ -138,6 +151,9 @@ const stagesOf = (pipeline) => {
 
 /** Текущая стадия карточки: локальный перенос важнее исходных данных. */
 const currentStage = (record) => S.moved[record.id] ?? record.stage;
+/** Статус задачи и проекта с учётом переноса по доске. */
+const taskStatusOf = (task) => S.taskMoved[task.id] ?? task.status;
+const projectStatusOf = (project) => S.projectMoved[project.id] ?? project.status;
 
 /* ── зона видимости ──────────────────────────────────────── */
 const inScope = (branchId, ownerId) => {

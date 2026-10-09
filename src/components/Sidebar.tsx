@@ -8,7 +8,7 @@ import {
   IconChevron, IconEye, IconEyeOff, IconLogo, IconPanel, IconPin, IconSettings,
 } from "./icons";
 import { Modal, Tooltip } from "./controls";
-import { translator, type Locale, type Loc } from "@/lib/i18n";
+import { translator, type Locale } from "@/lib/i18n";
 import type { Module } from "@/lib/rbac";
 import { S } from "@/lib/strings";
 
@@ -54,15 +54,20 @@ export function Sidebar({
   tenantMark,
   host,
   modules,
-  roleLabel,
   locale,
   home,
+  planLabel,
+  seatsUsed,
+  seatsLimit,
 }: {
   tenantName: string;
   tenantMark: string;
   host: string;
   modules: Module[];
-  roleLabel: string;
+  /** подпись тарифа и версии продукта — в подвале рельсы */
+  planLabel: string;
+  seatsUsed: number;
+  seatsLimit: number;
   locale: Locale;
   /** куда ведёт логотип: у MVP и у ролей без дашборда это не «/» */
   home: string;
@@ -99,23 +104,34 @@ export function Sidebar({
         transition: "width 160ms ease, padding 160ms ease",
       }}
     >
-      <div className="mb-6 flex items-center gap-2">
+      {/*
+        Шапка рельсы. Знак продукта и адрес рабочего места — одним блоком,
+        а не строкой с обрезанным хостом вперемешку с кнопками. Кнопки
+        настройки и сворачивания съехали вниз блока: они нужны редко, а
+        раньше теснили название и спорили с ним за внимание.
+      */}
+      <div className="mb-5">
         <Link
           href={home}
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-[10px] px-1 py-1"
+          className="rail-brand flex min-w-0 items-center gap-3 rounded-[14px] px-2 py-2"
         >
-          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-accent text-white">
-            <IconLogo size={18} />
+          <span className="rail-mark flex h-9 w-9 flex-none items-center justify-center rounded-[11px] text-white">
+            <IconLogo size={19} />
           </span>
           {collapsed ? null : (
-            <span className="min-w-0">
-              <span className="block text-[16px] font-semibold leading-tight tracking-[-0.5px]">Orbis</span>
+            <span className="min-w-0 flex-1">
+              {/* Главное здесь — рабочее место, а не марка продукта: человек
+                  каждый день работает в своём агентстве, а не в «Orbis». */}
+              <span className="block truncate text-[14px] font-semibold leading-tight tracking-[-0.3px]">
+                {tenantName}
+              </span>
               <span className="t-micro block truncate text-ink-faint">{host}</span>
             </span>
           )}
         </Link>
+
         {collapsed ? null : (
-          <>
+          <div className="mt-2 flex items-center gap-1 border-t border-hairline-soft pt-2">
             <Tooltip text={t(S.nav.customize)}>
               <button
                 type="button"
@@ -134,6 +150,7 @@ export function Sidebar({
                 ) : null}
               </button>
             </Tooltip>
+            <span className="t-micro flex-1 truncate text-ink-faint">Orbis System</span>
             <Tooltip text={t(S.nav.collapse)}>
               <button
                 type="button"
@@ -144,7 +161,7 @@ export function Sidebar({
                 <IconPanel size={15} />
               </button>
             </Tooltip>
-          </>
+          </div>
         )}
       </div>
 
@@ -159,7 +176,10 @@ export function Sidebar({
         </button>
       ) : null}
 
-      <nav className="flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden">
+      {/* min-h-0 обязателен: без него flex-элемент не ужимается ниже
+          своего содержимого, список разделов выпирает за край рельсы и
+          уносит подвал под нижнюю границу экрана. */}
+      <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden">
         {pins.length && !collapsed ? (
           <div className="mb-3 space-y-0.5 border-b border-hairline-soft pb-3">
             {pins.map((child) => (
@@ -193,17 +213,44 @@ export function Sidebar({
         ))}
       </nav>
 
-      {collapsed ? null : (
-        <div className="mt-6 rounded-[10px] border border-hairline bg-surface-1 px-3 py-3">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 flex-none items-center justify-center rounded-md bg-accent text-[13px] font-semibold text-white">
+      {/*
+        Подвал рельсы — состояние рабочего места, а не повтор того, что уже
+        написано в шапке справа. Роль сотрудника там и так видна под его
+        именем; здесь полезнее тариф и занятые места: по ним понимают,
+        когда пора расширять агентство.
+      */}
+      {collapsed ? (
+        <div className="mt-6 flex flex-none justify-center">
+          <Tooltip text={`${tenantName} · ${seatsUsed}/${seatsLimit}`}>
+            <span className="rail-mark flex h-8 w-8 items-center justify-center rounded-[10px] text-[13px] font-semibold text-white">
               {tenantMark}
             </span>
-            <span className="min-w-0">
-              <span className="t-caption block truncate">{tenantName}</span>
-              <span className="t-micro block truncate text-ink-faint">{roleLabel}</span>
+          </Tooltip>
+        </div>
+      ) : (
+        <div className="rail-foot mt-6 flex-none rounded-[14px] px-3.5 py-3">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="t-caption truncate font-medium">{planLabel}</span>
+            <span className="t-micro t-num flex-none text-ink-faint">
+              {`${seatsUsed} / ${seatsLimit}`}
             </span>
           </div>
+
+          {/* Полоска мест: пока есть запас — в цвете портала, под конец краснеет.
+              По ней понимают, когда пора расширять тариф, не заходя в настройки. */}
+          <div className="mt-2 h-[3px] w-full overflow-hidden rounded-full bg-surface-3">
+            <div
+              className="h-full rounded-full transition-[width] duration-300"
+              style={{
+                width: `${Math.min(100, Math.round((seatsUsed / Math.max(1, seatsLimit)) * 100))}%`,
+                background:
+                  seatsUsed / Math.max(1, seatsLimit) > 0.9
+                    ? "var(--color-status-risk)"
+                    : "var(--color-accent)",
+              }}
+            />
+          </div>
+          <div className="t-micro mt-1.5 text-ink-faint">{t(S.admin.seats)}</div>
         </div>
       )}
     </aside>
@@ -258,7 +305,7 @@ function MenuCustomizer({
   return (
     <Modal open={open} onClose={onClose} title={t(S.nav.customizeTitle)} width={420}>
       <p className="t-caption mb-4 leading-relaxed text-ink-faint">{t(S.nav.customizeHint)}</p>
-      <div className="stagger-in space-y-1">
+      <div className="space-y-1">
         {entries.map((entry, i) => {
           const Icon = entry.icon;
           const isHidden = hidden.includes(entry.key);

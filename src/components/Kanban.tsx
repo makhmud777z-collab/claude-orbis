@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useTransition } from "react";
+
 import { moveCardAction } from "@/app/actions";
+import { useBoardDrag } from "./board";
 import { Avatar, StatusDot } from "./ui";
 import { translator, type Locale } from "@/lib/i18n";
 import { som } from "@/lib/format";
@@ -75,33 +76,21 @@ export function Kanban({
   showTotals?: boolean;
 }) {
   const t = translator(locale);
-  const [, startTransition] = useTransition();
-  const [moved, setMoved] = useState<Record<string, string>>({});
-  const [dragging, setDragging] = useState<string | null>(null);
-  const [over, setOver] = useState<string | null>(null);
 
-  // Пришли свежие данные с сервера — локальные догадки больше не нужны.
-  useEffect(() => setMoved({}), [cards]);
-
-  const stageOf = (card: KanbanCard) => moved[card.id] ?? card.stage;
-
-  const drop = (stageKey: string) => {
-    setOver(null);
-    const id = dragging;
-    setDragging(null);
-    if (!id || !canEdit) return;
-    const card = cards.find((c) => c.id === id);
-    if (!card || stageOf(card) === stageKey) return;
-
-    setMoved((prev) => ({ ...prev, [id]: stageKey }));
-    const data = new FormData();
-    data.set("entity", entity);
-    data.set("id", id);
-    data.set("stage", stageKey);
-    startTransition(() => {
+  // Перетаскивание — общее для всех досок портала, см. board.ts.
+  const { columnFor, columnProps, cardProps, over } = useBoardDrag(
+    cards,
+    (card) => card.stage,
+    (id, stage) => {
+      const data = new FormData();
+      data.set("entity", entity);
+      data.set("id", id);
+      data.set("stage", stage);
       void moveCardAction(data);
-    });
-  };
+    },
+    canEdit,
+  );
+  const stageOf = (card: KanbanCard) => columnFor(card);
 
   // Доля колонки в общей сумме воронки — самая нагруженная колонка задаёт
   // 100% полоски, остальные показывают вес относительно неё.
@@ -130,19 +119,9 @@ export function Kanban({
             return (
               <section
                 key={stage.key}
-                onDragOver={(e) => {
-                  if (!canEdit) return;
-                  e.preventDefault();
-                  setOver(stage.key);
-                }}
-                onDragLeave={() => setOver((v) => (v === stage.key ? null : v))}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  drop(stage.key);
-                }}
-                className="kan-col page-in relative flex w-[280px] flex-none flex-col overflow-hidden rounded-[18px] border border-hairline bg-surface-2 transition-colors duration-150"
+                {...columnProps(stage.key)}
+                className="kan-col relative flex w-[280px] flex-none flex-col overflow-hidden rounded-[18px] border border-hairline bg-surface-2 transition-colors duration-150"
                 style={{
-                  animationDelay: `${Math.min(i * 45, 270)}ms`,
                   background: active
                     ? `color-mix(in srgb, ${stage.color} 6%, var(--color-surface-2))`
                     : undefined,
@@ -189,21 +168,9 @@ export function Kanban({
                   ) : null}
                 </header>
 
-                <div className="stagger-in flex flex-1 flex-col gap-2.5 p-2.5">
+                <div className="flex flex-1 flex-col gap-2.5 p-2.5">
                   {list.map((card) => (
-                    <Card
-                      key={card.id}
-                      card={card}
-                      fields={fields}
-                      draggable={canEdit}
-                      dragging={dragging === card.id}
-                      landed={Boolean(moved[card.id])}
-                      onDragStart={() => setDragging(card.id)}
-                      onDragEnd={() => {
-                        setDragging(null);
-                        setOver(null);
-                      }}
-                    />
+                    <Card key={card.id} card={card} fields={fields} drag={cardProps(card.id)} />
                   ))}
                   {!list.length ? (
                     <div className="rounded-[12px] border border-dashed border-hairline px-3 py-7 text-center text-ink-faint t-micro">
@@ -223,20 +190,12 @@ export function Kanban({
 function Card({
   card,
   fields,
-  draggable,
-  dragging,
-  landed,
-  onDragStart,
-  onDragEnd,
+  drag,
 }: {
   card: KanbanCard;
   fields: string[];
-  draggable: boolean;
-  dragging: boolean;
-  /** карточка только что «приземлилась» на новую стадию — короткий отклик */
-  landed: boolean;
-  onDragStart: () => void;
-  onDragEnd: () => void;
+  /** всё, что нужно карточке для переноса: см. useBoardDrag */
+  drag: ReturnType<ReturnType<typeof useBoardDrag>["cardProps"]>;
 }) {
   // Порядок строк задаёт настройка сотрудника, а не порядок в данных.
   // Пустые значения не показываем: столбик из прочерков ничего не сообщает.
@@ -252,15 +211,9 @@ function Card({
   return (
     <Link
       href={card.href}
-      draggable={draggable}
-      onDragStart={(e) => {
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", card.id);
-        onDragStart();
-      }}
-      onDragEnd={onDragEnd}
-      className={`card card-hover relative block px-3.5 py-3${landed ? " just-landed" : ""}`}
-      style={{ opacity: dragging ? 0.4 : 1, cursor: draggable ? "grab" : "pointer" }}
+      {...drag}
+      className={`card card-hover relative block px-3.5 py-3 ${drag.className}`}
+      style={{ cursor: drag.draggable ? "grab" : "pointer" }}
     >
       {card.flag ? (
         <span

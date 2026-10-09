@@ -1,3 +1,7 @@
+"use client";
+
+import { moveTaskAction } from "@/app/actions";
+import { useBoardDrag } from "./board";
 import { Avatar, StatusDot } from "./ui";
 import { TASK_STATUS } from "@/lib/labels";
 import { formatters } from "@/lib/format";
@@ -31,19 +35,57 @@ const COLUMNS: TaskStatus[] = ["todo", "in_progress", "review", "done"];
  * фильтр раздела на сервере, поэтому здесь нет ни своего состояния,
  * ни второго набора фильтров.
  */
-export function TasksBoard({ tasks, locale }: { tasks: TaskCard[]; locale: Locale }) {
+export function TasksBoard({
+  tasks,
+  locale,
+  canEdit,
+}: {
+  tasks: TaskCard[];
+  locale: Locale;
+  /** без права на правку доска остаётся доской, но не двигается */
+  canEdit: boolean;
+}) {
   const t = translator(locale);
 
+  // Тот же механизм, что на досках лидов и сделок, — см. board.ts. Раньше
+  // этой доске перетаскивания не досталось вовсе: колонки рисовались,
+  // карточки не двигались.
+  const { columnFor, columnProps, cardProps, over } = useBoardDrag(
+    tasks,
+    (task) => task.status,
+    (id, status) => {
+      const data = new FormData();
+      data.set("id", id);
+      data.set("status", status);
+      void moveTaskAction(data);
+    },
+    canEdit,
+  );
+
   return (
-    <div className="stagger-in grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
       {COLUMNS.map((status) => {
         const meta = TASK_STATUS[status];
-        const items = tasks.filter((task) => task.status === status);
+        const items = tasks.filter((task) => columnFor(task) === status);
+        const active = over === status;
         return (
           <section
             key={status}
-            className="flex flex-col overflow-hidden rounded-[18px] border border-hairline bg-surface-2"
+            {...columnProps(status)}
+            className="relative flex flex-col overflow-hidden rounded-[18px] border border-hairline bg-surface-2 transition-colors duration-150"
+            style={{
+              background: active
+                ? `color-mix(in srgb, ${meta.dot} 6%, var(--color-surface-2))`
+                : undefined,
+            }}
           >
+            {active ? (
+              <span
+                aria-hidden
+                className="kan-drop-ring pointer-events-none absolute inset-0 rounded-[18px]"
+                style={{ boxShadow: `inset 0 0 0 2px ${meta.dot}` }}
+              />
+            ) : null}
             <div className="h-[3px] w-full flex-none" style={{ background: meta.dot }} />
             <header className="flex-none border-b border-hairline-soft bg-surface-1 px-3.5 pb-3 pt-3">
               <div className="flex items-center gap-2">
@@ -57,9 +99,9 @@ export function TasksBoard({ tasks, locale }: { tasks: TaskCard[]; locale: Local
               </div>
             </header>
 
-            <div className="stagger-in flex flex-1 flex-col gap-2.5 p-2.5">
+            <div className="flex flex-1 flex-col gap-2.5 p-2.5">
               {items.map((task) => (
-                <TaskItem key={task.id} task={task} locale={locale} />
+                <TaskItem key={task.id} task={task} locale={locale} drag={cardProps(task.id)} />
               ))}
               {!items.length ? (
                 <div className="rounded-[12px] border border-dashed border-hairline px-3 py-7 text-center text-ink-faint t-micro">
@@ -74,8 +116,15 @@ export function TasksBoard({ tasks, locale }: { tasks: TaskCard[]; locale: Local
   );
 }
 
-function TaskItem({ task, locale }: { task: TaskCard; locale: Locale }) {
-  const t = translator(locale);
+function TaskItem({
+  task,
+  locale,
+  drag,
+}: {
+  task: TaskCard;
+  locale: Locale;
+  drag: ReturnType<ReturnType<typeof useBoardDrag>["cardProps"]>;
+}) {
   const f = formatters(locale);
   // Тот же язык, что у карточки сделки: просрочка важнее высокого приоритета.
   const flag = task.overdue
@@ -85,7 +134,11 @@ function TaskItem({ task, locale }: { task: TaskCard; locale: Locale }) {
       : null;
 
   return (
-    <article className="card card-hover relative px-3.5 py-3">
+    <article
+      {...drag}
+      className={`card card-hover relative px-3.5 py-3 ${drag.className}`}
+      style={{ cursor: drag.draggable ? "grab" : "default" }}
+    >
       {flag ? (
         <span
           className="absolute left-1.5 top-3.5 h-6 w-[3px] rounded-full"

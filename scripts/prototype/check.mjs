@@ -232,13 +232,60 @@ check(
   "подразделение не переименовалось",
 );
 
-/* канбан и список — два вида одного раздела */
-await page.evaluate(() => { window.handle("view", "list"); window.go("deals"); });
+/* канбан и список — два вида одного раздела, свой в каждом разделе */
+const heads = () => page.evaluate(() =>
+  [...document.querySelectorAll("#content table thead th")].map((n) => n.textContent.trim()));
+
+await page.evaluate(() => { window.handle("view", "deals:list"); window.go("deals"); });
 await page.waitForTimeout(200);
 check(await page.locator("#content table").count() > 0, "вид «Список» не показал таблицу");
-await page.evaluate(() => window.handle("view", "board"));
+check((await heads()).length === 6, "в списке сделок не пять колонок с названием");
+
+/* колонки списка настраиваются, как в Битриксе */
+await page.evaluate(() => window.handle("listfield", "deals:amount"));
+await page.waitForTimeout(150);
+check(!(await heads()).some((h) => /Сумма/.test(h)), "колонка не убралась из списка");
+await page.evaluate(() => window.handle("listfield", "deals:university"));
+await page.waitForTimeout(150);
+const dealsHeads = await heads();
+check(dealsHeads.some((h) => /Вуз/.test(h)), "колонка не добавилась в список");
+check(dealsHeads.indexOf("Вуз") > dealsHeads.findIndex((h) => /Дедлайн/.test(h)),
+  "порядок колонок идёт не по каталогу");
+await page.evaluate(() => window.handle("listreset", "deals"));
+await page.waitForTimeout(150);
+check((await heads()).some((h) => /Сумма/.test(h)), "«Сбросить» не вернул набор по умолчанию");
+
+await page.evaluate(() => window.handle("view", "deals:board"));
 await page.waitForTimeout(200);
 check(await page.locator(".kan-col").count() > 0, "вид «Канбан» не вернулся");
+
+/* доски задач и проектов двигаются так же, как доска сделок */
+await page.evaluate(() => window.go("tasks"));
+await page.waitForTimeout(200);
+check(await page.locator(".kan-col").count() === 4, "у доски задач не четыре столбца");
+const taskCards = () => page.locator(".kan-col").nth(0).locator(".kan-card").count();
+const tasksBefore = await taskCards();
+const taskId = await page.locator(".kan-col").nth(0).locator(".kan-card").first().getAttribute("data-drag");
+check(Boolean(taskId), "карточка задачи не берётся мышью");
+await page.evaluate((id) => window.handle("move", `task:${id}:review`), taskId);
+await page.waitForTimeout(200);
+check((await taskCards()) === tasksBefore - 1, "задача не ушла из прежнего столбца");
+
+await page.evaluate(() => { window.handle("view", "tasks:list"); });
+await page.waitForTimeout(200);
+check((await heads()).length === 5, "в списке задач не четыре колонки с названием");
+
+await page.evaluate(() => window.go("projects"));
+await page.waitForTimeout(200);
+check(await page.locator(".kan-col").count() === 3, "у доски проектов не три столбца");
+const projectId = await page.locator(".kan-col").nth(0).locator(".kan-card").first().getAttribute("data-drag");
+const projectsBefore = await page.locator(".kan-col").nth(0).locator(".kan-card").count();
+await page.evaluate((id) => window.handle("move", `project:${id}:paused`), projectId);
+await page.waitForTimeout(200);
+check(await page.locator(".kan-col").nth(0).locator(".kan-card").count() === projectsBefore - 1,
+  "проект не ушёл из столбца «Активен»");
+check(await page.locator(".kan-col").nth(1).locator(".kan-card").count() > 0,
+  "проект не появился в столбце «На паузе»");
 
 /* переключение роли перестраивает меню */
 await page.evaluate(() => window.handle("user", "u_partner1"));

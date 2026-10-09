@@ -70,7 +70,7 @@ export function PipelineEditor({
 
   return (
     <>
-      <div className="stagger-in space-y-8">
+      <div className="space-y-8">
         {pipelines.map((pipeline) => (
           <section key={pipeline.id} className="card overflow-hidden">
             <PipelineHead pipeline={pipeline} locale={locale} canEdit={canEdit} />
@@ -212,9 +212,8 @@ function PipelineBoard({
                   e.preventDefault();
                   drop(item.key);
                 }}
-                className="stage-col page-in relative flex w-[220px] flex-none flex-col overflow-hidden rounded-[16px] border border-hairline bg-surface-2"
+                className="stage-col relative flex w-[220px] flex-none flex-col overflow-hidden rounded-[16px] border border-hairline bg-surface-2"
                 style={{
-                  animationDelay: `${Math.min(index * 40, 240)}ms`,
                   opacity: dragging === item.key ? 0.4 : 1,
                   background: active
                     ? `color-mix(in srgb, ${item.color} 7%, var(--color-surface-2))`

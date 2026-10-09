@@ -53,7 +53,7 @@ export function CustomFieldsAdmin({
   return (
     <>
       {groups.length ? (
-        <div className="stagger-in space-y-6">
+        <div className="space-y-6">
           {groups.map((group) => (
             <section key={group.entity}>
               <div className="t-micro mb-2 uppercase tracking-[0.07em] text-ink-faint">{group.label}</div>

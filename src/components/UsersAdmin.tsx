@@ -80,7 +80,7 @@ export function UsersAdmin({
               ))}
             </tr>
           </thead>
-          <tbody className="stagger-in">
+          <tbody >
             {rows.map((row) => (
               <tr key={row.id} className="row-hover border-b border-hairline-soft last:border-b-0 hover:bg-surface-2">
                 <td className="px-5 py-3.5">

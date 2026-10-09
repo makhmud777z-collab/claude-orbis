@@ -97,7 +97,7 @@ export function MobileNav({
                   </span>
                 </Link>
 
-                <div className="stagger-in space-y-0.5">
+                <div className="space-y-0.5">
                   {entries.map(({ href, label, icon: Icon, children }) => (
                             <div key={href}>
                               <Link

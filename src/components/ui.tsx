@@ -159,7 +159,7 @@ export function SectionTitle({
 
 export function EmptyState({ title, hint }: { title: string; hint?: string }) {
   return (
-    <div className="rise-in card flex flex-col items-center justify-center px-6 py-16 text-center">
+    <div className="card flex flex-col items-center justify-center px-6 py-16 text-center">
       <div className="t-body-lg">{title}</div>
       {hint ? <div className="t-caption mt-2 max-w-sm text-ink-muted">{hint}</div> : null}
     </div>
@@ -184,7 +184,7 @@ export function Banner({
 }) {
   return (
     <div
-      className="rise-in t-caption mb-6 flex items-start gap-3 rounded-[10px] border px-4 py-3"
+      className="t-caption mb-6 flex items-start gap-3 rounded-[10px] border px-4 py-3"
       style={{
         borderColor: tone === "warn" ? "rgb(224 179 65 / 0.25)" : "var(--color-hairline)",
         background: "var(--color-surface-1)",

@@ -248,7 +248,22 @@
   .kan-share { margin-top: 8px; height: 3px; border-radius: 999px; overflow: hidden; background: var(--surface-3); }
   .kan-share > i { display: block; height: 100%; border-radius: 999px; opacity: .6; }
   .kan-card { position: relative; display: block; padding: 12px 14px; cursor: grab; }
-  .kan-card.drag { opacity: .4; }
+  /*
+   * Взятая карточка уходит на задний план, приземлившаяся — прилетает.
+   * Те же два движения, что в продукте: карточка покидает колонку, висит
+   * в воздухе под курсором и становится на место с подсветкой края.
+   */
+  .kan-lifted { opacity: .3; transform: scale(.97); transition: opacity .12s ease, transform .12s ease; }
+  @keyframes orbis-land {
+    0%   { opacity: .35; transform: translateY(-14px) scale(1.05);
+           box-shadow: var(--shadow-raised), 0 0 0 2px var(--accent); }
+    55%  { opacity: 1; transform: translateY(2px) scale(.995);
+           box-shadow: var(--shadow-raised), 0 0 0 2px color-mix(in srgb, var(--accent) 60%, transparent); }
+    100% { opacity: 1; transform: none;
+           box-shadow: var(--shadow-card), 0 0 0 2px transparent; }
+  }
+  /* Поверх соседей на время полёта: иначе приземление наполовину скрыто. */
+  .kan-landed { animation: orbis-land .42s cubic-bezier(.22,1,.36,1); position: relative; z-index: 2; }
   .kan-meta { display: block; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hairline-soft); }
   .kan-meta > * + * { margin-top: 4px; }
   .kan-flag { position: absolute; left: 6px; top: 14px; width: 3px; height: 24px; border-radius: 999px; }
@@ -415,7 +430,6 @@
   @keyframes orbis-rise { from { opacity: 0; transform: translateY(-6px) scale(.985); } to { opacity: 1; transform: none; } }
   @keyframes orbis-pop { from { opacity: 0; transform: translateY(8px) scale(.97); } to { opacity: 1; transform: none; } }
   @keyframes orbis-fade { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes orbis-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
   @keyframes orbis-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
 
   /*
@@ -437,6 +451,26 @@
     background: color-mix(in srgb, var(--rail-bg) 46%, transparent);
     backdrop-filter: blur(20px) saturate(1.1);
   }
+
+  /*
+   * Шапка и подвал левого меню.
+   *
+   * Знак продукта — объёмная плитка в цвете портала, а не плоский кружок:
+   * это первое, что видно на экране, и оно задаёт тон всему остальному.
+   * Подвал — состояние рабочего места: версия, тариф и занятые места.
+   */
+  .rail-mark {
+    background: linear-gradient(145deg,
+      color-mix(in srgb, var(--accent) 88%, white) 0%,
+      var(--accent) 55%,
+      color-mix(in srgb, var(--accent) 82%, black) 100%);
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--accent) 32%, transparent),
+      inset 0 1px 0 rgb(255 255 255 / .22);
+  }
+  .rail-brand { transition: background-color .14s ease; }
+  .rail-brand:hover { background: var(--surface-2); }
+  .rail-foot { background: var(--surface-2); border: 1px solid var(--hairline-soft); }
+  :root[data-backdrop] .rail-foot { background: color-mix(in srgb, var(--surface-1) 55%, transparent); }
 
   /* Кружок цвета и плитка фона в меню профиля. */
   .accent-dot {
@@ -460,76 +494,19 @@
   .pop, .filter-panel { animation: orbis-rise .14s cubic-bezier(.22,1,.36,1); }
   .modal { animation: orbis-pop .18s cubic-bezier(.22,1,.36,1); }
   .modal-scrim { animation: orbis-fade .16s ease; }
-  .content { animation: orbis-in .22s cubic-bezier(.22,1,.36,1); }
-  /* Содержимое экрана въезжает каскадом: путь назад, заголовок, блоки.
-     Правило на .content, поэтому работает на каждом экране прототипа. */
   /*
-   * Всплывающее исключено из каскада: прототип перерисовывает экран целиком
-   * на каждое действие, поэтому панель фильтра всё время в начале анимации,
-   * а анимированный блок накрывает собой выпадающий из него список.
-   * У панели и списка своя анимация появления — выше.
+   * Появление экрана.
+   *
+   * Анимация запускается из кода (см. render в 09-shell.js), а не классом:
+   * прототип перерисовывает содержимое на каждое действие — фильтр, тема,
+   * сохранение формы, — и CSS-правило играло бы заново каждый раз. Экран
+   * дёргался, показывая то же самое. Поэтому движение осталось одно и
+   * только там, где человек действительно сменил раздел.
+   *
+   * Каскадов внутри списков здесь нет намеренно: карточки, строки таблиц и
+   * поля форм появляются сразу. Список, который выезжает по одной строке,
+   * читать нельзя, пока он не доедет.
    */
-  .content > *:not(.filter-panel):not(.pop):not(.modal):not(.modal-scrim) {
-    animation: orbis-in .24s cubic-bezier(.22,1,.36,1) backwards;
-  }
-  .content > *:nth-child(1) { animation-delay: 0ms; }
-  .content > *:nth-child(2) { animation-delay: 40ms; }
-  .content > *:nth-child(3) { animation-delay: 80ms; }
-  .content > *:nth-child(4) { animation-delay: 120ms; }
-  .content > *:nth-child(5) { animation-delay: 160ms; }
-  .content > *:nth-child(n + 6) { animation-delay: 190ms; }
-
-  /*
-   * Каскад внутри списка. В прототипе разметку собирает генератор, поэтому
-   * правило вешается на сами контейнеры — сетку карточек и тело таблицы, —
-   * а не на класс, который пришлось бы расставлять руками в тридцати местах
-   * и неизбежно где-то забыть.
-   */
-  /*
-   * backwards, а не both: пока анимация «висит» завершённой, элемент
-   * продолжает создавать слой наложения, и выпадающий список внутри него
-   * уходит под соседей. Конечное состояние и так совпадает с обычным
-   * (непрозрачный, без сдвига), поэтому терять forwards нечего.
-   */
-  .content .grid > *:not(.filter-panel):not(.pop),
-  .content tbody > tr,
-  .stagger-in > * { animation: orbis-in .2s cubic-bezier(.22,1,.36,1) backwards; }
-  .content .grid > *:nth-child(1),
-  .content tbody > tr:nth-child(1),
-  .stagger-in > *:nth-child(1) { animation-delay: 0ms; }
-  .content .grid > *:nth-child(2),
-  .content tbody > tr:nth-child(2),
-  .stagger-in > *:nth-child(2) { animation-delay: 28ms; }
-  .content .grid > *:nth-child(3),
-  .content tbody > tr:nth-child(3),
-  .stagger-in > *:nth-child(3) { animation-delay: 56ms; }
-  .content .grid > *:nth-child(4),
-  .content tbody > tr:nth-child(4),
-  .stagger-in > *:nth-child(4) { animation-delay: 84ms; }
-  .content .grid > *:nth-child(5),
-  .content tbody > tr:nth-child(5),
-  .stagger-in > *:nth-child(5) { animation-delay: 112ms; }
-  .content .grid > *:nth-child(6),
-  .content tbody > tr:nth-child(6),
-  .stagger-in > *:nth-child(6) { animation-delay: 140ms; }
-  .content .grid > *:nth-child(7),
-  .content tbody > tr:nth-child(7),
-  .stagger-in > *:nth-child(7) { animation-delay: 168ms; }
-  .content .grid > *:nth-child(8),
-  .content tbody > tr:nth-child(8),
-  .stagger-in > *:nth-child(8) { animation-delay: 196ms; }
-  .content .grid > *:nth-child(9),
-  .content tbody > tr:nth-child(9),
-  .stagger-in > *:nth-child(9) { animation-delay: 224ms; }
-  .content .grid > *:nth-child(10),
-  .content tbody > tr:nth-child(10),
-  .stagger-in > *:nth-child(10) { animation-delay: 252ms; }
-  .content .grid > *:nth-child(11),
-  .content tbody > tr:nth-child(11),
-  .stagger-in > *:nth-child(11) { animation-delay: 280ms; }
-  .content .grid > *:nth-child(n + 12),
-  .content tbody > tr:nth-child(n + 12),
-  .stagger-in > *:nth-child(n + 12) { animation-delay: 308ms; }
 
   /* Кнопка «назад»: стрелка отъезжает влево под курсором — движение
      совпадает с тем, что произойдёт по нажатию. */

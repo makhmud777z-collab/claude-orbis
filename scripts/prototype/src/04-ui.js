@@ -210,7 +210,7 @@ function card(c, fields, entity) {
   const amountLine = lines.find((l) => l.key === "amount");
   const metaLines = lines.filter((l) => l.key !== "amount");
   const pad = c.flag ? "padding-left:8px" : "";
-  return `<a class="card card-hover kan-card${S.drag === c.id ? " drag" : ""}" draggable="true"
+  return `<a class="card card-hover kan-card" draggable="true"
       data-drag="${esc(c.id)}" data-entity="${esc(entity)}" href="#" data-go="${esc(c.go)}">
     ${c.flag ? `<span class="kan-flag" style="background:${c.flag}"></span>` : ""}
     <span style="display:flex;gap:10px;align-items:flex-start;${pad}">
@@ -559,55 +559,175 @@ function pipelinePicker(pipeline) {
 /**
  * Канбан или список. Доска нужна, когда ведёшь работу: видно, где затор.
  * Список нужен, когда работу проверяешь: суммы, сроки и ответственные
- * видны подряд, а не по одной карточке.
+ * видны подряд, а не по одной карточке. Вид свой у каждого раздела.
  */
-function viewSwitch() {
+function viewSwitch(section) {
   const options = [
     ["board", "board", loc("Канбан", "Kanban")],
     ["list", "list", loc("Список", "Ro‘yxat")],
   ];
+  const now = viewOf(section);
   return `<span style="display:inline-flex;gap:2px;padding:2px;border-radius:100px;background:var(--surface-1);border:1px solid var(--hairline)">
-    ${options.map(([key, ic, label]) => `<button class="t-micro" data-act="view" data-value="${key}"
+    ${options.map(([key, ic, label]) => `<button class="t-micro" data-act="view" data-value="${section}:${key}"
       style="display:inline-flex;align-items:center;gap:6px;border:0;border-radius:100px;padding:6px 10px;cursor:pointer;
-      background:${S.view === key ? "var(--surface-3)" : "transparent"};color:${S.view === key ? "var(--ink)" : "var(--ink-faint)"}">
+      background:${now === key ? "var(--surface-3)" : "transparent"};color:${now === key ? "var(--ink)" : "var(--ink-faint)"}">
       ${icon(ic, 13)}${esc(t(label))}
     </button>`).join("")}
   </span>`;
 }
 
-/** Строка списка: стадия, ответственный, сумма и быстрые действия. */
-function crmList(rows, valueLabel) {
+const viewOf = (section) => S.views[section] ?? "board";
+
+/* ── колонки списка ──────────────────────────────────────────
+   Каталог повторяет продукт: те же ключи, те же подписи, тот же порядок.
+   Название записи в каталог не входит — это ссылка на карточку, без неё
+   строка никуда не ведёт. ─────────────────────────────────── */
+const LIST_COLUMNS = {
+  leads: [
+    { key: "stage", label: loc("Стадия", "Bosqich") },
+    { key: "owner", label: loc("Ответственный", "Mas’ul") },
+    { key: "created", label: loc("Создан", "Yaratilgan"), num: true },
+    { key: "source", label: loc("Источник", "Manba") },
+    { key: "channel", label: loc("Канал", "Kanal") },
+    { key: "comment", label: loc("Комментарий", "Izoh") },
+    { key: "contacts", label: loc("Связь", "Aloqa") },
+  ],
+  deals: [
+    { key: "stage", label: loc("Стадия", "Bosqich") },
+    { key: "owner", label: loc("Ответственный", "Mas’ul") },
+    { key: "amount", label: loc("Сумма договора", "Shartnoma summasi"), num: true },
+    { key: "deadline", label: loc("Дедлайн", "Muddat"), num: true },
+    { key: "university", label: loc("Вуз", "Universitet") },
+    { key: "intake", label: loc("Набор", "Qabul") },
+    { key: "dossier", label: loc("Готовность досье", "Dosye tayyorligi"), num: true },
+    { key: "contacts", label: loc("Связь", "Aloqa") },
+  ],
+  tasks: [
+    { key: "status", label: loc("Статус", "Holat") },
+    { key: "assignee", label: loc("Исполнитель", "Ijrochi") },
+    { key: "due", label: loc("Срок", "Muddat"), num: true },
+    { key: "priority", label: loc("Приоритет", "Muhimlik") },
+    { key: "project", label: loc("Проект", "Loyiha") },
+    { key: "creator", label: loc("Поставил", "Qo‘ygan") },
+  ],
+  projects: [
+    { key: "status", label: loc("Статус", "Holat") },
+    { key: "lead", label: loc("Руководитель", "Rahbar") },
+    { key: "due", label: loc("Срок", "Muddat"), num: true },
+    { key: "progress", label: loc("Готовность", "Tayyorlik"), num: true },
+    { key: "members", label: loc("Участники", "Ishtirokchilar") },
+  ],
+};
+
+/** Выбранные колонки в порядке каталога, а не в порядке галочек. */
+const columnsOf = (section) =>
+  LIST_COLUMNS[section].filter((c) => (S.listFields[section] ?? []).includes(c.key));
+
+/**
+ * Кнопка «Колонки» и её панель — как в Битриксе: настройка стоит рядом со
+ * списком, а не в администрировании, потому что колонки подбирают во время
+ * работы и под себя.
+ */
+function listColumnsPicker(section) {
+  const open = S.popover === "columns";
+  const picked = S.listFields[section] ?? [];
+  return `<span style="position:relative">
+    <button class="btn btn-secondary" data-pop="columns"
+      title="${t(loc("Какие колонки показывать в списке и в каком порядке.", "Ro‘yxatda qaysi ustunlar ko‘rsatilsin."))}">
+      ${icon("panel", 14)} ${t(loc("Колонки", "Ustunlar"))}
+      <span class="num faint">${picked.length}</span>
+    </button>
+    ${open ? `<span class="pop" style="top:42px;right:0;left:auto;width:250px;padding:0;
+      /* у .pop своя прокрутка на 300px — иначе «Сбросить» и «Готово» уезжают из панели */
+      max-height:none;overflow:visible">
+      <span class="t-micro faint" style="display:block;padding:10px 14px;border-bottom:1px solid var(--hairline-soft)">
+        ${t(loc("Какие колонки показывать в списке и в каком порядке.", "Ro‘yxatda qaysi ustunlar ko‘rsatilsin."))}
+      </span>
+      <span style="display:block;max-height:300px;overflow-y:auto;padding:4px 0">
+        ${LIST_COLUMNS[section].map((c) => `<button data-act="listfield" data-value="${section}:${c.key}"
+          style="display:flex;gap:10px;align-items:center;width:100%;padding:8px 14px;border:0;background:none;
+          cursor:pointer;color:inherit;text-align:left">
+          ${checkbox(picked.includes(c.key))}<span class="t-body-sm" style="flex:1">${esc(t(c.label))}</span>
+        </button>`).join("")}
+      </span>
+      <span style="display:flex;justify-content:space-between;gap:8px;padding:10px 12px;border-top:1px solid var(--hairline-soft)">
+        <button class="btn btn-ghost" data-act="listreset" data-value="${section}">${t(loc("Сбросить", "Tozalash"))}</button>
+        <button class="btn btn-primary" data-act="pop.close">${t(loc("Готово", "Tayyor"))}</button>
+      </span>
+    </span>` : ""}
+  </span>`;
+}
+
+/**
+ * Список записей. Колонки приходят выбором сотрудника, строки несут все
+ * возможные ячейки раздела — показываются только выбранные.
+ */
+function recordList(section, rows) {
+  const columns = columnsOf(section);
+  const nameLabel = { leads: loc("Лид", "Lid"), deals: loc("Контакт", "Kontakt"),
+    tasks: loc("Название", "Nomi"), projects: loc("Название", "Nomi") }[section];
   return `<div class="card scroll-x" style="padding:0;overflow:hidden">
-    <table style="min-width:880px">
+    <table style="min-width:${320 + columns.length * 150}px">
       <thead><tr>
-        ${[loc("Контакт", "Kontakt"), loc("Стадия", "Bosqich"), loc("Ответственный", "Mas’ul"), valueLabel, loc("", "")]
-          .map((h) => `<th>${esc(t(h))}</th>`).join("")}
+        <th>${esc(t(nameLabel))}</th>
+        ${columns.map((c) => `<th style="text-align:${c.num ? "right" : "left"}">${esc(t(c.label))}</th>`).join("")}
       </tr></thead>
       <tbody>
         ${rows.map((r) => `<tr>
-          <td><a href="#" data-go="${esc(r.go)}" style="display:block;min-width:0">
-            <span class="t-body-sm truncate" style="display:block">${esc(r.title)}</span>
-            <span class="t-micro faint truncate" style="display:block">${esc(r.subtitle)}</span>
-          </a></td>
-          <td><span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-            <span class="chip">${dot(r.stageColor)}${esc(r.stageLabel)}</span>
-            ${r.stale ? `<span class="t-micro nowrap" style="border-radius:999px;padding:2px 8px;
-              background:color-mix(in srgb, var(--progress) 16%, transparent);color:var(--progress)">
-              ${t(loc("завис", "qotdi"))} ${r.idleDays}</span>` : ""}
-          </span></td>
-          <td><span style="display:flex;gap:8px;align-items:center">${avatar(r.ownerName, 24)}
-            <span class="t-caption muted nowrap">${esc(r.ownerName)}</span></span></td>
-          <td><span class="t-body-sm num nowrap" style="display:block">${esc(r.value)}</span>
-            ${r.valueHint ? `<span class="t-micro faint nowrap" style="display:block">${esc(r.valueHint)}</span>` : ""}</td>
-          <td><span style="display:flex;gap:4px;justify-content:flex-end">
-            ${r.phone ? `<a class="icon-btn" href="tel:${esc(r.phone)}" title="${esc(r.phone)}">${icon("phone", 14)}</a>` : ""}
-            ${r.email ? `<a class="icon-btn" href="mailto:${esc(r.email)}" title="${esc(r.email)}">${icon("mail", 14)}</a>` : ""}
-          </span></td>
+          <td>${r.go
+            ? `<a href="#" data-go="${esc(r.go)}" style="display:block;min-width:0;position:relative">${listName(r)}</a>`
+            : `<span style="display:block;min-width:0;position:relative">${listName(r)}</span>`}</td>
+          ${columns.map((c) => `<td style="text-align:${c.num ? "right" : "left"}">
+            ${r.cells[c.key] || `<span class="t-caption faint">—</span>`}</td>`).join("")}
         </tr>`).join("")}
       </tbody>
     </table>
+    ${columns.length ? "" : `<div class="t-micro faint" style="padding:10px 20px;border-top:1px solid var(--hairline-soft)">
+      ${t(loc("Все колонки скрыты — осталось только название.", "Barcha ustunlar yashirilgan — faqat nomi qoldi."))}</div>`}
   </div>`;
 }
+
+const listName = (r) => `
+  ${r.flag ? `<span style="position:absolute;left:-10px;top:4px;width:3px;height:24px;border-radius:999px;background:${r.flag}"></span>` : ""}
+  <span class="t-body-sm truncate" style="display:block;font-weight:500">${esc(r.title)}</span>
+  ${r.subtitle ? `<span class="t-micro faint truncate" style="display:block">${esc(r.subtitle)}</span>` : ""}`;
+
+/* ── ячейки списка: одни и те же во всех разделах ───────────── */
+const cellTag = (label, color, note) => `<span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+  <span class="chip">${dot(color)}${esc(label)}</span>
+  ${note ? `<span class="t-micro nowrap" style="border-radius:999px;padding:2px 8px;
+    background:color-mix(in srgb, var(--progress) 16%, transparent);color:var(--progress)">${esc(note)}</span>` : ""}
+</span>`;
+
+const cellPerson = (name) => `<span style="display:flex;gap:8px;align-items:center">${avatar(name, 24)}
+  <span class="t-caption muted nowrap">${esc(name)}</span></span>`;
+
+const cellPeople = (names) => (names.length
+  ? `<span style="display:flex;gap:4px;align-items:center">
+      ${names.slice(0, 4).map((n) => `<span title="${esc(n)}">${avatar(n, 22)}</span>`).join("")}
+      ${names.length > 4 ? `<span class="t-micro num faint">+${names.length - 4}</span>` : ""}
+    </span>`
+  : `<span class="t-caption faint">—</span>`);
+
+const cellNum = (value, hint, accent) => `<span style="display:block">
+  <span class="t-body-sm num nowrap" style="display:block;${accent ? `color:${accent};font-weight:600` : ""}">${esc(value)}</span>
+  ${hint ? `<span class="t-micro faint nowrap" style="display:block">${esc(hint)}</span>` : ""}</span>`;
+
+const cellText = (value, hint) => `<span style="display:block;max-width:260px">
+  <span class="t-caption muted truncate" style="display:block">${esc(value)}</span>
+  ${hint ? `<span class="t-micro faint truncate" style="display:block">${esc(hint)}</span>` : ""}</span>`;
+
+const cellBar = (percent, note) => `<span style="display:block;width:110px;margin-left:auto">
+  <span class="t-micro num muted" style="display:block;text-align:right;margin-bottom:4px">${Math.round(percent)}%</span>
+  ${bar(percent)}
+  ${note ? `<span class="t-micro faint" style="display:block;text-align:right;margin-top:4px">${esc(note)}</span>` : ""}</span>`;
+
+const cellContacts = (phone, email) => (phone || email
+  ? `<span style="display:flex;gap:4px;align-items:center">
+      ${phone ? `<a class="icon-btn" href="tel:${esc(phone)}" title="${esc(phone)}">${icon("phone", 14)}</a>` : ""}
+      ${email ? `<a class="icon-btn" href="mailto:${esc(email)}" title="${esc(email)}">${icon("mail", 14)}</a>` : ""}
+    </span>`
+  : `<span class="t-caption faint">—</span>`);
 
 /**
  * Выгрузка в CSV. Разделитель — точка с запятой, кодировка — UTF-8 с BOM:

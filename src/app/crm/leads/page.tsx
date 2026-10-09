@@ -1,15 +1,19 @@
 import { NewLeadDialog } from "@/components/NewLeadDialog";
-import { CrmList } from "@/components/CrmList";
+import { ListColumns } from "@/components/ListColumns";
 import { Kanban } from "@/components/Kanban";
+import {
+  ContactsCell, NumCell, PersonCell, RecordList, TagCell, TextCell,
+} from "@/components/RecordList";
 import { PipelinePicker } from "@/components/PipelinePicker";
 import { SectionFilter } from "@/components/SectionFilter";
 import { ViewSwitch } from "@/components/ViewSwitch";
 import { moduleGate } from "@/components/guard";
 import { Crumbs, EmptyState, PageHeader } from "@/components/ui";
-import { CARD_FIELD_LABEL, boardStages, leadCard } from "@/lib/crm";
+import { boardStages, leadCard } from "@/lib/crm";
 import { isActiveLead } from "@/lib/data/leads";
 import { userById } from "@/lib/data/users";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
+import { DEFAULT_LIST_COLUMNS, listCatalog, listColumns } from "@/lib/list-columns";
 import { formatters, idleDays, STALE_DAYS } from "@/lib/format";
 import { translator, type Loc } from "@/lib/i18n";
 import { ref, SOURCE_LABEL } from "@/lib/labels";
@@ -17,7 +21,9 @@ import { scopedLeads, scopedTeam } from "@/lib/queries";
 import { allow } from "@/lib/rbac";
 import { customFilterFields, leadFields, leadPresets, withCustom } from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
-import { CARD_FIELDS, cardFieldsOf, channelsOf, defaultPipeline, stageOf } from "@/lib/store";
+import {
+  cardFieldsOf, channelById, channelsOf, defaultPipeline, listFieldsOf, stageOf,
+} from "@/lib/store";
 import { P, S } from "@/lib/strings";
 import { readView } from "@/lib/view";
 import type { Lead } from "@/lib/types";
@@ -50,6 +56,8 @@ export default async function LeadsPage({
   );
   const canEdit = allow(session.tenant.id, session.role, "leads", "edit");
   const view = readView(params);
+  const picked = listFieldsOf(session.user.id, "leads", DEFAULT_LIST_COLUMNS.leads);
+  const columns = listColumns("leads", picked, t);
 
   return (
     <>
@@ -76,6 +84,15 @@ export default async function LeadsPage({
         actions={
           <>
             <ViewSwitch view={view} locale={session.locale} />
+            {view === "list" ? (
+              <ListColumns
+                section="leads"
+                catalog={listCatalog("leads", t)}
+                picked={picked}
+                defaults={DEFAULT_LIST_COLUMNS.leads}
+                locale={session.locale}
+              />
+            ) : null}
             <PipelinePicker
               locale={session.locale}
               current={pipeline?.id ?? ""}
@@ -114,25 +131,44 @@ export default async function LeadsPage({
       {!leads.length ? (
         <EmptyState title={t(FILTER_TEXT.nothing)} />
       ) : view === "list" ? (
-        <CrmList
-          locale={session.locale}
-          valueLabel={t(S.applications.created)}
+        <RecordList
+          nameLabel={t(S.crm.lead)}
+          noColumnsNote={t(S.list.noColumns)}
+          columns={columns}
           rows={leads.map((lead) => {
             const stage = stageOf(pipeline, lead.stage);
+            const idle = idleDays(lead.stageEnteredAt);
+            const channel = channelById(lead.channelId);
+
             return {
               id: lead.id,
               href: `/crm/leads/${lead.id}`,
               title: lead.name,
-              subtitle: `${t(ref(SOURCE_LABEL, lead.source))} · ${lead.phone}`,
-              stageLabel: stage ? t(stage.label) : lead.stage,
-              stageColor: stage?.color ?? "var(--color-ink-faint)",
-              ownerName: team.find((u) => u.id === lead.ownerId)?.name ?? "—",
-              value: f.shortDate(lead.createdAt),
-              valueHint: null,
-              phone: lead.phone,
-              email: lead.email,
-              idleDays: idleDays(lead.stageEnteredAt),
-              stale: isActiveLead(lead) && idleDays(lead.stageEnteredAt) >= STALE_DAYS,
+              subtitle: lead.phone,
+              cells: {
+                stage: (
+                  <TagCell
+                    label={stage ? t(stage.label) : lead.stage}
+                    color={stage?.color ?? "var(--color-ink-faint)"}
+                    note={
+                      isActiveLead(lead) && idle >= STALE_DAYS ? `${t(S.crm.idle)} ${idle}` : null
+                    }
+                  />
+                ),
+                owner: <PersonCell name={team.find((u) => u.id === lead.ownerId)?.name ?? "—"} />,
+                created: <NumCell value={f.shortDate(lead.createdAt)} />,
+                source: <TextCell value={t(ref(SOURCE_LABEL, lead.source))} />,
+                channel: channel ? <TextCell value={channel.title} hint={channel.handle} /> : null,
+                comment: lead.comment ? <TextCell value={lead.comment} /> : null,
+                contacts: (
+                  <ContactsCell
+                    phone={lead.phone}
+                    email={lead.email}
+                    callLabel={t(S.students.call)}
+                    writeLabel={t(S.students.write)}
+                  />
+                ),
+              },
             };
           })}
         />

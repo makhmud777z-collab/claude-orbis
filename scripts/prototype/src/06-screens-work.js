@@ -11,23 +11,53 @@ function screenTasks() {
   const fields = taskFields();
   const st = filterState("tasks");
   const list = all.filter((x) => matchesFilter(taskRow(x), fields, st.values, st.q));
+  const projects = scopedProjects();
+
   return `
     ${head(t(loc("Задачи", "Vazifalar")),
-      `<span>${list.filter((x) => x.status !== "done").length} ${t(loc("в работе", "ishda"))}</span><span class="faint">·</span>
-       <span>${list.filter((x) => x.status !== "done" && isPast(x.dueAt)).length} ${t(loc("просрочено", "kechikkan"))}</span><span class="faint">·</span>
+      `<span>${list.filter((x) => taskStatusOf(x) !== "done").length} ${t(loc("в работе", "ishda"))}</span><span class="faint">·</span>
+       <span>${list.filter((x) => taskStatusOf(x) !== "done" && isPast(x.dueAt)).length} ${t(loc("просрочено", "kechikkan"))}</span><span class="faint">·</span>
        <a href="#" data-go="projects">${t(loc("Проекты", "Loyihalar"))}</a>
        <a href="#" data-go="taskreports">${t(loc("Отчёты", "Hisobotlar"))}</a>`,
-      allow(user().role, "tasks", "create")
+      `${viewSwitch("tasks")}
+       ${viewOf("tasks") === "list" ? listColumnsPicker("tasks") : ""}
+       ${allow(user().role, "tasks", "create")
         ? `<button class="btn btn-primary" data-act="newtask">${icon("plus", 15)} ${t(loc("Новая задача", "Yangi vazifa"))}</button>`
-        : "")}
+        : ""}`)}
 
     ${smartFilter("tasks", fields, taskPresets(), { shown: list.length, total: all.length })}
 
+    ${viewOf("tasks") === "list" ? recordList("tasks", list.map((x) => {
+      const status = L.taskStatus[taskStatusOf(x)];
+      const overdue = taskStatusOf(x) !== "done" && isPast(x.dueAt);
+      const project = projects.find((p) => p.id === x.projectId);
+      return {
+        // Своей страницы у задачи нет: ведём туда, из-за чего она появилась.
+        go: x.relation?.type === "deal" ? "deal/" + x.relation.id
+          : x.relation?.type === "student" ? "contact/" + x.relation.id : null,
+        title: x.title,
+        subtitle: x.relation?.type === "student" ? (studentById(x.relation.id)?.fullName ?? "")
+          : x.relation?.type === "deal" ? `${t(loc("Сделка", "Bitim"))} ${x.relation.id.toUpperCase()}`
+          : x.description,
+        flag: overdue ? "var(--risk)" : x.priority === "high" ? "var(--progress)" : null,
+        cells: {
+          status: cellTag(t(status.label), status.dot),
+          assignee: cellPerson(userById(x.assigneeId)?.name ?? "—"),
+          due: cellNum(fmtShort(x.dueAt), relDeadline(x.dueAt), overdue ? "var(--risk)" : null),
+          priority: cellText(t(ref(L.priority, x.priority))),
+          project: project ? cellText(t(project.name)) : "",
+          creator: cellPerson(userById(x.creatorId)?.name ?? "—"),
+        },
+      };
+    })) : `
+    ${allow(user().role, "tasks", "edit")
+      ? `<div class="t-micro faint" style="margin-bottom:12px">${t(loc("Перетащите задачу в другой столбец", "Vazifani boshqa ustunga torting"))}</div>`
+      : ""}
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr));align-items:start;gap:16px">
       ${TASK_ORDER.map((status) => {
         const meta = L.taskStatus[status];
-        const col = list.filter((x) => x.status === status);
-        return `<section class="kan-col">
+        const col = list.filter((x) => taskStatusOf(x) === status);
+        return `<section class="kan-col${S.over === status ? " over" : ""}" data-drop="${status}" data-entity="task">
           <div class="kan-topbar" style="background:${meta.dot}"></div>
           <header class="kan-head">
             <div style="display:flex;align-items:center;gap:8px">
@@ -38,9 +68,11 @@ function screenTasks() {
           </header>
           <div class="kan-body">
             ${col.map((x) => {
-              const overdue = x.status !== "done" && isPast(x.dueAt);
+              const overdue = taskStatusOf(x) !== "done" && isPast(x.dueAt);
               const flag = overdue ? "var(--risk)" : x.priority === "high" ? "var(--progress)" : null;
-              return `<article class="card card-hover" style="padding:12px 14px;position:relative">
+              const movable = allow(user().role, "tasks", "edit");
+              return `<article class="card card-hover kan-card" style="padding:12px 14px;position:relative;cursor:${movable ? "grab" : "default"}"
+                  ${movable ? `draggable="true" data-drag="${esc(x.id)}" data-entity="task"` : ""}>
                 ${flag ? `<span class="kan-flag" style="background:${flag}"></span>` : ""}
                 <div style="padding-left:${flag ? "8px" : "0"}">
                   <div class="t-body-sm" style="font-weight:600">${esc(x.title)}</div>
@@ -56,48 +88,96 @@ function screenTasks() {
           </div>
         </section>`;
       }).join("")}
-    </div>`;
+    </div>`}`;
 }
 
+const PROJECT_ORDER = ["active", "paused", "done"];
+const PROJECT_STATUS = {
+  active: { label: loc("Активен", "Faol"), dot: "var(--color-status-open)" },
+  paused: { label: loc("На паузе", "To‘xtatilgan"), dot: "var(--hold)" },
+  done: { label: loc("Завершён", "Yakunlangan"), dot: "var(--deal)" },
+};
+
+/**
+ * Проекты. Доской их ведут, списком проверяют — как и всё остальное в
+ * портале. Раньше здесь была сетка карточек, и статус проекта нельзя было
+ * сменить с экрана вовсе; теперь проект переносят рукой между столбцами.
+ */
 function screenProjects() {
   const projects = scopedProjects();
   const tasks = scopedTasks();
-  const STATUS = {
-    active: { label: loc("Активен", "Faol"), dot: "var(--accent)" },
-    done: { label: loc("Завершён", "Yakunlangan"), dot: "var(--deal)" },
-    paused: { label: loc("На паузе", "To‘xtatilgan"), dot: "var(--hold)" },
+  const movable = allow(user().role, "projects", "edit");
+  const counts = (p) => {
+    const mine = tasks.filter((x) => x.projectId === p.id);
+    return {
+      total: mine.length,
+      done: mine.filter((x) => taskStatusOf(x) === "done").length,
+      late: mine.filter((x) => taskStatusOf(x) !== "done" && isPast(x.dueAt)).length,
+    };
   };
+
   return `
     ${head(t(loc("Проекты", "Loyihalar")),
       `<span>${plural(projects.length, ["проект", "проекта", "проектов"], "loyiha")}</span><span class="faint">·</span>
-       <a href="#" data-go="tasks">${t(loc("Задачи", "Vazifalar"))}</a>`)}
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
-      ${projects.map((p) => {
-        const mine = tasks.filter((x) => x.projectId === p.id);
-        const done = mine.filter((x) => x.status === "done").length;
-        const late = mine.filter((x) => x.status !== "done" && isPast(x.dueAt)).length;
-        const st = STATUS[p.status];
-        return `<article class="card" style="padding:18px">
-          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
-            <h2 class="t-headline" style="min-width:0">${esc(t(p.name))}</h2>
-            <span class="chip">${dot(st.dot)}${esc(t(st.label))}</span>
-          </div>
-          <p class="t-caption muted" style="margin:10px 0 0;line-height:1.5">${esc(p.description)}</p>
-          <div style="margin-top:14px">
-            <div class="t-micro faint" style="display:flex;justify-content:space-between;margin-bottom:6px">
-              <span>${done} / ${mine.length} ${t(loc("выполнено", "bajarilgan"))}</span>
-              ${late ? `<span style="color:var(--risk)">${late} ${t(loc("просрочено", "kechikkan"))}</span>` : ""}
+       <a href="#" data-go="tasks">${t(loc("Задачи", "Vazifalar"))}</a>`,
+      `${viewSwitch("projects")}
+       ${viewOf("projects") === "list" ? listColumnsPicker("projects") : ""}`)}
+
+    ${viewOf("projects") === "list" ? recordList("projects", projects.map((p) => {
+      const c = counts(p);
+      const meta = PROJECT_STATUS[projectStatusOf(p)];
+      return {
+        title: t(p.name), subtitle: p.description,
+        flag: c.late ? "var(--risk)" : null,
+        cells: {
+          status: cellTag(t(meta.label), meta.dot),
+          lead: cellPerson(userById(p.leadId)?.name ?? "—"),
+          due: cellNum(fmtDate(p.dueAt), relDeadline(p.dueAt)),
+          progress: cellBar(c.total ? (c.done / c.total) * 100 : 0,
+            `${c.done} / ${c.total} ${t(loc("выполнено", "bajarilgan"))}`),
+          members: cellPeople(p.memberIds.map((m) => userById(m)?.name).filter(Boolean)),
+        },
+      };
+    })) : `
+    ${movable ? `<div class="t-micro faint" style="margin-bottom:12px">${t(loc("Перетащите проект в другой столбец, чтобы сменить статус", "Holatni o‘zgartirish uchun loyihani boshqa ustunga torting"))}</div>` : ""}
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:start;gap:16px">
+      ${PROJECT_ORDER.map((status) => {
+        const meta = PROJECT_STATUS[status];
+        const col = projects.filter((p) => projectStatusOf(p) === status);
+        return `<section class="kan-col${S.over === status ? " over" : ""}" data-drop="${status}" data-entity="project">
+          <div class="kan-topbar" style="background:${meta.dot}"></div>
+          <header class="kan-head">
+            <div style="display:flex;align-items:center;gap:8px">
+              ${dot(meta.dot)}
+              <span class="t-caption truncate" style="flex:1;min-width:0;font-weight:600;color:${meta.dot}">${esc(t(meta.label))}</span>
+              <span class="kan-count num">${col.length}</span>
             </div>
-            ${bar(mine.length ? (done / mine.length) * 100 : 0)}
+          </header>
+          <div class="kan-body">
+            ${col.map((p) => {
+              const c = counts(p);
+              return `<article class="card card-hover kan-card" style="padding:12px 14px;cursor:${movable ? "grab" : "default"}"
+                  ${movable ? `draggable="true" data-drag="${esc(p.id)}" data-entity="project"` : ""}>
+                <div class="t-body-sm" style="font-weight:600">${esc(t(p.name))}</div>
+                <p class="t-micro faint" style="margin:6px 0 0;line-height:1.5">${esc(p.description)}</p>
+                <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--hairline-soft)">
+                  <div class="t-micro faint" style="display:flex;justify-content:space-between;margin-bottom:6px">
+                    <span>${c.done} / ${c.total} ${t(loc("выполнено", "bajarilgan"))}</span>
+                    ${c.late ? `<span style="color:var(--risk)">${c.late} ${t(loc("просрочено", "kechikkan"))}</span>` : ""}
+                  </div>
+                  ${bar(c.total ? (c.done / c.total) * 100 : 0)}
+                </div>
+                <div class="t-micro" style="display:flex;gap:8px;align-items:center;margin-top:10px">
+                  ${avatar(userById(p.leadId)?.name ?? "—", 20)}
+                  <span class="truncate faint" style="flex:1;min-width:0">${esc(userById(p.leadId)?.name ?? "—")}</span>
+                  <span class="nowrap faint">${esc(relDeadline(p.dueAt))}</span>
+                </div>
+              </article>`;
+            }).join("") || `<div class="empty-col">${t(loc("Пусто", "Bo‘sh"))}</div>`}
           </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px">
-            ${chip(userById(p.leadId)?.name ?? "—", null, true)}
-            ${p.memberIds.slice(0, 4).map((m) => chip(userById(m)?.name.split(" ")[0] ?? "—")).join("")}
-          </div>
-          <div class="t-micro faint" style="margin-top:14px">${t(loc("Срок", "Muddat"))}: ${esc(fmtDate(p.dueAt))} · ${esc(relDeadline(p.dueAt))}</div>
-        </article>`;
+        </section>`;
       }).join("")}
-    </div>`;
+    </div>`}`;
 }
 
 function screenTaskReports() {

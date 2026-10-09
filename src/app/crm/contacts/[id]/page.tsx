@@ -299,7 +299,7 @@ export default async function ContactPage({
 
           <section>
             <SectionTitle>{t(S.crm.dealsOfContact)}</SectionTitle>
-            <div className="stagger-in card divide-y divide-hairline-soft">
+            <div className="card divide-y divide-hairline-soft">
               {apps.length ? (
                 apps.map((a) => {
                   const uni = universityById(a.universityId);
@@ -349,7 +349,7 @@ export default async function ContactPage({
             >
               {t(S.students.recommended)}
             </SectionTitle>
-            <div className="stagger-in grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {shortlist.map((m) => (
                 <Link
                   key={`${m.university.id}_${m.program.id}`}
@@ -396,7 +396,7 @@ export default async function ContactPage({
 
           <section>
             <SectionTitle>{t(S.students.relatedTasks)}</SectionTitle>
-            <div className="stagger-in card divide-y divide-hairline-soft">
+            <div className="card divide-y divide-hairline-soft">
               {tasks.length ? (
                 tasks.map((task) => (
                   <div key={task.id} className="flex items-center gap-3 px-5 py-3.5">

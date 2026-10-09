@@ -8,7 +8,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { openModules } from "@/components/guard";
 import { navFor } from "@/components/nav";
-import { homeHref } from "@/lib/edition";
+import { editionMeta, homeHref } from "@/lib/edition";
 import { roleLabel, roleTitle } from "@/lib/rbac";
 import { formatters } from "@/lib/format";
 import { translator } from "@/lib/i18n";
@@ -138,9 +138,11 @@ export default async function RootLayout({
             tenantMark={session.tenant.mark}
             host={host}
             modules={modules}
-            roleLabel={roleTitle(roleLabel(session.tenant.id, session.role), t)}
             locale={session.locale}
             home={home}
+            planLabel={`${editionMeta(session.tenant.edition).code} · ${session.tenant.plan.toUpperCase()}`}
+            seatsUsed={session.tenant.seatsUsed}
+            seatsLimit={session.tenant.seatsLimit}
           />
           <div className="relative z-10 flex min-w-0 flex-1 flex-col">
             <Topbar

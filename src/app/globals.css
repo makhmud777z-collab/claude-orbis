@@ -379,15 +379,47 @@
       color 140ms ease,
       background-color 140ms ease;
   }
-  /* Карточка, только что перенесённая на другую стадию, коротко
-     «приземляется»: подсветка кольцом акцента гаснет за 600 мс — глаз
-     ловит, куда именно уехала карточка, а не теряет её среди прочих. */
-  @keyframes orbis-land {
-    0% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 55%, transparent); }
-    100% { box-shadow: 0 0 0 2px transparent; }
+  /*
+   * Перенос карточки между колонками — единственное место в портале, где
+   * движение не украшение, а объяснение. Человек тянет карточку рукой,
+   * отпускает, и она должна оказаться там, куда он её привёл, на глазах:
+   * иначе список просто перерисовывается, и карточку ищут заново.
+   *
+   * Две половины одного жеста. Взятая карточка отходит на задний план —
+   * видно, что она покинула прежнюю колонку. Приземлившаяся приходит
+   * сверху, чуть крупнее, с поднятой тенью, и оседает на место.
+   */
+  .kan-lifted {
+    opacity: 0.3;
+    transform: scale(0.97);
+    transition:
+      opacity 120ms ease,
+      transform 120ms ease;
   }
-  .just-landed {
-    animation: orbis-land 600ms ease-out;
+
+  @keyframes orbis-land {
+    0% {
+      opacity: 0.35;
+      transform: translateY(-14px) scale(1.05);
+      box-shadow: var(--shadow-raised), 0 0 0 2px var(--color-accent);
+    }
+    55% {
+      opacity: 1;
+      transform: translateY(2px) scale(0.995);
+      box-shadow: var(--shadow-raised), 0 0 0 2px color-mix(in srgb, var(--color-accent) 60%, transparent);
+    }
+    100% {
+      opacity: 1;
+      transform: none;
+      box-shadow: var(--shadow-card), 0 0 0 2px transparent;
+    }
+  }
+  .kan-landed {
+    animation: orbis-land 420ms cubic-bezier(0.22, 1, 0.36, 1);
+    /* Карточка на время полёта идёт поверх соседей: иначе она ныряет
+       под следующую и приземление наполовину не видно. */
+    position: relative;
+    z-index: 2;
   }
 
   .nav-item {
@@ -470,6 +502,39 @@
   }
 
   /*
+   * Шапка и подвал рельсы.
+   *
+   * Знак продукта — не плоский круг, а плитка с лёгким объёмом: это
+   * единственное цветное пятно на рельсе, и оно задаёт тон всему меню.
+   * Блоки сидят на слегка поднятой поверхности, отделяясь от списка
+   * разделов воздухом, а не линией.
+   */
+  .rail-mark {
+    background: linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--color-accent) 88%, white) 0%,
+      var(--color-accent) 55%,
+      color-mix(in srgb, var(--color-accent) 82%, black) 100%
+    );
+    box-shadow:
+      0 2px 6px color-mix(in srgb, var(--color-accent) 32%, transparent),
+      inset 0 1px 0 rgb(255 255 255 / 0.22);
+  }
+  .rail-brand {
+    transition: background-color 140ms ease;
+  }
+  .rail-brand:hover {
+    background: var(--color-surface-2);
+  }
+  .rail-foot {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-hairline-soft);
+  }
+  :root[data-backdrop] .rail-foot {
+    background: color-mix(in srgb, var(--color-surface-1) 55%, transparent);
+  }
+
+  /*
    * Элементы управления в шапке. Раньше они были прозрачными и проявлялись
    * только под курсором: сотрудник не видел, что язык, уведомления и
    * профиль вообще нажимаются, — на светлом фоне это выглядело подписями.
@@ -517,32 +582,15 @@
   }
 
   /*
-   * Каскад: список проявляется сверху вниз, а не вспыхивает целиком.
-   * Задержка нарастает по 28 мс и обрывается на 12-м элементе — дальше
-   * ждать нечего, остальное всё равно ниже сгиба, а длинная таблица
-   * не должна доигрывать секунду после того, как человек начал читать.
+   * Каскадов по спискам в портале нет.
+   *
+   * Они были: строки таблиц и карточки проявлялись волной сверху вниз. На
+   * демонстрации это выглядит живо, в работе — мешает: человек открывает
+   * раздел, чтобы прочитать число, а оно доезжает. Движение осталось там,
+   * где объясняет происходящее, — перенос карточки между колонками, —
+   * и там, где подтверждает нажатие.
    */
-  .stagger-in > * {
-    animation: orbis-in 260ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
-  }
-  .stagger-in > *:nth-child(1) { animation-delay: 0ms; }
-  .stagger-in > *:nth-child(2) { animation-delay: 34ms; }
-  .stagger-in > *:nth-child(3) { animation-delay: 68ms; }
-  .stagger-in > *:nth-child(4) { animation-delay: 102ms; }
-  .stagger-in > *:nth-child(5) { animation-delay: 136ms; }
-  .stagger-in > *:nth-child(6) { animation-delay: 170ms; }
-  .stagger-in > *:nth-child(7) { animation-delay: 204ms; }
-  .stagger-in > *:nth-child(8) { animation-delay: 238ms; }
-  .stagger-in > *:nth-child(9) { animation-delay: 272ms; }
-  .stagger-in > *:nth-child(10) { animation-delay: 306ms; }
-  .stagger-in > *:nth-child(11) { animation-delay: 340ms; }
-  .stagger-in > *:nth-child(n + 12) { animation-delay: 374ms; }
 
-  /* Одиночный блок, который должен появиться отдельно от общего потока
-     страницы: сводка над таблицей, баннер, карточка-итог. */
-  .rise-in {
-    animation: orbis-in 300ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
-  }
 
   /* Строка таблицы: подсветка под курсором и отклик на нажатие — строка
      кликабельна целиком, и это должно быть видно до клика. */

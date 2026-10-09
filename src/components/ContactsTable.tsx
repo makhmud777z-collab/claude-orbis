@@ -47,7 +47,7 @@ export function ContactsTable({ rows, locale }: { rows: ContactRow[]; locale: Lo
               ))}
             </tr>
           </thead>
-          <tbody className="stagger-in">
+          <tbody >
             {rows.map((s) => {
               const st = STUDENT_STATUS[s.status];
               return (

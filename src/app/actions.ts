@@ -20,6 +20,7 @@ import { acceptInvite, authenticate, createTenant, inviteEmployee } from "@/lib/
 import { validateSlug } from "@/lib/tenants";
 import { metaConfigured, subscribePage } from "@/lib/meta/oauth";
 import { ROBOT_ACTIONS, TRIGGER_EVENTS } from "@/lib/automation";
+import { LIST_COLUMNS, type ListSection } from "@/lib/list-columns";
 import {
   NO_STUDENT,
   parseShortlist,
@@ -367,6 +368,33 @@ export async function setCardFieldsAction(formData: FormData) {
   revalidatePath("/crm/leads");
 }
 
+/**
+ * Колонки списка — настройка сотрудника, а не агентства, поэтому права тут
+ * не спрашиваем: человек меняет вид своего экрана, а не чужие данные.
+ * Ключи проверяем по каталогу раздела: из формы может прийти что угодно, а
+ * список не должен пытаться нарисовать колонку, которой нет.
+ */
+export async function setListFieldsAction(formData: FormData) {
+  const session = await actor();
+  const section = String(formData.get("section") ?? "");
+  if (!isListSection(section)) return;
+
+  const allowed = new Set(LIST_COLUMNS[section].map((c) => c.key));
+  const fields = formData.getAll("field").map(String).filter((key) => allowed.has(key));
+  db.setListFields(session.user.id, section, fields);
+  revalidatePath(LIST_PATH[section]);
+}
+
+/** Где живёт список раздела: его и обновляем после правки колонок. */
+const LIST_PATH: Record<ListSection, string> = {
+  leads: "/crm/leads",
+  deals: "/crm/deals",
+  tasks: "/tasks",
+  projects: "/tasks/projects",
+};
+
+const isListSection = (value: string): value is ListSection => value in LIST_PATH;
+
 /* ── пользователи и филиалы ──────────────────────────────────── */
 
 export async function inviteUserAction(formData: FormData) {
@@ -537,6 +565,42 @@ export async function addTaskAction(formData: FormData) {
   revalidatePath("/tasks");
   revalidatePath("/deadlines");
   revalidatePath("/");
+}
+
+/**
+ * Перенос задачи по доске. Своё действие, а не moveCardAction: у задач свои
+ * статусы и свой модуль прав — менеджер двигает задачи, но не сделки.
+ */
+export async function moveTaskAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "tasks", "edit")) return;
+
+  const id = String(formData.get("id") ?? "");
+  const status = String(formData.get("status") ?? "");
+  if (!["todo", "in_progress", "review", "done"].includes(status)) return;
+
+  db.moveTask(id, status as "todo" | "in_progress" | "review" | "done", session.user.id, session.tenant.id);
+  revalidatePath("/tasks");
+  revalidatePath("/tasks/reports");
+  revalidatePath("/");
+}
+
+/**
+ * Перенос проекта по статусам с доски проектов. Статусов три, и приходят они
+ * из формы, поэтому проверяем значение: иначе на доске появится колонка,
+ * которой нет в типе.
+ */
+export async function moveProjectAction(formData: FormData) {
+  const session = await actor();
+  if (!allow(session.tenant.id, session.role, "projects", "edit")) return;
+
+  const id = String(formData.get("id") ?? "");
+  const status = String(formData.get("status") ?? "");
+  if (!["active", "paused", "done"].includes(status)) return;
+
+  db.moveProject(id, status as "active" | "paused" | "done", session.tenant.id);
+  revalidatePath("/tasks/projects");
+  revalidatePath("/tasks/reports");
 }
 
 /* ── документы ───────────────────────────────────────────────── */

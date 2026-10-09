@@ -63,7 +63,7 @@ export function MetaForms({
   ];
 
   return (
-    <div className="stagger-in flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       {forms.map((form) => {
         // Без телефона и почты лид создать не из чего — предупреждаем здесь,
         // а не после того, как заявки начнут молча пропадать.
@@ -120,7 +120,7 @@ export function MetaForms({
                     </th>
                   </tr>
                 </thead>
-                <tbody className="stagger-in">
+                <tbody >
                   {form.fields.map((field) => (
                     <tr
                       key={field.name}

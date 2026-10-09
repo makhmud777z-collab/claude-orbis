@@ -339,7 +339,7 @@ export function CompanyStructure({
               </button>
             ) : null}
           </div>
-          <div className="stagger-in max-h-[38vh] space-y-1 overflow-y-auto pr-1">
+          <div className="max-h-[38vh] space-y-1 overflow-y-auto pr-1">
             {visible.map((person) => (
               <Person
                 key={person.id}

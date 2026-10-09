@@ -121,7 +121,7 @@ export default async function UniversityPage({
         <div className="space-y-8">
           <section>
             <SectionTitle>{t(S.universities.programsTitle)}</SectionTitle>
-            <div className="stagger-in card divide-y divide-hairline-soft">
+            <div className="card divide-y divide-hairline-soft">
               {uni.programs.map((p) => (
                 <div key={p.id} className="flex flex-wrap items-center gap-4 px-5 py-4">
                   <div className="min-w-[220px] flex-1">
@@ -147,7 +147,7 @@ export default async function UniversityPage({
 
           <section>
             <SectionTitle>{t(S.universities.whoFits)}</SectionTitle>
-            <div className="stagger-in card divide-y divide-hairline-soft">
+            <div className="card divide-y divide-hairline-soft">
               {fits.length ? (
                 fits.map(({ student, match }) => (
                   <Link
@@ -182,7 +182,7 @@ export default async function UniversityPage({
           {apps.length ? (
             <section>
               <SectionTitle>{t(S.universities.ourApplications)}</SectionTitle>
-              <div className="stagger-in card divide-y divide-hairline-soft">
+              <div className="card divide-y divide-hairline-soft">
                 {apps.map((a) => (
                   <Link
                     key={a.id}

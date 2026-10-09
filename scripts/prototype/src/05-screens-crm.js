@@ -147,25 +147,30 @@ function screenLeads() {
       `<span>${plural(all.length, ["лид", "лида", "лидов"], "lid")}</span><span class="faint">·</span>
        <span>${all.filter(isActiveLead).length} ${t(loc("в работе", "ishda"))}</span><span class="faint">·</span>
        <span>${esc(scopeLabel())}</span>`,
-      `${viewSwitch()}
+      `${viewSwitch("leads")}
+       ${viewOf("leads") === "list" ? listColumnsPicker("leads") : ""}
        ${pipelinePicker(pipeline)}
        ${allow(user().role, "leads", "create")
         ? `<button class="btn btn-primary" data-act="newlead">${icon("plus", 15)} ${t(loc("Новый лид", "Yangi lid"))}</button>` : ""}`)}
     ${smartFilter("leads", fields, leadPresets(), { shown: leads.length, total: all.length })}
-    ${S.view === "list" ? crmList(leads.map((l) => {
+    ${viewOf("leads") === "list" ? recordList("leads", leads.map((l) => {
       const stage = stageOf(pipeline, currentStage(l));
       const idle = idleDaysOf(l.stageEnteredAt);
+      const channel = D.channels.find((c) => c.id === l.channelId);
       return {
-        go: "lead/" + l.id, title: l.name,
-        subtitle: `${t(ref(L.source, l.source))} · ${l.phone}`,
-        stageLabel: stage ? t(stage.label) : currentStage(l),
-        stageColor: stage?.color ?? "var(--ink-faint)",
-        ownerName: userById(l.ownerId)?.name ?? "—",
-        value: fmtShort(l.createdAt), valueHint: null,
-        phone: l.phone, email: l.email, idleDays: idle,
-        stale: isActiveLead(l) && idle >= STALE_DAYS,
+        go: "lead/" + l.id, title: l.name, subtitle: l.phone,
+        cells: {
+          stage: cellTag(stage ? t(stage.label) : currentStage(l), stage?.color ?? "var(--ink-faint)",
+            isActiveLead(l) && idle >= STALE_DAYS ? `${t(loc("завис", "qotdi"))} ${idle}` : null),
+          owner: cellPerson(userById(l.ownerId)?.name ?? "—"),
+          created: cellNum(fmtShort(l.createdAt)),
+          source: cellText(t(ref(L.source, l.source))),
+          channel: channel ? cellText(channel.title, channel.handle) : "",
+          comment: l.comment ? cellText(l.comment) : "",
+          contacts: cellContacts(l.phone, l.email),
+        },
       };
-    }), loc("Создан", "Yaratilgan")) : kanban("lead", stages, leads.map(leadCard), {
+    })) : kanban("lead", stages, leads.map(leadCard), {
       totals: false,
       fields: S.cardFields.filter((f) => ["phone", "source", "comment", "owner"].includes(f)).concat(["phone"]).filter((v, i, a) => a.indexOf(v) === i),
     })}`;
@@ -245,27 +250,38 @@ function screenDeals() {
       `<span>${plural(all.length, ["сделка", "сделки", "сделок"], "bitim")}</span><span class="faint">·</span>
        <span class="num">${esc(som(total, true))}</span><span class="faint">·</span>
        <span>${esc(scopeLabel())}</span>`,
-      `${viewSwitch()}
+      `${viewSwitch("deals")}
+       ${viewOf("deals") === "list" ? listColumnsPicker("deals") : ""}
        ${pipelinePicker(pipeline)}
        ${allow(user().role, "deals", "create")
         ? `<button class="btn btn-primary" data-go="leads">${icon("plus", 15)} ${t(loc("Новая сделка", "Yangi bitim"))}</button>` : ""}`)}
     ${smartFilter("deals", fields, dealPresets(), { shown: deals.length, total: all.length })}
-    ${S.view === "list" ? crmList(deals.map((d) => {
+    ${viewOf("deals") === "list" ? recordList("deals", deals.map((d) => {
       const stage = stageOf(pipeline, currentStage(d));
       const contact = studentById(d.studentId);
       const idle = idleDaysOf(d.stageEnteredAt);
+      const dos = contact ? dossier(contact.id) : null;
+      const overdue = Boolean(d.deadline) && isPast(d.deadline);
+      const university = uniById(d.universityId)?.name ?? "—";
       return {
         go: "deal/" + d.id, title: contact?.fullName ?? d.id.toUpperCase(),
-        subtitle: uniById(d.universityId)?.name ?? "—",
-        stageLabel: stage ? t(stage.label) : currentStage(d),
-        stageColor: stage?.color ?? "var(--ink-faint)",
-        ownerName: userById(d.ownerId)?.name ?? "—",
-        value: d.contractValue ? som(d.contractValue, true) : "—",
-        valueHint: d.deadline ? relDeadline(d.deadline) : null,
-        phone: contact?.phone ?? null, email: contact?.email ?? null,
-        idleDays: idle, stale: !stage?.final && idle >= STALE_DAYS,
+        subtitle: university,
+        // Тот же язык, что на карточке доски: просрочка важнее приоритета.
+        flag: overdue ? "var(--risk)" : d.priority === "high" ? "var(--progress)" : null,
+        cells: {
+          stage: cellTag(stage ? t(stage.label) : currentStage(d), stage?.color ?? "var(--ink-faint)",
+            !stage?.final && idle >= STALE_DAYS ? `${t(loc("завис", "qotdi"))} ${idle}` : null),
+          owner: cellPerson(userById(d.ownerId)?.name ?? "—"),
+          amount: d.contractValue ? cellNum(som(d.contractValue, true)) : "",
+          deadline: d.deadline ? cellNum(fmtShort(d.deadline), relDeadline(d.deadline),
+            overdue ? "var(--risk)" : null) : "",
+          university: cellText(university),
+          intake: cellText(t(ref(L.intake, d.intake))),
+          dossier: dos ? cellBar(dos.percent) : "",
+          contacts: cellContacts(contact?.phone ?? null, contact?.email ?? null),
+        },
       };
-    }), loc("Договор", "Shartnoma")) : kanban("deal", stagesOf(pipeline), deals.map(dealCard))}`;
+    })) : kanban("deal", stagesOf(pipeline), deals.map(dealCard))}`;
 }
 
 function screenDeal(id) {

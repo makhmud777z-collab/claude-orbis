@@ -69,7 +69,7 @@ export function Automation({
 
   return (
     <>
-      <div className="stagger-in space-y-8">
+      <div className="space-y-8">
         {pipelines.map((pipeline) => (
           <section key={pipeline.id} className="card overflow-hidden">
             <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-hairline-soft bg-surface-2 px-5 py-3.5">
@@ -82,10 +82,9 @@ export function Automation({
             <div className="px-4 py-4">
               <div className="-mx-4 overflow-x-auto px-4 pb-1">
                 <div className="flex min-w-max items-stretch gap-3">
-                  {pipeline.stages.map((stage, index) => (
+                  {pipeline.stages.map((stage) => (
                     <StageColumn
                       key={stage.key}
-                      index={index}
                       pipeline={pipeline}
                       stage={stage}
                       robots={robots.filter((r) => r.pipelineId === pipeline.id && r.stage === stage.key)}
@@ -133,10 +132,9 @@ export function Automation({
 /* ── колонка стадии ──────────────────────────────────────────── */
 
 function StageColumn({
-  index, pipeline, stage, robots, triggers, staff, locale, canEdit,
+  pipeline, stage, robots, triggers, staff, locale, canEdit,
   onAddRobot, onEditRobot, onAddTrigger,
 }: {
-  index: number;
   pipeline: PipelineCol;
   stage: StageCol;
   robots: Robot[];
@@ -152,8 +150,7 @@ function StageColumn({
 
   return (
     <section
-      className="stage-col page-in flex w-[248px] flex-none flex-col overflow-hidden rounded-[16px] border border-hairline bg-surface-2"
-      style={{ animationDelay: `${Math.min(index * 40, 240)}ms` }}
+      className="stage-col flex w-[248px] flex-none flex-col overflow-hidden rounded-[16px] border border-hairline bg-surface-2"
     >
       <div className="h-[3px] w-full flex-none" style={{ background: stage.color }} />
 

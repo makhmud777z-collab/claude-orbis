@@ -629,6 +629,25 @@ export const S = {
     owner: loc("Ответственный", "Mas’ul"),
   },
 
+  list: {
+    columns: loc("Колонки", "Ustunlar"),
+    columnsHint: loc(
+      "Какие колонки показывать в списке и в каком порядке.",
+      "Ro‘yxatda qaysi ustunlar va qanday tartibda ko‘rsatilsin.",
+    ),
+    contacts: loc("Связь", "Aloqa"),
+    created: loc("Создан", "Yaratilgan"),
+    status: loc("Статус", "Holat"),
+    project: loc("Проект", "Loyiha"),
+    creator: loc("Поставил", "Qo‘ygan"),
+    progress: loc("Готовность", "Tayyorlik"),
+    name: loc("Название", "Nomi"),
+    noColumns: loc(
+      "Все колонки скрыты — осталось только название.",
+      "Barcha ustunlar yashirilgan — faqat nomi qoldi.",
+    ),
+  },
+
   pipelines: {
     title: loc("Воронки", "Voronkalar"),
     subtitle: loc(
@@ -737,6 +756,10 @@ export const S = {
     useTemplate: loc("Создать по шаблону", "Shablon bo‘yicha yaratish"),
     completed: loc("выполнено", "bajarilgan"),
     overdueTasks: loc("просрочено", "kechikkan"),
+    dragHint: loc(
+      "Перетащите проект в другой столбец, чтобы сменить статус",
+      "Holatni o‘zgartirish uchun loyihani boshqa ustunga torting",
+    ),
   },
 
   structure: {

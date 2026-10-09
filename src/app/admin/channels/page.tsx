@@ -73,7 +73,7 @@ export default async function ChannelsPage() {
 
       <Banner>{t(S.channels.stage2)}</Banner>
 
-      <div className="stagger-in grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {channels.map((channel) => {
           const status = STATUS[channel.status];
           const Icon = CHANNEL_ICON[channel.kind];

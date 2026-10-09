@@ -108,7 +108,7 @@ export default async function AutomationPage() {
         <div className="card overflow-hidden">
           <div className="scroll-x">
             <table className="w-full min-w-[680px] border-collapse">
-              <tbody className="stagger-in">
+              <tbody >
                 {runs.map((run) => {
                   const meta = RUN_META[run.status];
                   return (

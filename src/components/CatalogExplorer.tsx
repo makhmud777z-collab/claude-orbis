@@ -260,7 +260,7 @@ export function CatalogExplorer({
           </span>
         </div>
 
-        <div className="stagger-in space-y-4">
+        <div className="space-y-4">
           {rows.map(({ university: u, programs, match }) => (
             <div key={u.id} className="card card-hover p-5">
               <div className="flex flex-wrap items-start justify-between gap-4">

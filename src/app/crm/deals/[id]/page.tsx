@@ -185,7 +185,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
               </span>
             </div>
             <Progress percent={dossier.percent} />
-            <ul className="stagger-in mt-3 space-y-1.5">
+            <ul className="mt-3 space-y-1.5">
               {docs.slice(0, 8).map((doc) => {
                 const meta = DOCUMENT_STATUS[doc.status];
                 return (
@@ -205,7 +205,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
           {tasks.length ? (
             <div className="card p-4">
               <div className="t-headline mb-3">{t(S.applications.tasksOfApplication)}</div>
-              <ul className="stagger-in space-y-2">
+              <ul className="space-y-2">
                 {tasks.map((task) => (
                   <li key={task.id} className="t-caption flex items-center gap-2.5">
                     <Avatar name={userById(task.assigneeId)?.name ?? "—"} size={20} />

@@ -36,7 +36,7 @@ export function LegalPage({
         <p className="t-caption mt-2.5 text-ink-faint">{updated}</p>
       </header>
 
-      <article className="stagger-in">{children}</article>
+      <article >{children}</article>
 
       <footer className="t-caption mt-14 border-t border-hairline-soft pt-6 text-ink-faint">
         Orbis System · {ROOT_DOMAIN} ·{" "}

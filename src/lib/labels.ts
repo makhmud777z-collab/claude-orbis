@@ -5,6 +5,7 @@ import type {
   DocumentStatus,
   LeadSource,
   Ownership,
+  Project,
   TaskStatus,
 } from "./types";
 
@@ -28,6 +29,17 @@ export const TASK_STATUS: Record<TaskStatus, { label: Loc; dot: string }> = {
   in_progress: { label: loc("В работе", "Ishda"), dot: "var(--color-status-progress)" },
   review: { label: loc("На проверке", "Tekshiruvda"), dot: "var(--color-status-open)" },
   done: { label: loc("Готово", "Bajarildi"), dot: "var(--color-status-deal)" },
+};
+
+/**
+ * Статусы проекта. Лежат здесь, а не в странице проектов: тот же набор
+ * подписывает колонки доски проектов и колонку статуса в списке, и
+ * расходиться они не должны.
+ */
+export const PROJECT_STATUS: Record<Project["status"], { label: Loc; dot: string }> = {
+  active: { label: loc("Активен", "Faol"), dot: "var(--color-status-open)" },
+  paused: { label: loc("На паузе", "To‘xtatilgan"), dot: "var(--color-status-hold)" },
+  done: { label: loc("Завершён", "Yakunlangan"), dot: "var(--color-status-deal)" },
 };
 
 export const DEADLINE_KIND: Record<DeadlineKind, { label: Loc; dot: string }> = {

@@ -111,7 +111,7 @@ export default async function DashboardPage() {
         }
       />
 
-      <div className="stagger-in grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
           label={t(S.dashboard.tileStudents)}
           value={active}
@@ -233,7 +233,7 @@ export default async function DashboardPage() {
           >
             {t(S.dashboard.nearestDeadlines)}
           </SectionTitle>
-          <div className="stagger-in card divide-y divide-hairline-soft">
+          <div className="card divide-y divide-hairline-soft">
             {deadlines.slice(0, 6).map((d) => {
               const kind = DEADLINE_KIND[d.kind];
               const owner = userById(d.ownerId);
@@ -311,7 +311,7 @@ export default async function DashboardPage() {
           >
             {t(S.dashboard.myTasks)}
           </SectionTitle>
-          <div className="stagger-in card divide-y divide-hairline-soft">
+          <div className="card divide-y divide-hairline-soft">
             {myTasks.map((task) => {
               const assignee = userById(task.assigneeId);
               // Просрочено и «скоро» — не одно и то же: красим в красный только
@@ -360,7 +360,7 @@ export default async function DashboardPage() {
           </div>
 
           <SectionTitle>{t(S.dashboard.feed)}</SectionTitle>
-          <div className="stagger-in card divide-y divide-hairline-soft">
+          <div className="card divide-y divide-hairline-soft">
             {activity.slice(0, 7).map((e) => {
               const actor = userById(e.authorId);
               return (

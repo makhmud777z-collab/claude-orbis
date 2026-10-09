@@ -44,21 +44,31 @@ function renderRail() {
     </span>`).join("");
 
   return `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:22px">
-      <a href="#" data-go="${esc(items[0]?.href ?? "universities")}" style="display:flex;gap:12px;align-items:center;flex:1;min-width:0;padding:0 4px">
-        <span style="width:32px;height:32px;border-radius:999px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;flex:none">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <!--
+      Шапка рельсы: знак продукта и рабочее место одним блоком. Главное
+      здесь — агентство, а не марка продукта: человек каждый день работает
+      в своём агентстве, а не в «Orbis». Сама марка и кнопка сворачивания
+      съехали строкой ниже: они нужны редко и не должны теснить название.
+    -->
+    <div style="margin-bottom:20px">
+      <a class="rail-brand" href="#" data-go="${esc(items[0]?.href ?? "universities")}"
+         style="display:flex;gap:12px;align-items:center;min-width:0;padding:8px;border-radius:14px">
+        <span class="rail-mark" style="width:36px;height:36px;border-radius:11px;color:#fff;display:flex;align-items:center;justify-content:center;flex:none">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3.4" fill="currentColor"/>
             <circle cx="19.6" cy="6.4" r="2.1" fill="currentColor"/>
           </svg>
         </span>
-        ${narrow ? "" : `<span style="min-width:0">
-          <span style="display:block;font-size:16px;font-weight:600;letter-spacing:-.5px;line-height:1.2">Orbis</span>
+        ${narrow ? "" : `<span style="min-width:0;flex:1">
+          <span class="truncate" style="display:block;font-size:14px;font-weight:600;letter-spacing:-.3px;line-height:1.2">${esc(tenant().name)}</span>
           <span class="t-micro faint truncate" style="display:block">${esc(tenant().slug)}.orbisystem.us</span>
         </span>`}
       </a>
-      ${narrow ? "" : `<button class="icon-btn" style="width:28px;height:28px" data-act="rail"
-        title="${t(loc("Свернуть меню", "Menyuni yig‘ish"))}">${icon("panel", 15)}</button>`}
+      ${narrow ? "" : `<div style="display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--hairline-soft)">
+        <span class="t-micro faint truncate" style="flex:1;padding-left:4px">Orbis System</span>
+        <button class="icon-btn" style="width:28px;height:28px" data-act="rail"
+          title="${t(loc("Свернуть меню", "Menyuni yig‘ish"))}">${icon("panel", 15)}</button>
+      </div>`}
     </div>
 
     ${narrow ? `<button class="icon-btn" style="width:36px;height:36px;align-self:center;margin-bottom:10px" data-act="rail"
@@ -97,15 +107,27 @@ function renderRail() {
       }).join("")}
     </nav>
 
-    ${narrow ? "" : `<div class="card" style="padding:12px;margin-top:20px">
-      <div style="display:flex;gap:10px;align-items:center">
-        <span style="width:28px;height:28px;border-radius:7px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex:none">${esc(tenant().mark)}</span>
-        <span style="min-width:0">
-          <span class="t-caption truncate" style="display:block">${esc(tenant().name)}</span>
-          <span class="t-micro faint truncate" style="display:block">${esc(roleName(roleById(user().role)))}</span>
-        </span>
-      </div>
-    </div>`}`;
+    <!--
+      Подвал рельсы — состояние рабочего места, а не повтор шапки. Роль
+      сотрудника видна в шапке портала под его именем; здесь полезнее версия,
+      тариф и занятые места: по ним понимают, когда пора расширять агентство.
+    -->
+    ${narrow
+      ? `<div style="margin-top:20px;display:flex;justify-content:center">
+          <span class="rail-mark" style="width:32px;height:32px;border-radius:10px;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px"
+            title="${esc(tenant().name)} · ${tenant().seatsUsed}/${tenant().seatsLimit}">${esc(tenant().mark)}</span>
+        </div>`
+      : `<div class="rail-foot" style="margin-top:20px;border-radius:14px;padding:12px 14px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+            <span class="t-caption truncate" style="font-weight:500">${esc(EDITION_CODE[tenant().edition] ?? "")} · ${esc(tenant().plan.toUpperCase())}</span>
+            <span class="t-micro num faint" style="flex:none">${tenant().seatsUsed} / ${tenant().seatsLimit}</span>
+          </div>
+          <div style="height:3px;border-radius:999px;background:var(--surface-3);margin-top:8px;overflow:hidden">
+            <i style="display:block;height:100%;border-radius:999px;width:${Math.min(100, Math.round((tenant().seatsUsed / Math.max(1, tenant().seatsLimit)) * 100))}%;
+              background:${tenant().seatsUsed / Math.max(1, tenant().seatsLimit) > 0.9 ? "var(--risk)" : "var(--accent)"}"></i>
+          </div>
+          <div class="t-micro faint" style="margin-top:6px">${t(loc("мест по тарифу", "tarif bo‘yicha o‘rin"))}</div>
+        </div>`}`;
 }
 
 /**
@@ -575,7 +597,33 @@ function render() {
   document.documentElement.style.setProperty("--orbis-backdrop", layers || "none");
   if (layers) document.documentElement.dataset.backdrop = S.backdrop;
   else delete document.documentElement.dataset.backdrop;
+  enterScreen();
   afterRender();
+}
+
+/** Какой раздел показан сейчас: по нему решается, играть ли появление. */
+let shownRoute = null;
+
+/**
+ * Появление экрана — ровно один раз на вход в раздел.
+ *
+ * Прототип перерисовывает содержимое на любое действие: фильтр, тема, смена
+ * вида, сохранение формы. Поэтому решение принимает код, а не CSS: запомнил
+ * раздел, сравнил, проиграл только при настоящем переходе. Повторный клик по
+ * тому разделу, где человек уже стоит, не делает ничего.
+ */
+function enterScreen() {
+  const el = document.getElementById("content");
+  const route = S.route + (S.param ? "/" + S.param : "");
+  const first = shownRoute === null;
+  const moved = shownRoute !== route;
+  shownRoute = route;
+  if ((!first && !moved) || !el.animate) return;
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+  el.animate(
+    [{ opacity: 0, transform: "translateY(5px)" }, { opacity: 1, transform: "none" }],
+    { duration: 320, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
+  );
 }
 
 /**
@@ -668,6 +716,20 @@ function moveCard(entity, id, stageKey) {
   addNote(entity, id, "stage",
     loc(`Стадия изменена: ${from?.label.ru ?? "—"} → ${to.label.ru}`,
         `Bosqich o‘zgardi: ${from?.label.uz ?? "—"} → ${to.label.uz}`));
+}
+
+/** Перенос задачи по доске задач: статус и пометка для приземления. */
+function moveTask(id, status) {
+  const task = scopedTasks().find((x) => x.id === id);
+  if (!task || taskStatusOf(task) === status) return;
+  S.taskMoved[id] = status;
+}
+
+/** Перенос проекта по доске проектов. */
+function moveProject(id, status) {
+  const project = scopedProjects().find((p) => p.id === id);
+  if (!project || projectStatusOf(project) === status) return;
+  S.projectMoved[id] = status;
 }
 
 const ACTIONS = {
@@ -870,9 +932,22 @@ const ACTIONS = {
   theme: (v) => { S.theme = v; try { localStorage.setItem("orbis-theme", v); } catch { /* приватное окно */ } },
   accent: (v) => { S.accent = v; try { localStorage.setItem("orbis-accent", v); } catch { /* приватное окно */ } },
   backdrop: (v) => { S.backdrop = v; try { localStorage.setItem("orbis-backdrop", v); } catch { /* приватное окно */ } },
-  move: (v) => { const [entity, id, stage] = v.split(":"); moveCard(entity, id, stage); },
+  // Перенос из разметки и из прогона: доска у каждой сущности своя.
+  move: (v) => {
+    const [entity, id, stage] = v.split(":");
+    if (entity === "task") moveTask(id, stage);
+    else if (entity === "project") moveProject(id, stage);
+    else moveCard(entity, id, stage);
+  },
   pipeline: () => { S.popover = null; },
-  view: (v) => { S.view = v; },
+  // Вид свой на каждый раздел: «deals:list», «tasks:board».
+  view: (v) => { const [section, mode] = v.split(":"); S.views[section] = mode; },
+  listfield: (v) => {
+    const [section, key] = v.split(":");
+    S.listFields[section] = toggleIn(S.listFields[section] ?? [], key);
+  },
+  listreset: (v) => { S.listFields[v] = [...DEFAULT_LIST_FIELDS[v]]; },
+  "pop.close": () => { S.popover = null; },
   "cal.view": (v) => { S.cal.view = v; },
   "cal.day": (v) => { S.cal.date = v; S.cal.view = "day"; },
   "cal.today": () => { S.cal.date = TODAY_ISO; },
@@ -1265,6 +1340,9 @@ document.addEventListener("dragstart", (e) => {
   S.drag = { id: card.dataset.drag, entity: card.dataset.entity };
   e.dataTransfer.effectAllowed = "move";
   e.dataTransfer.setData("text/plain", card.dataset.drag);
+  // Взятая карточка отходит на задний план: видно, что она покинула колонку.
+  // Класс ставим прямо в DOM — перерисовка во время жеста обрывает перенос.
+  card.classList.add("kan-lifted");
 });
 document.addEventListener("dragover", (e) => {
   if (S.dragUser) {
@@ -1273,7 +1351,7 @@ document.addEventListener("dragover", (e) => {
     return;
   }
   const col = e.target.closest("[data-drop]");
-  if (!col || !S.drag) return;
+  if (!col || !S.drag || col.dataset.entity !== S.drag.entity) return;
   e.preventDefault();
   // Подсветку колонки ставим прямо в DOM: перерисовка во время перетаскивания
   // уничтожает элемент, который тащит браузер, и жест обрывается.
@@ -1296,14 +1374,33 @@ document.addEventListener("drop", (e) => {
     return;
   }
   const col = e.target.closest("[data-drop]");
-  if (!col || !S.drag) return;
+  if (!col || !S.drag || col.dataset.entity !== S.drag.entity) return;
   e.preventDefault();
-  moveCard(S.drag.entity, S.drag.id, col.dataset.drop);
+  const { entity, id } = S.drag;
+  if (entity === "task") moveTask(id, col.dataset.drop);
+  else if (entity === "project") moveProject(id, col.dataset.drop);
+  else moveCard(entity, id, col.dataset.drop);
   S.drag = null;
   S.over = null;
   render();
+  land(id);
 });
 document.addEventListener("dragend", () => { S.drag = null; S.dragUser = null; S.over = null; render(); });
+
+/**
+ * Приземление карточки.
+ *
+ * Карточку перерисовывает render, поэтому движение вешается после него, на
+ * новый узел: она прилетает сверху, слегка проваливается и встаёт на место
+ * с подсветкой края — ровно как в продукте. Класс снимаем по окончании,
+ * иначе повторный перенос той же карточки ничего не сыграет.
+ */
+function land(id) {
+  const el = document.querySelector(`[data-drag="${CSS.escape(id)}"]`);
+  if (!el) return;
+  el.classList.add("kan-landed");
+  el.addEventListener("animationend", () => el.classList.remove("kan-landed"), { once: true });
+}
 
 document.addEventListener("keydown", (e) => {
   // Enter в строке фильтра = «Найти»: набрал и нажал, как в Битриксе

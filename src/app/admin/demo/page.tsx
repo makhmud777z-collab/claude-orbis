@@ -23,7 +23,7 @@ export default async function AdminDemoPage() {
       <PageHeader title={t(S.admin.demo)} meta={<span>{t(S.admin.demoHint)}</span>} />
 
       <SectionTitle>{t(S.common.workspace)}</SectionTitle>
-      <form action={switchTenant} className="stagger-in grid grid-cols-1 gap-3 md:grid-cols-3">
+      <form action={switchTenant} className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {TENANTS.map((item) => {
           const on = item.id === session.tenant.id;
           return (
@@ -49,7 +49,7 @@ export default async function AdminDemoPage() {
       </form>
 
       <SectionTitle>{t(S.common.signInAs)}</SectionTitle>
-      <form action={switchUser} className="stagger-in grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <form action={switchUser} className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {staff.map((member) => {
           const on = member.id === session.user.id;
           return (

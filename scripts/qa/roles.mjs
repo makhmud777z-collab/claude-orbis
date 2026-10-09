@@ -94,13 +94,15 @@ for (const [userId, exp] of Object.entries(EXPECT)) {
     await rail.locator("a[href]").evaluateAll((els) =>
       els.map((e) => e.getAttribute("href")).filter((h) => h && !h.startsWith("http"))),
   );
-  const roleShown = await rail.innerText();
+  // Роль сотрудника живёт в шапке, под его именем, а не в подвале меню:
+  // в подвале теперь состояние рабочего места — тариф и занятые места.
+  const roleShown = await page.locator("header").first().innerText();
 
   const missing = exp.must.filter((href) => !got.has(href));
   const extra = exp.mustNot.filter((href) => got.has(href));
   if (missing.length) issues.push(`${userId} (${exp.role}): в меню нет ${JSON.stringify(missing)}`);
   if (extra.length) issues.push(`${userId} (${exp.role}): в меню лишнее ${JSON.stringify(extra)}`);
-  if (!roleShown.includes(exp.role)) issues.push(`${userId}: в сайдбаре роль не «${exp.role}»`);
+  if (!roleShown.includes(exp.role)) issues.push(`${userId}: в шапке роль не «${exp.role}»`);
 
   for (const route of GUARDED.filter((r) => exp.mustNot.includes(r))) {
     await page.goto(BASE + route, { waitUntil: "networkidle" });

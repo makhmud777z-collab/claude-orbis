@@ -244,7 +244,7 @@ export function SmartFilter({
             <div className="t-micro mb-2 px-2 uppercase tracking-[0.08em] text-ink-faint">
               {t(FILTER_TEXT.savedFilters)}
             </div>
-            <div className="stagger-in space-y-0.5">
+            <div className="space-y-0.5">
               {presets.map((item) => (
                 <button
                   key={item.key}

@@ -104,7 +104,7 @@ export default async function FinancePage({
         shown={apps.length}
       />
 
-      <div className="stagger-in grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
           label={t(S.finance.contracted)}
           value={f.som(contracted, { compact: true })}
@@ -137,7 +137,7 @@ export default async function FinancePage({
         <>
           <section className="mt-9">
             <SectionTitle>{t(S.finance.byManager)}</SectionTitle>
-            <div className="stagger-in card divide-y divide-hairline-soft">
+            <div className="card divide-y divide-hairline-soft">
               {byManager.map((row) => (
                 <div key={row.user.id} className="flex flex-wrap items-center gap-4 px-5 py-4">
                   <Avatar name={row.user.name} size={30} />
@@ -186,7 +186,7 @@ export default async function FinancePage({
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="stagger-in">
+                  <tbody >
                     {apps.map((a) => {
                       const stage = stageOf(pipelineById(a.pipelineId), a.stage);
                       return (

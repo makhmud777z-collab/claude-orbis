@@ -189,7 +189,7 @@ export function PermissionsMatrix({
             </tr>
           </thead>
 
-          <tbody className="stagger-in">
+          <tbody >
             {/* Зона видимости — не галочка, а выбор из трёх: столько их умеет
                 сама выборка данных. Поэтому ячейка здесь ссылка, не тумблер. */}
             <tr className="border-b border-hairline-soft">

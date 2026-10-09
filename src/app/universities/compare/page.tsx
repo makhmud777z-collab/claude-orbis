@@ -206,7 +206,7 @@ export default async function ComparePage({
                   ))}
                 </tr>
               </thead>
-              <tbody className="stagger-in">
+              <tbody >
                 {student ? (
                   <tr className="border-b border-hairline-soft bg-surface-2/40">
                     <td className="t-caption sticky left-0 z-10 bg-surface-1 px-5 py-3 text-ink-muted">

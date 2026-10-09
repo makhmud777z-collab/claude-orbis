@@ -86,7 +86,7 @@ export default async function DeadlinesPage({
 
       {!deadlines.length ? <EmptyState title={t(FILTER_TEXT.nothing)} /> : null}
 
-      <div className="stagger-in space-y-8">
+      <div className="space-y-8">
         {GROUPS.map((group) => {
           const items = deadlines.filter((d) => group.test(daysUntil(d.date)));
           if (!items.length) return null;
@@ -97,7 +97,7 @@ export default async function DeadlinesPage({
               >
                 {t(group.title)}
               </SectionTitle>
-              <div className="stagger-in card divide-y divide-hairline-soft">
+              <div className="card divide-y divide-hairline-soft">
                 {items.map((d) => {
                   const kind = DEADLINE_KIND[d.kind];
                   const owner = userById(d.ownerId);

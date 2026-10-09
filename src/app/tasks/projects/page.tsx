@@ -1,24 +1,34 @@
 import Link from "next/link";
+import { ListColumns } from "@/components/ListColumns";
+import { ProjectsBoard, type ProjectCard } from "@/components/ProjectsBoard";
+import { BarCell, NumCell, PeopleCell, PersonCell, RecordList, TagCell } from "@/components/RecordList";
 import { SectionFilter } from "@/components/SectionFilter";
+import { ViewSwitch } from "@/components/ViewSwitch";
 import { moduleGate } from "@/components/guard";
-import { Avatar, Chip, Crumbs, EmptyState, PageHeader, Progress, StatusDot } from "@/components/ui";
+import { Crumbs, EmptyState, PageHeader } from "@/components/ui";
 import { userById } from "@/lib/data/users";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
 import { formatters, isPast } from "@/lib/format";
-import { translator, type Loc } from "@/lib/i18n";
+import { translator } from "@/lib/i18n";
+import { PROJECT_STATUS } from "@/lib/labels";
+import { DEFAULT_LIST_COLUMNS, listCatalog, listColumns } from "@/lib/list-columns";
 import { scopedProjects, scopedTasks, scopedTeam } from "@/lib/queries";
+import { allow } from "@/lib/rbac";
 import { projectFields, simplePresets } from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
+import { listFieldsOf } from "@/lib/store";
 import { P, S } from "@/lib/strings";
+import { readView } from "@/lib/view";
 import type { Project } from "@/lib/types";
 
-const STATUS: Record<Project["status"], { label: Loc; dot: string }> = {
-  active: { label: S.projects.statusActive, dot: "var(--color-status-open)" },
-  done: { label: S.projects.statusDone, dot: "var(--color-status-deal)" },
-  paused: { label: S.projects.statusPaused, dot: "var(--color-status-hold)" },
-};
-
-/** Проекты объединяют задачи в общую цель: набор, сверка каталога, открытие филиала. */
+/**
+ * Проекты объединяют задачи в общую цель: набор, сверка каталога, открытие
+ * филиала.
+ *
+ * Показываются так же, как всё остальное в портале: доской, если работу
+ * ведут, и списком, если её проверяют. На доске столбцы — статусы проекта, и
+ * проект переносится между ними рукой.
+ */
 export default async function ProjectsPage({
   searchParams,
 }: {
@@ -39,6 +49,37 @@ export default async function ProjectsPage({
   const projects = all.filter((p) => matchesFilter(projectRow(p, t(p.name)), fields, values, query));
   const tasks = scopedTasks(session);
 
+  const view = readView(params);
+  const picked = listFieldsOf(session.user.id, "projects", DEFAULT_LIST_COLUMNS.projects);
+  const columns = listColumns("projects", picked, t);
+
+  /** Сколько задач проекта закрыто и сколько из открытых просрочено. */
+  const progressOf = (project: Project) => {
+    const mine = tasks.filter((task) => task.projectId === project.id);
+    return {
+      total: mine.length,
+      done: mine.filter((task) => task.status === "done").length,
+      overdue: mine.filter((task) => task.status !== "done" && isPast(task.dueAt)).length,
+    };
+  };
+
+  const cards: ProjectCard[] = projects.map((project) => {
+    const counts = progressOf(project);
+    return {
+      id: project.id,
+      name: t(project.name),
+      description: project.description,
+      status: project.status,
+      leadName: userById(project.leadId)?.name ?? null,
+      memberNames: project.memberIds
+        .map((id) => userById(id)?.name)
+        .filter((name): name is string => Boolean(name)),
+      dueLabel: f.date(project.dueAt),
+      dueHint: f.relativeDeadline(project.dueAt),
+      ...counts,
+    };
+  });
+
   return (
     <>
       <Crumbs back="/tasks" backLabel={t(S.nav.tasks)} current={t(S.projects.title)} />
@@ -49,6 +90,20 @@ export default async function ProjectsPage({
             <span>{f.plural(all.length, P.projects)}</span>
             <span>·</span>
             <Link href="/tasks" className="hover:text-ink">{t(S.nav.tasks)}</Link>
+          </>
+        }
+        actions={
+          <>
+            <ViewSwitch view={view} locale={session.locale} />
+            {view === "list" ? (
+              <ListColumns
+                section="projects"
+                catalog={listCatalog("projects", t)}
+                picked={picked}
+                defaults={DEFAULT_LIST_COLUMNS.projects}
+                locale={session.locale}
+              />
+            ) : null}
           </>
         }
       />
@@ -63,71 +118,44 @@ export default async function ProjectsPage({
         shown={projects.length}
       />
 
-      {!projects.length ? <EmptyState title={t(FILTER_TEXT.nothing)} /> : null}
+      {!projects.length ? (
+        <EmptyState title={t(FILTER_TEXT.nothing)} />
+      ) : view === "list" ? (
+        <RecordList
+          nameLabel={t(S.list.name)}
+          noColumnsNote={t(S.list.noColumns)}
+          columns={columns}
+          rows={cards.map((card) => {
+            const meta = PROJECT_STATUS[card.status];
+            const percent = card.total ? (card.done / card.total) * 100 : 0;
 
-      <div className="stagger-in grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {projects.map((project) => {
-          const mine = tasks.filter((task) => task.projectId === project.id);
-          const done = mine.filter((task) => task.status === "done").length;
-          const overdue = mine.filter(
-            (task) => task.status !== "done" && isPast(task.dueAt),
-          ).length;
-          const status = STATUS[project.status];
-          const lead = userById(project.leadId);
-
-          return (
-            <article key={project.id} className="card p-5">
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="t-body-lg min-w-0">{t(project.name)}</h2>
-                <span className="chip flex-none">
-                  <StatusDot color={status.dot} />
-                  {t(status.label)}
-                </span>
-              </div>
-
-              <p className="t-caption mt-2 leading-relaxed text-ink-muted">
-                {project.description}
-              </p>
-
-              <div className="mt-4">
-                <div className="t-micro mb-1.5 flex items-center justify-between text-ink-faint">
-                  <span>
-                    {done} / {mine.length} {t(S.projects.completed)}
-                  </span>
-                  {overdue ? (
-                    <span style={{ color: "var(--color-status-risk)" }}>
-                      {overdue} {t(S.projects.overdueTasks)}
-                    </span>
-                  ) : null}
-                </div>
-                <Progress percent={mine.length ? (done / mine.length) * 100 : 0} />
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center gap-1.5">
-                {lead ? (
-                  <Chip active>
-                    <Avatar name={lead.name} size={18} />
-                    {lead.name}
-                  </Chip>
-                ) : null}
-                {project.memberIds.slice(0, 4).map((memberId) => {
-                  const member = userById(memberId);
-                  return member ? (
-                    <Chip key={memberId}>
-                      <Avatar name={member.name} size={16} />
-                      {member.name.split(" ")[0]}
-                    </Chip>
-                  ) : null;
-                })}
-              </div>
-
-              <div className="t-micro mt-4 text-ink-faint">
-                {t(S.projects.due)}: {f.date(project.dueAt)} · {f.relativeDeadline(project.dueAt)}
-              </div>
-            </article>
-          );
-        })}
-      </div>
+            return {
+              id: card.id,
+              title: card.name,
+              subtitle: card.description,
+              flag: card.overdue ? "var(--color-status-risk)" : null,
+              cells: {
+                status: <TagCell label={t(meta.label)} color={meta.dot} />,
+                lead: card.leadName ? <PersonCell name={card.leadName} /> : null,
+                due: <NumCell value={card.dueLabel} hint={card.dueHint} />,
+                progress: (
+                  <BarCell
+                    percent={percent}
+                    note={`${card.done} / ${card.total} ${t(S.projects.completed)}`}
+                  />
+                ),
+                members: <PeopleCell names={card.memberNames} />,
+              },
+            };
+          })}
+        />
+      ) : (
+        <ProjectsBoard
+          projects={cards}
+          locale={session.locale}
+          canEdit={allow(session.tenant.id, session.role, "projects", "edit")}
+        />
+      )}
     </>
   );
 }

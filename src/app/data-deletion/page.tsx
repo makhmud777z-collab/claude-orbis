@@ -38,7 +38,7 @@ export default async function DataDeletionPage({
     <LegalPage title="Удаление данных" updated="Действует с 7 октября 2026 года">
       {code ? (
         <section
-          className="rise-in mb-10 rounded-[12px] border px-5 py-4"
+          className="mb-10 rounded-[12px] border px-5 py-4"
           style={{
             borderColor: record ? "var(--color-hairline)" : "rgb(224 179 65 / 0.35)",
             background: "var(--color-surface-1)",

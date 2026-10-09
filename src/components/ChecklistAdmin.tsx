@@ -45,7 +45,7 @@ export function ChecklistAdmin({
   return (
     <>
       <div className="card overflow-hidden">
-        <div className="stagger-in">
+        <div >
           {rows.map((row, index) => (
             <div
               key={row.id}

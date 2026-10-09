@@ -90,6 +90,8 @@ const MODULES_BY_EDITION = {
   advanced: [],
 };
 const EDITION_ORDER = { mvp: 1, crm: 2, advanced: 3 };
+/** Код версии из дорожной карты — тот же, что в продукте. */
+const EDITION_CODE = { mvp: "01 / MVP", crm: "02 / CRM", advanced: "03 / ADVANCED" };
 function editionModules(edition) {
   return Object.entries(MODULES_BY_EDITION)
     .filter(([key]) => EDITION_ORDER[key] <= EDITION_ORDER[edition])

@@ -21,7 +21,7 @@ import type {
   CalendarEvent, Channel, CustomField, Deal, Department, EventKind, Lead, Pipeline, Project, Role,
   ChecklistItem, MetaDeletion, MetaEvent, MetaFormMapping, MetaPage, MetaPending,
   Robot, RobotPending, RobotRun, Trigger, TriggerEvent,
-  Stage, Student, StudentDocument, Task, Tenant, TenantRole, TimelineEvent, User, WorkSession,
+  Stage, Student, StudentDocument, Task, TaskStatus, Tenant, TenantRole, TimelineEvent, User, WorkSession,
 } from "./types";
 
 /**
@@ -84,6 +84,8 @@ interface State {
   robotRuns: RobotRun[];
   /** какие поля показывать на карточке канбана: userId → список полей */
   cardFields: Record<string, string[]>;
+  /** какие колонки показывать в списке: «userId:раздел» → список колонок */
+  listFields: Record<string, string[]>;
   /** сохранённые фильтры: «userId:раздел» → срезы сотрудника */
   filters: Record<string, SavedFilter[]>;
   /** код входа в «Администрирование», если агентство его сменило */
@@ -101,7 +103,7 @@ interface State {
  * кода, и новое поле оказалось бы undefined — поэтому состояние с чужой
  * версией пересоздаётся целиком.
  */
-const STATE_VERSION = 13;
+const STATE_VERSION = 14;
 
 const globalStore = globalThis as unknown as { __orbisStore?: State };
 
@@ -131,6 +133,7 @@ function createState(): State {
     robotQueue: [],
     robotRuns: [],
     cardFields: {},
+    listFields: {},
     filters: {},
     passcodes: {},
     customValues: {},
@@ -868,6 +871,31 @@ export function setCardFields(userId: string, fields: string[]) {
   state.cardFields[userId] = fields;
 }
 
+/* ── настройка колонок списка ────────────────────────────────── */
+
+/**
+ * Колонки списка настраиваются отдельно на каждый раздел.
+ *
+ * Один набор на весь портал не годится: в сделках смотрят сумму и дедлайн,
+ * в задачах — исполнителя и срок, и ключи у этих колонок разные. Поэтому
+ * ключ хранения составной — сотрудник и раздел.
+ *
+ * Пустой список — это выбор сотрудника, а не отсутствие настройки: он
+ * оставил одно название и убрал всё остальное. Поэтому отличаем «не
+ * настраивал» (нет записи) от «убрал всё» (пустой массив).
+ */
+const listKey = (userId: string, section: string) => `${userId}:${section}`;
+
+export const listFieldsOf = (
+  userId: string,
+  section: string,
+  fallback: string[],
+): string[] => state.listFields[listKey(userId, section)] ?? fallback;
+
+export function setListFields(userId: string, section: string, fields: string[]) {
+  state.listFields[listKey(userId, section)] = fields;
+}
+
 /* ── запись в историю ────────────────────────────────────────── */
 export function addTimeline(event: Omit<TimelineEvent, "id" | "at"> & { at?: string }) {
   const item: TimelineEvent = { ...event, id: nextId("tl"), at: event.at ?? now() };
@@ -1512,6 +1540,49 @@ export function setCustomValues(studentId: string, values: Record<string, string
 }
 
 /* ── задачи ──────────────────────────────────────────────────── */
+
+export const taskById = (id: string) => state.tasks.find((t) => t.id === id);
+
+/**
+ * Перенос задачи между колонками доски.
+ *
+ * То же действие, что перенос карточки в воронке, только статусов четыре и
+ * они зашиты: «сделать», «в работе», «на проверке», «готово». Запись в
+ * историю сотрудника — чтобы в отчётности было видно, кто и когда закрыл.
+ */
+export function moveTask(id: string, status: TaskStatus, actorId: string, tenantId: string) {
+  const task = state.tasks.find((t) => t.id === id && t.tenantId === tenantId);
+  if (!task) return { ok: false as const, reason: "not_found" as const };
+  if (task.status === status) return { ok: false as const, reason: "same" as const };
+
+  const from = task.status;
+  task.status = status;
+  addTimeline({
+    tenantId, entity: "employee", entityId: task.assigneeId, kind: "task",
+    title: loc(`Задача «${task.title}»: ${from} → ${status}`, `Vazifa «${task.title}»: ${from} → ${status}`),
+    body: null, authorId: actorId, source: null, dueAt: task.dueAt,
+    done: status === "done",
+  });
+  return { ok: true as const, task };
+}
+
+/**
+ * Перенос проекта по статусам — то же, что перенос задачи, только статусов
+ * три: в работе, на паузе, завершён. Отдельная запись в истории здесь не
+ * нужна: проект — это рамка вокруг задач, и его собственная лента никому не
+ * показывается; важен сам статус, который видят все.
+ */
+export function moveProject(
+  id: string,
+  status: Project["status"],
+  tenantId: string,
+) {
+  const project = state.projects.find((p) => p.id === id && p.tenantId === tenantId);
+  if (!project) return { ok: false as const, reason: "not_found" as const };
+  if (project.status === status) return { ok: false as const, reason: "same" as const };
+  project.status = status;
+  return { ok: true as const, project };
+}
 
 /** Новая задача от руководителя сотруднику: та же модель, что и в сидах. */
 export function addTask(input: {

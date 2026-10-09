@@ -59,7 +59,7 @@ export default async function TaskReportsPage() {
         }
       />
 
-      <div className="stagger-in grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
           label={t(S.tasks.inProgress)}
           value={open.length}
@@ -89,7 +89,7 @@ export default async function TaskReportsPage() {
       <section className="mt-9 grid min-w-0 gap-5 lg:grid-cols-[1.2fr_1fr]">
         <div className="card min-w-0 p-5">
           <h2 className="t-headline mb-4">{t(S.staffReports.employee)}</h2>
-          <div className="stagger-in space-y-3">
+          <div className="space-y-3">
             {byPerson.map((row) => (
               <Link
                 key={row.user.id}
@@ -119,7 +119,7 @@ export default async function TaskReportsPage() {
 
         <div className="card min-w-0 p-5">
           <h2 className="t-headline mb-4">{t(S.tasks.title)}</h2>
-          <div className="stagger-in space-y-3">
+          <div className="space-y-3">
             {ORDER.map((status) => {
               const count = tasks.filter((task) => task.status === status).length;
               const meta = TASK_STATUS[status];

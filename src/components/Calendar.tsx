@@ -219,7 +219,7 @@ export function Calendar({
           <div className="t-caption mb-3 uppercase tracking-[0.07em] text-ink-faint">
             {t(S.calendar.onDay)} {cursor.getDate()} {MONTHS[locale][cursor.getMonth()].toLowerCase()}
           </div>
-          <div className="stagger-in space-y-2.5">
+          <div className="space-y-2.5">
             {(byDate.get(selected) ?? []).map((item) => (
               <Entry key={item.id} item={item} />
             ))}
