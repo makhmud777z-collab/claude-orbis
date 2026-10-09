@@ -126,15 +126,17 @@ function Item({
         <Progress percent={percent} />
       </div>
 
+      {/* min-w-0 на каждом уровне: без него длинное имя руководителя не
+          обрезается, а распирает карточку и вылезает за колонку. */}
       <div className="mt-2.5 flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-1">
-          {project.leadName ? (
-            <span className="flex items-center gap-1.5" title={project.leadName}>
-              <Avatar name={project.leadName} size={22} />
-              <span className="t-micro truncate text-ink-faint">{project.leadName}</span>
-            </span>
-          ) : null}
-        </div>
+        {project.leadName ? (
+          <span className="flex min-w-0 items-center gap-1.5" title={project.leadName}>
+            <Avatar name={project.leadName} size={22} />
+            <span className="t-micro min-w-0 truncate text-ink-faint">{project.leadName}</span>
+          </span>
+        ) : (
+          <span />
+        )}
         <span className="t-micro flex-none text-ink-faint">{project.dueHint}</span>
       </div>
     </article>
