@@ -1,8 +1,9 @@
 "use client";
 
 import { moveProjectAction } from "@/app/actions";
+import { Board, BoardColumn } from "./BoardColumn";
 import { useBoardDrag } from "./board";
-import { Avatar, Progress, StatusDot } from "./ui";
+import { Avatar, Progress } from "./ui";
 import { PROJECT_STATUS } from "@/lib/labels";
 import { translator, type Locale } from "@/lib/i18n";
 import { S } from "@/lib/strings";
@@ -45,7 +46,7 @@ export function ProjectsBoard({
 }) {
   const t = translator(locale);
 
-  const { columnFor, columnProps, cardProps, over } = useBoardDrag(
+  const { columnFor, columnProps, cardProps, dropIndex, over } = useBoardDrag(
     projects,
     (project) => project.status,
     (id, status) => {
@@ -58,72 +59,33 @@ export function ProjectsBoard({
   );
 
   return (
-    <>
-      {canEdit ? (
-        <div className="t-micro mb-3 text-ink-faint">{t(S.projects.dragHint)}</div>
-      ) : null}
+    <Board hint={canEdit ? t(S.projects.dragHint) : null}>
+      {COLUMNS.map((status) => {
+        const meta = PROJECT_STATUS[status];
+        const items = projects.filter((project) => columnFor(project) === status);
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {COLUMNS.map((status) => {
-          const meta = PROJECT_STATUS[status];
-          const items = projects.filter((project) => columnFor(project) === status);
-          const active = over === status;
-
-          return (
-            <section
-              key={status}
-              {...columnProps(status)}
-              className="relative flex flex-col overflow-hidden rounded-[18px] border border-hairline bg-surface-2 transition-colors duration-150"
-              style={{
-                background: active
-                  ? `color-mix(in srgb, ${meta.dot} 6%, var(--color-surface-2))`
-                  : undefined,
-              }}
-            >
-              {active ? (
-                <span
-                  aria-hidden
-                  className="kan-drop-ring pointer-events-none absolute inset-0 rounded-[18px]"
-                  style={{ boxShadow: `inset 0 0 0 2px ${meta.dot}` }}
-                />
-              ) : null}
-              <div className="h-[3px] w-full flex-none" style={{ background: meta.dot }} />
-
-              <header className="flex-none border-b border-hairline-soft bg-surface-1 px-3.5 pb-3 pt-3">
-                <div className="flex items-center gap-2">
-                  <StatusDot color={meta.dot} />
-                  <span
-                    className="t-caption min-w-0 flex-1 truncate font-semibold"
-                    style={{ color: meta.dot }}
-                  >
-                    {t(meta.label)}
-                  </span>
-                  <span className="t-micro t-num rounded-full bg-surface-3 px-1.5 py-0.5 font-semibold text-ink-muted">
-                    {items.length}
-                  </span>
-                </div>
-              </header>
-
-              <div className="flex flex-1 flex-col gap-2.5 p-2.5">
-                {items.map((project) => (
-                  <Item
-                    key={project.id}
-                    project={project}
-                    locale={locale}
-                    drag={cardProps(project.id)}
-                  />
-                ))}
-                {!items.length ? (
-                  <div className="t-micro rounded-[12px] border border-dashed border-hairline px-3 py-7 text-center text-ink-faint">
-                    {t(S.common.empty)}
-                  </div>
-                ) : null}
-              </div>
-            </section>
-          );
-        })}
-      </div>
-    </>
+        return (
+          <BoardColumn
+            key={status}
+            color={meta.dot}
+            title={t(meta.label)}
+            count={items.length}
+            active={over === status}
+            dropAt={dropIndex(status)}
+            drop={columnProps(status)}
+            emptyLabel={t(S.common.empty)}
+            cards={items.map((project) => (
+              <Item
+                key={project.id}
+                project={project}
+                locale={locale}
+                drag={cardProps(project.id)}
+              />
+            ))}
+          />
+        );
+      })}
+    </Board>
   );
 }
 

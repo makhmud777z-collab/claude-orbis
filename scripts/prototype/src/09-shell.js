@@ -291,11 +291,11 @@ function renderModal() {
     return modal(t(loc("Новое дело", "Yangi ish")), `
       <p class="t-caption muted" style="margin:0 0 14px">${esc(fmtDate(S.cal.date))}</p>
       <input class="field" id="ev-title" placeholder="${t(loc("Что за дело", "Qanday ish"))}" style="margin-bottom:14px" autofocus>
-      <span class="t-micro faint" style="display:block;margin-bottom:8px">${t(loc("Тип", "Turi"))}</span>
+      <span class="t-micro field-label" style="display:block;margin-bottom:8px">${t(loc("Тип", "Turi"))}</span>
       <span style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
         ${Object.entries(EVENT_KIND).map(([key, k]) => `<button class="chip${m.kindValue === key ? " on" : ""}" data-act="cal.kind" data-value="${key}">${dot(k.color)}${esc(t(k.label))}</button>`).join("")}
       </span>
-      <span class="t-micro faint" style="display:block;margin-bottom:8px">${t(loc("Время", "Vaqt"))}</span>
+      <span class="t-micro field-label" style="display:block;margin-bottom:8px">${t(loc("Время", "Vaqt"))}</span>
       <span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span class="t-caption muted">${t(loc("с", "dan"))}</span>
         <input class="field num" id="ev-start" value="${esc(m.start)}" style="width:86px;text-align:center" inputmode="numeric">
@@ -345,22 +345,22 @@ function renderModal() {
   if (m.kind === "newtask") {
     const people = scopedTeam();
     return modal(t(loc("Новая задача", "Yangi vazifa")), `
-      <label><span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Название", "Nomi"))}</span>
+      <label><span class="t-micro field-label" style="display:block;margin-bottom:5px">${t(loc("Название", "Nomi"))}</span>
         <input class="field" id="task-title" autofocus style="margin-bottom:14px"></label>
-      <span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Исполнитель", "Ijrochi"))}</span>
+      <span class="t-micro field-label" style="display:block;margin-bottom:5px">${t(loc("Исполнитель", "Ijrochi"))}</span>
       <div style="margin-bottom:14px">${select("task.assignee", m.assignee ?? S.userId,
         people.map((u) => ({ value: u.id, label: u.name, hint: u.title })), 300)}</div>
-      <label><span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Срок", "Muddat"))}</span>
+      <label><span class="t-micro field-label" style="display:block;margin-bottom:5px">${t(loc("Срок", "Muddat"))}</span>
         <input class="field" id="task-due" type="date" value="${shiftDay(TODAY_ISO, 3)}"></label>`,
       `<button class="btn btn-primary" data-act="task.save">${t(loc("Сохранить", "Saqlash"))}</button>`);
   }
   if (m.kind === "invite") {
     return modal(t(loc("Пригласить сотрудника", "Xodimni taklif qilish")), `
-      <label><span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Имя", "Ism"))}</span>
+      <label><span class="t-micro field-label" style="display:block;margin-bottom:5px">${t(loc("Имя", "Ism"))}</span>
         <input class="field" id="invite-name" autofocus style="margin-bottom:14px"></label>
-      <label><span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Почта", "Pochta"))}</span>
+      <label><span class="t-micro field-label" style="display:block;margin-bottom:5px">${t(loc("Почта", "Pochta"))}</span>
         <input class="field" id="invite-email" type="email" style="margin-bottom:14px"></label>
-      <span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Роль", "Rol"))}</span>
+      <span class="t-micro field-label" style="display:block;margin-bottom:5px">${t(loc("Роль", "Rol"))}</span>
       ${select("invite.role", m.role ?? "sales_manager",
         rolesList().map((r) => ({ value: r.id, label: roleName(r) })), 300)}
       <p class="t-micro faint" style="margin:14px 0 0;line-height:1.5">${t(loc(
@@ -381,14 +381,14 @@ function renderModal() {
     const free = D.checklist.filter((item) => !settled.has(item.kind.ru));
     const kind = free.some((x) => x.kind.ru === m.kind_) ? m.kind_ : free[0]?.kind.ru;
     return modal(t(loc("Запросить документ", "Hujjat so‘rash")), `
-      ${m.locked ? "" : `<span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Студент", "Talaba"))}</span>
+      ${m.locked ? "" : `<span class="t-micro field-label" style="display:block;margin-bottom:5px">${t(loc("Студент", "Talaba"))}</span>
       <div style="margin-bottom:14px">${select("reqdoc.student", studentId,
         people.map((s) => ({ value: s.id, label: s.fullName, hint: s.phone })), 300)}</div>`}
-      <span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Тип документа", "Hujjat turi"))}</span>
+      <span class="t-micro field-label" style="display:block;margin-bottom:5px">${t(loc("Тип документа", "Hujjat turi"))}</span>
       <div style="margin-bottom:14px">${free.length
         ? select("reqdoc.kind", kind ?? "", free.map((x) => ({ value: x.kind.ru, label: t(x.kind) })), 300)
         : `<span class="t-caption faint">${t(loc("Все пункты чек-листа уже в досье", "Chek-ro‘yxatning barcha bandlari dosyeda"))}</span>`}</div>
-      <label><span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Комментарий для истории", "Tarix uchun izoh"))}</span>
+      <label><span class="t-micro field-label" style="display:block;margin-bottom:5px">${t(loc("Комментарий для истории", "Tarix uchun izoh"))}</span>
         <textarea class="field" id="reqdoc-note" rows="2" style="resize:none"></textarea></label>
       <p class="t-micro faint" style="margin:12px 0 0;line-height:1.5">${t(loc(
         "Пункт появится в досье со статусом «запрошен» и попадёт в историю контакта. Файл прикрепится, когда подключим хранилище.",
@@ -401,7 +401,7 @@ function renderModal() {
     const parents = allDepartments();
     return modal(t(loc("Новое подразделение", "Yangi bo‘lim")), `
       <input class="field" id="dep-name" placeholder="${t(loc("Название отдела", "Bo‘lim nomi"))}" style="margin-bottom:14px">
-      <span class="t-micro faint" style="display:block;margin-bottom:8px">${t(loc("Входит в", "Tarkibida"))}</span>
+      <span class="t-micro field-label" style="display:block;margin-bottom:8px">${t(loc("Входит в", "Tarkibida"))}</span>
       ${select("org.parent", m.parent ?? "", [{ value: "", label: t(loc("— верхний уровень —", "— yuqori daraja —")) },
         ...parents.map((d) => ({ value: d.id, label: t(d.name) }))], 260)}`,
       `<button class="btn btn-primary" data-act="org.save">${t(loc("Создать", "Yaratish"))}</button>`);
@@ -416,12 +416,12 @@ function renderModal() {
   if (m.kind === "newstage") {
     return modal(t(loc("Добавить стадию", "Bosqich qo‘shish")), `
       <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-        <label><span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Новая стадия", "Yangi bosqich"))} · RU</span>
+        <label><span class="t-micro field-label" style="display:block;margin-bottom:5px">${t(loc("Новая стадия", "Yangi bosqich"))} · RU</span>
           <input class="field" id="stage-new-ru" autofocus></label>
-        <label><span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Новая стадия", "Yangi bosqich"))} · UZ</span>
+        <label><span class="t-micro field-label" style="display:block;margin-bottom:5px">${t(loc("Новая стадия", "Yangi bosqich"))} · UZ</span>
           <input class="field" id="stage-new-uz"></label>
       </div>
-      <span class="t-micro faint" style="display:block;margin-bottom:8px">${t(loc("Цвет", "Rang"))}</span>
+      <span class="t-micro field-label" style="display:block;margin-bottom:8px">${t(loc("Цвет", "Rang"))}</span>
       <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:6px">
         ${PALETTE.map((c) => `<button class="swatch" data-act="stagecolor" data-value="${c}"
           style="background:${c};border-color:${(m.color ?? "") === c ? "var(--ink)" : "transparent"}"></button>`).join("")}
@@ -431,9 +431,9 @@ function renderModal() {
   if (m.kind === "newpipeline") {
     return modal(t(loc("Новая воронка", "Yangi voronka")), `
       <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
-        <label><span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Название воронки", "Voronka nomi"))} · RU</span>
+        <label><span class="t-micro field-label" style="display:block;margin-bottom:5px">${t(loc("Название воронки", "Voronka nomi"))} · RU</span>
           <input class="field" id="pipeline-ru" autofocus></label>
-        <label><span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Название воронки", "Voronka nomi"))} · UZ</span>
+        <label><span class="t-micro field-label" style="display:block;margin-bottom:5px">${t(loc("Название воронки", "Voronka nomi"))} · UZ</span>
           <input class="field" id="pipeline-uz"></label>
       </div>
       <div style="display:flex;gap:6px">
@@ -461,14 +461,14 @@ function renderModal() {
     return modal(t(loc("Изменить стадию", "Bosqichni o‘zgartirish")), `
       <p class="t-caption muted" style="margin:0 0 14px">${esc(t(stage.hint))}</p>
       <label style="display:block;margin-bottom:12px">
-        <span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Название стадии", "Bosqich nomi"))} · RU</span>
+        <span class="t-micro field-label" style="display:block;margin-bottom:5px">${t(loc("Название стадии", "Bosqich nomi"))} · RU</span>
         <input class="field" id="stage-ru" value="${esc(stage.label.ru)}">
       </label>
       <label style="display:block;margin-bottom:16px">
-        <span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Название стадии", "Bosqich nomi"))} · UZ</span>
+        <span class="t-micro field-label" style="display:block;margin-bottom:5px">${t(loc("Название стадии", "Bosqich nomi"))} · UZ</span>
         <input class="field" id="stage-uz" value="${esc(stage.label.uz)}">
       </label>
-      <span class="t-micro faint" style="display:block;margin-bottom:8px">${t(loc("Цвет", "Rang"))}</span>
+      <span class="t-micro field-label" style="display:block;margin-bottom:8px">${t(loc("Цвет", "Rang"))}</span>
       <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:6px">
         ${PALETTE.map((c) => `<button class="swatch" data-act="stagecolor" data-value="${esc(c)}"
           style="background:${c};border-color:${c.toLowerCase() === (m.color ?? stage.color).toLowerCase() ? "var(--ink)" : "transparent"};
@@ -499,11 +499,11 @@ function renderModal() {
     const dup = S.lead.checked ? findDuplicate(S.lead.phone, "") : null;
     return modal(t(loc("Новый лид", "Yangi lid")), `
       <label style="display:block;margin-bottom:12px">
-        <span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("ФИО", "F.I.Sh."))}</span>
+        <span class="t-micro field-label" style="display:block;margin-bottom:5px">${t(loc("ФИО", "F.I.Sh."))}</span>
         <input class="field" id="lead-name" value="${esc(S.lead.name)}">
       </label>
       <label style="display:block;margin-bottom:12px">
-        <span class="t-micro faint" style="display:block;margin-bottom:5px">${t(loc("Телефон", "Telefon"))}</span>
+        <span class="t-micro field-label" style="display:block;margin-bottom:5px">${t(loc("Телефон", "Telefon"))}</span>
         <input class="field" id="lead-phone" value="${esc(S.lead.phone)}" placeholder="+998 90 000-00-00">
       </label>
       <button class="btn btn-secondary" data-act="checkdup">${t(loc("Проверить дубль", "Dublikatni tekshirish"))}</button>
@@ -1359,8 +1359,42 @@ document.addEventListener("dragover", (e) => {
     document.querySelectorAll(".kan-col.over").forEach((el) => el.classList.remove("over"));
     col.classList.add("over");
     S.over = col.dataset.drop;
+    showSlot(col);
   }
 });
+
+/**
+ * Черта места вставки.
+ *
+ * Порядок внутри колонки задают данные, а не рука: карточка встанет туда,
+ * где ей место в общем списке раздела. Поэтому место считается по data-pos —
+ * номеру карточки в этом списке, — а не по положению курсора. Черта не
+ * обещает того, чего не будет.
+ */
+function showSlot(col) {
+  document.querySelectorAll(".kan-slot").forEach((el) => el.remove());
+  const card = document.querySelector(`[data-drag="${CSS.escape(S.drag.id)}"]`);
+  // Над своей же колонкой черты нет: отпускать там нечего.
+  if (!card || card.closest("[data-drop]") === col) return;
+
+  const pos = Number(card.dataset.pos);
+  const body = col.querySelector(".kan-body");
+  if (!body || Number.isNaN(pos)) return;
+
+  const slot = document.createElement("i");
+  slot.className = "kan-slot";
+  const after = [...body.querySelectorAll("[data-pos]")].find((el) => Number(el.dataset.pos) > pos);
+  const empty = body.querySelector(".empty-col");
+  if (after) body.insertBefore(slot, after);
+  else if (empty) body.insertBefore(slot, empty);
+  else body.append(slot);
+}
+
+/** Убрать черту и подсветку: жест закончился или ушёл с доски. */
+function clearSlot() {
+  document.querySelectorAll(".kan-slot").forEach((el) => el.remove());
+  document.querySelectorAll(".kan-col.over").forEach((el) => el.classList.remove("over"));
+}
 document.addEventListener("drop", (e) => {
   if (S.dragUser) {
     const dept = e.target.closest("[data-drop-dept]");
@@ -1376,6 +1410,7 @@ document.addEventListener("drop", (e) => {
   const col = e.target.closest("[data-drop]");
   if (!col || !S.drag || col.dataset.entity !== S.drag.entity) return;
   e.preventDefault();
+  clearSlot();
   const { entity, id } = S.drag;
   if (entity === "task") moveTask(id, col.dataset.drop);
   else if (entity === "project") moveProject(id, col.dataset.drop);
@@ -1385,7 +1420,11 @@ document.addEventListener("drop", (e) => {
   render();
   land(id);
 });
-document.addEventListener("dragend", () => { S.drag = null; S.dragUser = null; S.over = null; render(); });
+document.addEventListener("dragend", () => {
+  clearSlot();
+  S.drag = null; S.dragUser = null; S.over = null;
+  render();
+});
 
 /**
  * Приземление карточки.

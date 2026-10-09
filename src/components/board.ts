@@ -51,6 +51,25 @@ export function useBoardDrag<T extends { id: string }>(
     startTransition(() => persist(id, column));
   };
 
+  /**
+   * Где в колонке окажется карточка, если её отпустить сейчас.
+   *
+   * Порядок внутри колонки задают данные, а не рука: карточка встанет туда,
+   * где ей место в общем списке раздела. Поэтому место вставки не угадывается
+   * по курсору, а считается — собираем колонку так, будто карточка уже в ней,
+   * и смотрим, какой она там по счёту. Черта на этом месте не обманывает.
+   *
+   * Над своей же колонкой черты нет: отпускать там нечего.
+   */
+  const dropIndex = (column: string): number | null => {
+    if (!dragging || over !== column) return null;
+    const card = items.find((x) => x.id === dragging);
+    if (!card || columnFor(card) === column) return null;
+    const list = items.filter((x) => x.id === dragging || columnFor(x) === column);
+    const at = list.findIndex((x) => x.id === dragging);
+    return at < 0 ? null : at;
+  };
+
   /** Свойства колонки: подсветка под курсором и приём карточки. */
   const columnProps = (column: string) => ({
     onDragOver: (e: React.DragEvent) => {
@@ -81,5 +100,5 @@ export function useBoardDrag<T extends { id: string }>(
     className: dragging === id ? "kan-lifted" : landed[id] ? "kan-landed" : "",
   });
 
-  return { columnFor, columnProps, cardProps, over, dragging, landed };
+  return { columnFor, columnProps, cardProps, dropIndex, over, dragging, landed };
 }

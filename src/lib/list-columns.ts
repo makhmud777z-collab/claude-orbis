@@ -14,7 +14,7 @@ import { S } from "./strings";
  * строка перестаёт быть строкой. Всё остальное — выбор сотрудника, вплоть до
  * «оставить одно название».
  */
-export type ListSection = "leads" | "deals" | "tasks" | "projects";
+export type ListSection = "leads" | "deals" | "tasks" | "projects" | "deadlines";
 
 export interface ListColumnSpec {
   key: string;
@@ -57,6 +57,12 @@ export const LIST_COLUMNS: Record<ListSection, ListColumnSpec[]> = {
     { key: "project", label: S.list.project },
     { key: "creator", label: S.list.creator },
   ],
+  deadlines: [
+    { key: "kind", label: S.list.kind },
+    { key: "owner", label: S.pipelines.fieldOwner },
+    { key: "date", label: S.tasks.due, numeric: true },
+    { key: "source", label: S.list.source },
+  ],
   projects: [
     { key: "status", label: S.list.status },
     { key: "lead", label: S.projects.manager },
@@ -72,6 +78,7 @@ export const DEFAULT_LIST_COLUMNS: Record<ListSection, string[]> = {
   deals: ["stage", "owner", "amount", "deadline", "contacts"],
   tasks: ["status", "assignee", "due", "priority"],
   projects: ["status", "lead", "due", "progress"],
+  deadlines: ["kind", "owner", "date", "source"],
 };
 
 /**

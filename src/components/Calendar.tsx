@@ -239,17 +239,17 @@ export function Calendar({
           className="space-y-3"
         >
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.calendar.eventTitle)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.calendar.eventTitle)}</span>
             <input name="title" required autoFocus className="field text-[13px]" />
           </label>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">{t(S.calendar.date)}</span>
+              <span className="t-micro field-label mb-1 block">{t(S.calendar.date)}</span>
               <DatePicker name="date" value={selected} locale={locale} />
             </label>
             <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">{t(S.calendar.kind)}</span>
+              <span className="t-micro field-label mb-1 block">{t(S.calendar.kind)}</span>
               <EventKindPicker locale={locale} />
             </label>
           </div>
@@ -257,7 +257,7 @@ export function Calendar({
           {/* Время одной строкой: «с 10:00 до 11:00» читается как фраза,
               а не как два одинаковых поля с отдельными подписями. */}
           <div>
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.calendar.time)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.calendar.time)}</span>
             <div className="flex items-center gap-2.5">
               <span className="t-caption flex-none text-ink-muted">{t(S.calendar.timeFrom)}</span>
               <span className="w-[86px] flex-none">
@@ -274,7 +274,7 @@ export function Calendar({
           </div>
 
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.crm.comment)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.crm.comment)}</span>
             <textarea name="note" rows={2} className="field resize-none text-[13px]" />
           </label>
 

@@ -91,20 +91,20 @@ export function AgencyProfileCard({
 
       <div className="space-y-3">
         <label className="block">
-          <span className="t-micro mb-1 block text-ink-faint">{t(S.settings.name)}</span>
+          <span className="t-micro field-label mb-1 block">{t(S.settings.name)}</span>
           <input name="name" required defaultValue={name} className="field text-[13px]" />
         </label>
         <label className="block">
-          <span className="t-micro mb-1 block text-ink-faint">{t(S.settings.legalName)}</span>
+          <span className="t-micro field-label mb-1 block">{t(S.settings.legalName)}</span>
           <input name="legalName" defaultValue={legalName} className="field text-[13px]" />
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.settings.monogram)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.settings.monogram)}</span>
             <input name="mark" maxLength={2} defaultValue={mark} className="field text-[13px] uppercase" />
           </label>
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.settings.usdRate)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.settings.usdRate)}</span>
             <input
               name="usdRate"
               type="number"
@@ -115,7 +115,7 @@ export function AgencyProfileCard({
           </label>
         </div>
         <div>
-          <span className="t-micro mb-1 block text-ink-faint">{t(S.settings.interfaceLanguage)}</span>
+          <span className="t-micro field-label mb-1 block">{t(S.settings.interfaceLanguage)}</span>
           <div className="flex gap-1.5">
             {LOCALES.map((l) => (
               <button

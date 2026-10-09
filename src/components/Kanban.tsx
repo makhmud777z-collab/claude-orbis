@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { moveCardAction } from "@/app/actions";
+import { Board, BoardColumn } from "./BoardColumn";
 import { useBoardDrag } from "./board";
 import { Avatar, StatusDot } from "./ui";
 import { translator, type Locale } from "@/lib/i18n";
@@ -78,7 +79,7 @@ export function Kanban({
   const t = translator(locale);
 
   // Перетаскивание — общее для всех досок портала, см. board.ts.
-  const { columnFor, columnProps, cardProps, over } = useBoardDrag(
+  const { columnFor, columnProps, cardProps, dropIndex, over } = useBoardDrag(
     cards,
     (card) => card.stage,
     (id, stage) => {
@@ -103,87 +104,44 @@ export function Kanban({
   const maxTotal = Math.max(1, ...totalsByStage);
 
   return (
-    <>
-      {canEdit ? (
-        <div className="t-micro mb-3 text-ink-faint">{t(S.pipelines.dragHint)}</div>
-      ) : null}
+    <Board hint={canEdit ? t(S.pipelines.dragHint) : null}>
+      {stages.map((stage, i) => {
+        const list = cards.filter((c) => stageOf(c) === stage.key);
+        const total = totalsByStage[i];
+        const share = total ? Math.max(6, Math.round((total / maxTotal) * 100)) : 0;
 
-      <div className="-mx-5 overflow-x-auto px-5 pb-2 lg:-mx-8 lg:px-8">
-        <div className="flex min-w-max gap-4">
-          {stages.map((stage, i) => {
-            const list = cards.filter((c) => stageOf(c) === stage.key);
-            const total = totalsByStage[i];
-            const share = total ? Math.max(6, Math.round((total / maxTotal) * 100)) : 0;
-            const active = over === stage.key;
-
-            return (
-              <section
-                key={stage.key}
-                {...columnProps(stage.key)}
-                className="kan-col relative flex w-[280px] flex-none flex-col overflow-hidden rounded-[18px] border border-hairline bg-surface-2 transition-colors duration-150"
-                style={{
-                  background: active
-                    ? `color-mix(in srgb, ${stage.color} 6%, var(--color-surface-2))`
-                    : undefined,
-                }}
-              >
-                {/* Цвет стадии сверху — тонкая полоса вместо заливки всей колонки. */}
-                <div className="h-[3px] w-full flex-none" style={{ background: stage.color }} />
-
-                {active ? (
-                  <span
-                    aria-hidden
-                    className="kan-drop-ring pointer-events-none absolute inset-0 rounded-[18px]"
-                    style={{ boxShadow: `inset 0 0 0 2px ${stage.color}` }}
-                  />
-                ) : null}
-
-                {/* Шапка — нейтральная поверхность: цвет живёт только в точке,
-                    названии и полоске доли суммы, не в фоне блока. */}
-                <header className="flex-none border-b border-hairline-soft bg-surface-1 px-3.5 pb-3 pt-3">
-                  <div className="flex items-center gap-2">
-                    <StatusDot color={stage.color} />
-                    <span
-                      className="t-caption min-w-0 flex-1 truncate font-semibold"
-                      style={{ color: stage.color }}
-                    >
-                      {stage.label}
-                    </span>
-                    <span className="t-micro t-num rounded-full bg-surface-3 px-1.5 py-0.5 font-semibold text-ink-muted">
-                      {list.length}
-                    </span>
+        return (
+          <BoardColumn
+            key={stage.key}
+            color={stage.color}
+            title={stage.label}
+            count={list.length}
+            active={over === stage.key}
+            dropAt={dropIndex(stage.key)}
+            drop={columnProps(stage.key)}
+            emptyLabel={t(S.common.empty)}
+            meta={
+              showTotals ? (
+                <>
+                  <div className="t-micro t-num mt-1.5 pl-3.5 text-ink-muted">
+                    {total ? som(total, { compact: true, locale }) : "—"}
                   </div>
-                  {showTotals ? (
-                    <>
-                      <div className="t-micro t-num mt-1.5 pl-3.5 text-ink-muted">
-                        {total ? som(total, { compact: true, locale }) : "—"}
-                      </div>
-                      <div className="mt-2 h-[3px] overflow-hidden rounded-full bg-surface-3">
-                        <div
-                          className="bar-fill h-full rounded-full"
-                          style={{ width: `${share}%`, background: stage.color, opacity: 0.6 }}
-                        />
-                      </div>
-                    </>
-                  ) : null}
-                </header>
-
-                <div className="flex flex-1 flex-col gap-2.5 p-2.5">
-                  {list.map((card) => (
-                    <Card key={card.id} card={card} fields={fields} drag={cardProps(card.id)} />
-                  ))}
-                  {!list.length ? (
-                    <div className="rounded-[12px] border border-dashed border-hairline px-3 py-7 text-center text-ink-faint t-micro">
-                      {t(S.common.empty)}
-                    </div>
-                  ) : null}
-                </div>
-              </section>
-            );
-          })}
-        </div>
-      </div>
-    </>
+                  <div className="mt-2 h-[3px] overflow-hidden rounded-full bg-surface-3">
+                    <div
+                      className="bar-fill h-full rounded-full"
+                      style={{ width: `${share}%`, background: stage.color, opacity: 0.6 }}
+                    />
+                  </div>
+                </>
+              ) : null
+            }
+            cards={list.map((card) => (
+              <Card key={card.id} card={card} fields={fields} drag={cardProps(card.id)} />
+            ))}
+          />
+        );
+      })}
+    </Board>
   );
 }
 

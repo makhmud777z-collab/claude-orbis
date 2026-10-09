@@ -165,43 +165,64 @@ const CARD_FIELDS = [
  * сверху колонки, точка с названием и полоска доли суммы, — а сама
  * колонка и карточки остаются на нейтральной поверхности.
  */
+/**
+ * Доска и её колонка — одни на все доски прототипа.
+ *
+ * Раньше доска задач рисовалась сеткой на всю ширину, а канбан CRM — рядом
+ * колонок по 280 пикселей: промежутки отличались вдвое, хотя выглядеть
+ * должны одинаково. Теперь расстояние задано в одном месте, а справа
+ * всегда остаётся воздух — место под новую стадию.
+ */
+function board(hint, columns) {
+  return `
+    ${hint ? `<div class="t-micro faint" style="margin-bottom:12px">${esc(hint)}</div>` : ""}
+    <div class="scroll-x"><div class="kan">${columns.join("")}</div></div>`;
+}
+
+function boardColumn({ color, title, count, meta = "", drop = null, entity = null, cards, empty }) {
+  return `<section class="kan-col" ${drop ? `data-drop="${esc(drop)}" data-entity="${esc(entity)}"` : ""}
+      style="--kan-accent:${color}">
+    <div class="kan-topbar" style="background:${color}"></div>
+    <header class="kan-head">
+      <div style="display:flex;align-items:center;gap:8px">
+        ${dot(color)}
+        <span class="t-caption truncate" style="flex:1;min-width:0;font-weight:600;color:${color}">${esc(title)}</span>
+        <span class="kan-count num">${count}</span>
+      </div>
+      ${meta}
+    </header>
+    <div class="kan-body">
+      ${cards.join("") || `<div class="empty-col">${esc(empty)}</div>`}
+    </div>
+  </section>`;
+}
+
 function kanban(entity, stages, cards, opts = {}) {
   const fields = opts.fields ?? S.cardFields;
   const totals = stages.map((stage) =>
     cards.filter((c) => c.stage === stage.key).reduce((n, c) => n + (c.amount ?? 0), 0));
   const maxTotal = Math.max(1, ...totals);
-  return `
-  <div class="t-micro faint" style="margin-bottom:12px">${t(loc("Перетащите карточку на другую стадию", "Kartani boshqa bosqichga torting"))}</div>
-  <div class="scroll-x"><div class="kan">
-    ${stages.map((stage, i) => {
+  return board(t(loc("Перетащите карточку на другую стадию", "Kartani boshqa bosqichga torting")),
+    stages.map((stage, i) => {
       const list = cards.filter((c) => c.stage === stage.key);
       const total = totals[i];
       const share = total ? Math.max(6, Math.round((total / maxTotal) * 100)) : 0;
-      const over = S.over === stage.key;
-      return `<section class="kan-col${over ? " over" : ""}" data-drop="${esc(stage.key)}" data-entity="${esc(entity)}"
-        style="--kan-accent:${stage.color}">
-        <div class="kan-topbar" style="background:${stage.color}"></div>
-        <header class="kan-head">
-          <div style="display:flex;align-items:center;gap:8px">
-            ${dot(stage.color)}
-            <span class="t-caption truncate" style="flex:1;min-width:0;font-weight:600;color:${stage.color}">${esc(t(stage.label))}</span>
-            <span class="kan-count num">${list.length}</span>
-          </div>
-          ${opts.totals === false ? "" : `
-            <div class="t-micro num muted" style="margin-top:6px;padding-left:14px">${total ? som(total, true) : "—"}</div>
-            <div class="kan-share"><i style="width:${share}%;background:${stage.color}"></i></div>
-          `}
-        </header>
-        <div class="kan-body">
-          ${list.map((c) => card(c, fields, entity)).join("") ||
-            `<div class="empty-col">${t(loc("Пусто", "Bo‘sh"))}</div>`}
-        </div>
-      </section>`;
-    }).join("")}
-  </div></div>`;
+      return boardColumn({
+        color: stage.color,
+        title: t(stage.label),
+        count: list.length,
+        drop: stage.key,
+        entity,
+        empty: t(loc("Пусто", "Bo‘sh")),
+        meta: opts.totals === false ? "" : `
+          <div class="t-micro num muted" style="margin-top:6px;padding-left:14px">${total ? som(total, true) : "—"}</div>
+          <div class="kan-share"><i style="width:${share}%;background:${stage.color}"></i></div>`,
+        cards: list.map((c) => card(c, fields, entity, cards.indexOf(c))),
+      });
+    }));
 }
 
-function card(c, fields, entity) {
+function card(c, fields, entity, pos) {
   const lines = fields
     .map((key) => c.lines.find((l) => l.key === key))
     .filter((l) => l && l.value && l.value !== "—");
@@ -210,8 +231,11 @@ function card(c, fields, entity) {
   const amountLine = lines.find((l) => l.key === "amount");
   const metaLines = lines.filter((l) => l.key !== "amount");
   const pad = c.flag ? "padding-left:8px" : "";
+  // data-pos — место карточки в общем списке раздела. По нему считается,
+  // куда встанет черта при перетаскивании: порядок внутри колонки задают
+  // данные, а не рука.
   return `<a class="card card-hover kan-card" draggable="true"
-      data-drag="${esc(c.id)}" data-entity="${esc(entity)}" href="#" data-go="${esc(c.go)}">
+      data-drag="${esc(c.id)}" data-entity="${esc(entity)}" data-pos="${pos}" href="#" data-go="${esc(c.go)}">
     ${c.flag ? `<span class="kan-flag" style="background:${c.flag}"></span>` : ""}
     <span style="display:flex;gap:10px;align-items:flex-start;${pad}">
       <span style="min-width:0;flex:1">
@@ -610,6 +634,12 @@ const LIST_COLUMNS = {
     { key: "project", label: loc("Проект", "Loyiha") },
     { key: "creator", label: loc("Поставил", "Qo‘ygan") },
   ],
+  deadlines: [
+    { key: "kind", label: loc("Тип", "Turi") },
+    { key: "owner", label: loc("Ответственный", "Mas’ul") },
+    { key: "date", label: loc("Срок", "Muddat"), num: true },
+    { key: "source", label: loc("Откуда", "Qayerdan") },
+  ],
   projects: [
     { key: "status", label: loc("Статус", "Holat") },
     { key: "lead", label: loc("Руководитель", "Rahbar") },
@@ -665,7 +695,8 @@ function listColumnsPicker(section) {
 function recordList(section, rows) {
   const columns = columnsOf(section);
   const nameLabel = { leads: loc("Лид", "Lid"), deals: loc("Контакт", "Kontakt"),
-    tasks: loc("Название", "Nomi"), projects: loc("Название", "Nomi") }[section];
+    tasks: loc("Название", "Nomi"), projects: loc("Название", "Nomi"),
+    deadlines: loc("Название", "Nomi") }[section];
   return `<div class="card scroll-x" style="padding:0;overflow:hidden">
     <table style="min-width:${320 + columns.length * 150}px">
       <thead><tr>

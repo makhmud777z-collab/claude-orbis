@@ -304,53 +304,85 @@ function docSteps(d) {
 
 const deadlineRow = (d) => ({ search: t(d.title), kind: d.kind, ownerId: d.ownerId });
 
+/**
+ * Столбцы доски дедлайнов — срочность, а не вид: от красного к серому.
+ * Карточки здесь не двигаются рукой, и это не упущение: срок живёт в
+ * сделке, документе или задаче, а доска только раскладывает его по
+ * срочности. Поменять срок можно там, куда карточка и ведёт.
+ */
+const DEADLINE_GROUPS = [
+  { key: "overdue", label: loc("Просрочено", "Kechikkan"), color: "var(--risk)", test: (n) => n < 0 },
+  { key: "today", label: loc("Сегодня и завтра", "Bugun va ertaga"), color: "var(--progress)", test: (n) => n >= 0 && n <= 1 },
+  { key: "week", label: loc("Ближайшие 7 дней", "Yaqin 7 kun"), color: "var(--color-status-open)", test: (n) => n > 1 && n <= 7 },
+  { key: "month", label: loc("8–30 дней", "8–30 kun"), color: "var(--deal)", test: (n) => n > 7 && n <= 30 },
+  { key: "later", label: loc("Позже", "Keyinroq"), color: "var(--hold)", test: (n) => n > 30 },
+];
+
 function screenDeadlines() {
   const all = scopedDeadlines();
   const fields = deadlineFields();
   const st = filterState("deadlines");
   const items = all.filter((d) => matchesFilter(deadlineRow(d), fields, st.values, st.q));
-  const groups = [
-    [loc("Просрочено", "Kechikkan"), (n) => n < 0],
-    [loc("Сегодня и завтра", "Bugun va ertaga"), (n) => n >= 0 && n <= 1],
-    [loc("Ближайшие 7 дней", "Yaqin 7 kun"), (n) => n > 1 && n <= 7],
-    [loc("8–30 дней", "8–30 kun"), (n) => n > 7 && n <= 30],
-    [loc("Позже", "Keyinroq"), (n) => n > 30],
-  ];
+  const source = (d) => (d.relation?.type === "deal" ? loc("Сделка", "Bitim")
+    : d.relation?.type === "student" ? loc("Контакт", "Kontakt") : loc("Задачи", "Vazifalar"));
 
   return `
     ${head(t(loc("Дедлайны", "Muddatlar")),
       `<span>${items.length} ${t(loc("событий", "hodisa"))}</span><span class="faint">·</span>
        <span>${items.filter((d) => isPast(d.date)).length} ${t(loc("просрочено", "kechikkan"))}</span><span class="faint">·</span>
        <span>${t(loc("собираются автоматически из заявок, документов и задач", "arizalar, hujjatlar va vazifalardan avtomatik yig‘iladi"))}</span>`,
-      `<button class="btn btn-secondary" data-go="calendar">${icon("calendar", 15)} ${t(loc("Открыть календарь", "Kalendarni ochish"))}</button>`)}
+      `${viewSwitch("deadlines")}
+       ${viewOf("deadlines") === "list" ? listColumnsPicker("deadlines") : ""}
+       <button class="btn btn-secondary" data-go="calendar">${icon("calendar", 15)} ${t(loc("Открыть календарь", "Kalendarni ochish"))}</button>`)}
 
     ${smartFilter("deadlines", fields, simplePresets(), { shown: items.length, total: all.length })}
 
-    ${groups.map(([label, test]) => {
-      const list = items.filter((d) => test(daysUntil(d.date)));
-      if (!list.length) return "";
-      return `<section style="margin-bottom:30px">
-        ${sectionTitle(t(label), `<span class="t-caption faint">${list.length}</span>`)}
-        <div class="card divide">
-          ${list.map((d) => {
-            const kind = L.deadlineKind[d.kind];
-            const n = daysUntil(d.date);
-            return `<div class="row" style="flex-wrap:wrap;cursor:pointer" data-go="${d.go}">
-              ${dot(kind.dot)}
-              <span style="flex:1;min-width:200px">
+    ${viewOf("deadlines") === "list" ? recordList("deadlines", items.map((d) => {
+      const kind = L.deadlineKind[d.kind];
+      const late = daysUntil(d.date) < 0;
+      return {
+        go: d.go, title: t(d.title), subtitle: t(kind.label),
+        flag: late ? "var(--risk)" : null,
+        cells: {
+          kind: cellTag(t(kind.label), kind.dot),
+          owner: cellPerson(userById(d.ownerId)?.name ?? "—"),
+          date: cellNum(fmtShort(d.date), relDeadline(d.date), late ? "var(--risk)" : null),
+          source: cellText(t(source(d))),
+        },
+      };
+    })) : board(null, DEADLINE_GROUPS.map((group) => {
+      const list = items.filter((d) => group.test(daysUntil(d.date)));
+      return boardColumn({
+        color: group.color,
+        title: t(group.label),
+        count: list.length,
+        empty: t(loc("Пусто", "Bo‘sh")),
+        cards: list.map((d) => {
+          const kind = L.deadlineKind[d.kind];
+          const late = daysUntil(d.date) < 0;
+          return `<a class="card card-hover kan-card" href="#" data-go="${esc(d.go)}"
+              style="cursor:pointer${late ? ";background:color-mix(in srgb, var(--risk) 6%, var(--surface-1))" : ""}">
+            <span style="display:flex;gap:8px;align-items:flex-start">
+              <span style="margin-top:4px;flex:none">${dot(late ? "var(--risk)" : kind.dot)}</span>
+              <span style="min-width:0;flex:1">
                 <span class="t-body-sm" style="display:block">${esc(t(d.title))}</span>
-                <span class="t-micro faint">${esc(t(kind.label))}</span>
+                <span class="t-micro faint truncate" style="display:block">${esc(t(kind.label))}</span>
               </span>
-              <span style="display:flex;align-items:center;gap:8px">${avatar(userById(d.ownerId)?.name ?? "—", 22)}<span class="t-caption muted nowrap">${esc(userById(d.ownerId)?.name ?? "")}</span></span>
-              <span style="width:140px;text-align:right">
-                <span class="t-caption num" style="display:block">${fmtDate(d.date)}</span>
-                <span class="t-micro" style="color:${n < 0 ? "var(--risk)" : n <= 3 ? "var(--progress)" : "var(--ink-faint)"}">${relDeadline(d.date)}</span>
+            </span>
+            <span style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--hairline-soft)">
+              <span style="display:flex;gap:8px;align-items:center;min-width:0">
+                ${avatar(userById(d.ownerId)?.name ?? "—", 22)}
+                <span class="t-micro faint truncate">${esc(userById(d.ownerId)?.name ?? "—")}</span>
               </span>
-            </div>`;
-          }).join("")}
-        </div>
-      </section>`;
-    }).join("")}`;
+              <span style="text-align:right;flex:none">
+                <span class="t-micro num nowrap" style="display:block">${esc(fmtShort(d.date))}</span>
+                <span class="t-micro nowrap" style="display:block;color:${late ? "var(--risk)" : "var(--ink-faint)"};font-weight:${late ? 600 : 400}">${esc(relDeadline(d.date))}</span>
+              </span>
+            </span>
+          </a>`;
+        }),
+      });
+    }))}`;
 }
 
 function screenFinance() {

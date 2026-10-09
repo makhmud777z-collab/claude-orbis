@@ -27,11 +27,11 @@ export function AddBranchDialog({ locale }: { locale: Locale }) {
           className="space-y-3"
         >
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.settings.branchName)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.settings.branchName)}</span>
             <input name="name" required autoFocus className="field text-[13px]" />
           </label>
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.students.colCity)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.students.colCity)}</span>
             <input name="city" required className="field text-[13px]" />
           </label>
           <div className="flex justify-end gap-2 pt-2">

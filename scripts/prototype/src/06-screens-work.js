@@ -50,45 +50,41 @@ function screenTasks() {
         },
       };
     })) : `
-    ${allow(user().role, "tasks", "edit")
-      ? `<div class="t-micro faint" style="margin-bottom:12px">${t(loc("Перетащите задачу в другой столбец", "Vazifani boshqa ustunga torting"))}</div>`
-      : ""}
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr));align-items:start;gap:16px">
-      ${TASK_ORDER.map((status) => {
+    ${board(
+      allow(user().role, "tasks", "edit")
+        ? t(loc("Перетащите задачу в другой столбец, чтобы сменить статус", "Holatni o‘zgartirish uchun vazifani boshqa ustunga torting"))
+        : null,
+      TASK_ORDER.map((status) => {
         const meta = L.taskStatus[status];
         const col = list.filter((x) => taskStatusOf(x) === status);
-        return `<section class="kan-col${S.over === status ? " over" : ""}" data-drop="${status}" data-entity="task">
-          <div class="kan-topbar" style="background:${meta.dot}"></div>
-          <header class="kan-head">
-            <div style="display:flex;align-items:center;gap:8px">
-              ${dot(meta.dot)}
-              <span class="t-caption truncate" style="flex:1;min-width:0;font-weight:600;color:${meta.dot}">${esc(t(meta.label))}</span>
-              <span class="kan-count num">${col.length}</span>
-            </div>
-          </header>
-          <div class="kan-body">
-            ${col.map((x) => {
-              const overdue = taskStatusOf(x) !== "done" && isPast(x.dueAt);
-              const flag = overdue ? "var(--risk)" : x.priority === "high" ? "var(--progress)" : null;
-              const movable = allow(user().role, "tasks", "edit");
-              return `<article class="card card-hover kan-card" style="padding:12px 14px;position:relative;cursor:${movable ? "grab" : "default"}"
-                  ${movable ? `draggable="true" data-drag="${esc(x.id)}" data-entity="task"` : ""}>
-                ${flag ? `<span class="kan-flag" style="background:${flag}"></span>` : ""}
-                <div style="padding-left:${flag ? "8px" : "0"}">
-                  <div class="t-body-sm" style="font-weight:600">${esc(x.title)}</div>
-                  ${x.description ? `<p class="t-micro faint" style="margin:6px 0 0;line-height:1.5">${esc(x.description)}</p>` : ""}
-                  <div class="t-micro" style="display:flex;gap:8px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--hairline-soft)">
-                    ${avatar(userById(x.assigneeId)?.name ?? "—", 20)}
-                    <span class="truncate faint" style="flex:1;min-width:0">${esc(userById(x.assigneeId)?.name ?? "—")}</span>
-                    <span class="nowrap" style="color:${overdue ? "var(--risk)" : "var(--ink-faint)"};font-weight:${overdue ? 600 : 400}">${esc(fmtShort(x.dueAt))}</span>
-                  </div>
+        const movable = allow(user().role, "tasks", "edit");
+        return boardColumn({
+          color: meta.dot,
+          title: t(meta.label),
+          count: col.length,
+          drop: movable ? status : null,
+          entity: "task",
+          empty: t(loc("Пусто", "Bo‘sh")),
+          cards: col.map((x) => {
+            const overdue = taskStatusOf(x) !== "done" && isPast(x.dueAt);
+            const flag = overdue ? "var(--risk)" : x.priority === "high" ? "var(--progress)" : null;
+            return `<article class="card card-hover kan-card" style="cursor:${movable ? "grab" : "default"}"
+                ${movable ? `draggable="true" data-drag="${esc(x.id)}" data-entity="task" data-pos="${list.indexOf(x)}"` : ""}>
+              ${flag ? `<span class="kan-flag" style="background:${flag}"></span>` : ""}
+              <div style="padding-left:${flag ? "8px" : "0"}">
+                <div class="t-body-sm" style="font-weight:600">${esc(x.title)}</div>
+                ${x.description ? `<p class="t-micro faint" style="margin:6px 0 0;line-height:1.5">${esc(x.description)}</p>` : ""}
+                <div class="t-micro" style="display:flex;gap:8px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--hairline-soft)">
+                  ${avatar(userById(x.assigneeId)?.name ?? "—", 20)}
+                  <span class="truncate faint" style="flex:1;min-width:0">${esc(userById(x.assigneeId)?.name ?? "—")}</span>
+                  <span class="nowrap" style="color:${overdue ? "var(--risk)" : "var(--ink-faint)"};font-weight:${overdue ? 600 : 400}">${esc(fmtShort(x.dueAt))}</span>
                 </div>
-              </article>`;
-            }).join("") || `<div class="empty-col">${t(loc("Пусто", "Bo‘sh"))}</div>`}
-          </div>
-        </section>`;
-      }).join("")}
-    </div>`}`;
+              </div>
+            </article>`;
+          }),
+        });
+      }),
+    )}`}`;
 }
 
 const PROJECT_ORDER = ["active", "paused", "done"];
@@ -139,45 +135,41 @@ function screenProjects() {
         },
       };
     })) : `
-    ${movable ? `<div class="t-micro faint" style="margin-bottom:12px">${t(loc("Перетащите проект в другой столбец, чтобы сменить статус", "Holatni o‘zgartirish uchun loyihani boshqa ustunga torting"))}</div>` : ""}
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:start;gap:16px">
-      ${PROJECT_ORDER.map((status) => {
+    ${board(
+      movable ? t(loc("Перетащите проект в другой столбец, чтобы сменить статус", "Holatni o‘zgartirish uchun loyihani boshqa ustunga torting")) : null,
+      PROJECT_ORDER.map((status) => {
         const meta = PROJECT_STATUS[status];
         const col = projects.filter((p) => projectStatusOf(p) === status);
-        return `<section class="kan-col${S.over === status ? " over" : ""}" data-drop="${status}" data-entity="project">
-          <div class="kan-topbar" style="background:${meta.dot}"></div>
-          <header class="kan-head">
-            <div style="display:flex;align-items:center;gap:8px">
-              ${dot(meta.dot)}
-              <span class="t-caption truncate" style="flex:1;min-width:0;font-weight:600;color:${meta.dot}">${esc(t(meta.label))}</span>
-              <span class="kan-count num">${col.length}</span>
-            </div>
-          </header>
-          <div class="kan-body">
-            ${col.map((p) => {
-              const c = counts(p);
-              return `<article class="card card-hover kan-card" style="padding:12px 14px;cursor:${movable ? "grab" : "default"}"
-                  ${movable ? `draggable="true" data-drag="${esc(p.id)}" data-entity="project"` : ""}>
-                <div class="t-body-sm" style="font-weight:600">${esc(t(p.name))}</div>
-                <p class="t-micro faint" style="margin:6px 0 0;line-height:1.5">${esc(p.description)}</p>
-                <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--hairline-soft)">
-                  <div class="t-micro faint" style="display:flex;justify-content:space-between;margin-bottom:6px">
-                    <span>${c.done} / ${c.total} ${t(loc("выполнено", "bajarilgan"))}</span>
-                    ${c.late ? `<span style="color:var(--risk)">${c.late} ${t(loc("просрочено", "kechikkan"))}</span>` : ""}
-                  </div>
-                  ${bar(c.total ? (c.done / c.total) * 100 : 0)}
+        return boardColumn({
+          color: meta.dot,
+          title: t(meta.label),
+          count: col.length,
+          drop: movable ? status : null,
+          entity: "project",
+          empty: t(loc("Пусто", "Bo‘sh")),
+          cards: col.map((p) => {
+            const c = counts(p);
+            return `<article class="card card-hover kan-card" style="cursor:${movable ? "grab" : "default"}"
+                ${movable ? `draggable="true" data-drag="${esc(p.id)}" data-entity="project" data-pos="${projects.indexOf(p)}"` : ""}>
+              <div class="t-body-sm" style="font-weight:600">${esc(t(p.name))}</div>
+              <p class="t-micro faint" style="margin:6px 0 0;line-height:1.5">${esc(p.description)}</p>
+              <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--hairline-soft)">
+                <div class="t-micro faint" style="display:flex;justify-content:space-between;margin-bottom:6px">
+                  <span>${c.done} / ${c.total} ${t(loc("выполнено", "bajarilgan"))}</span>
+                  ${c.late ? `<span style="color:var(--risk)">${c.late} ${t(loc("просрочено", "kechikkan"))}</span>` : ""}
                 </div>
-                <div class="t-micro" style="display:flex;gap:8px;align-items:center;margin-top:10px">
-                  ${avatar(userById(p.leadId)?.name ?? "—", 20)}
-                  <span class="truncate faint" style="flex:1;min-width:0">${esc(userById(p.leadId)?.name ?? "—")}</span>
-                  <span class="nowrap faint">${esc(relDeadline(p.dueAt))}</span>
-                </div>
-              </article>`;
-            }).join("") || `<div class="empty-col">${t(loc("Пусто", "Bo‘sh"))}</div>`}
-          </div>
-        </section>`;
-      }).join("")}
-    </div>`}`;
+                ${bar(c.total ? (c.done / c.total) * 100 : 0)}
+              </div>
+              <div class="t-micro" style="display:flex;gap:8px;align-items:center;margin-top:10px">
+                ${avatar(userById(p.leadId)?.name ?? "—", 20)}
+                <span class="truncate faint" style="flex:1;min-width:0">${esc(userById(p.leadId)?.name ?? "—")}</span>
+                <span class="nowrap faint">${esc(relDeadline(p.dueAt))}</span>
+              </div>
+            </article>`;
+          }),
+        });
+      }),
+    )}`}`;
 }
 
 function screenTaskReports() {

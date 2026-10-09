@@ -22,11 +22,23 @@
   --color-surface-3: #edeff6;
   --color-hairline: #e2e5ef;
   --color-hairline-soft: #edeff6;
+  /*
+   * Граница поля ввода — отдельный, более тёмный тон, чем линия между
+   * строками. Поле обязано читаться как место, куда пишут, с первого
+   * взгляда: волосяной линии для этого не хватало, и формы выглядели
+   * набором подписей без полей.
+   */
+  --color-field-edge: #c3cad9;
 
   /* ink */
   --color-ink: #141a28;
   --color-ink-muted: #5c6880;
-  --color-ink-faint: #8b95aa;
+  /*
+   * Самый тихий тон текста. Был светлее — подписи, телефоны и «через 5
+   * дней» читались с трудом, а на холсте почти пропадали: 3:1 при норме
+   * 4.5:1. Тише этого в портале ничего не пишется, поэтому и предел здесь.
+   */
+  --color-ink-faint: #687386;
 
   /*
    * Один акцент на весь портал: ссылки, фокус, выделение, главная кнопка.
@@ -88,10 +100,11 @@
     --color-surface-3: #252934;
     --color-hairline: #2b303c;
     --color-hairline-soft: #1f232c;
+    --color-field-edge: #434b5c;
 
     --color-ink: #f1f3f8;
     --color-ink-muted: #99a3b8;
-    --color-ink-faint: #6b748a;
+    --color-ink-faint: #808aa0;
 
     --color-accent: #7b88ff;
 
@@ -414,6 +427,32 @@
       box-shadow: var(--shadow-card), 0 0 0 2px transparent;
     }
   }
+  /*
+   * Черта места вставки.
+   *
+   * Подсветки колонки мало: она говорит «сюда», но не говорит «куда
+   * именно». Черта стоит ровно там, где карточка окажется после того, как
+   * её отпустят, — между соседями или в конце списка, — и подписана
+   * цветом стадии, в которую карточка едет.
+   */
+  .kan-slot {
+    height: 3px;
+    border-radius: 999px;
+    background: currentColor;
+    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 16%, transparent);
+    animation: orbis-slot 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes orbis-slot {
+    from {
+      opacity: 0;
+      transform: scaleX(0.72);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
   .kan-landed {
     animation: orbis-land 420ms cubic-bezier(0.22, 1, 0.36, 1);
     /* Карточка на время полёта идёт поверх соседей: иначе она ныряет
@@ -753,16 +792,39 @@
   }
   .field {
     background: var(--color-surface-1);
-    border: 1px solid var(--color-hairline);
+    border: 1px solid var(--color-field-edge);
     border-radius: var(--radius-md);
     padding: 9px 12px;
     color: var(--color-ink);
     font-size: 14px;
     width: 100%;
-    transition: border-color 140ms ease, box-shadow 140ms ease;
+    /* Еле заметная тень внутрь: поле выглядит углублением, а не плашкой. */
+    box-shadow: inset 0 1px 2px rgb(16 24 40 / 0.05);
+    transition:
+      border-color 140ms ease,
+      box-shadow 140ms ease;
   }
   .field:hover {
-    border-color: var(--color-ink-faint);
+    border-color: color-mix(in srgb, var(--color-ink) 34%, transparent);
+  }
+  /*
+   * Поле в фокусе обведено цветом портала — видно, куда попадёт следующая
+   * нажатая клавиша. :focus, а не :focus-visible: в поле ввода курсор
+   * ставят мышью чаще, чем приходят табом.
+   */
+  .field:focus,
+  .field:focus-visible,
+  .field:focus-within {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow:
+      inset 0 1px 2px rgb(16 24 40 / 0.04),
+      0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent);
+  }
+  /* Подпись над полем — не серый шёпот: по ней ищут нужную строку формы. */
+  .field-label {
+    color: var(--color-ink-muted);
+    font-weight: 500;
   }
 
   /* ── rail navigation ──────────────────────────────────────── */

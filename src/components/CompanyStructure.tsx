@@ -377,22 +377,22 @@ export function CompanyStructure({
           <input type="hidden" name="parentId" value={adding ?? ""} />
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">{t(S.structure.name)} · RU</span>
+              <span className="t-micro field-label mb-1 block">{t(S.structure.name)} · RU</span>
               <input name="nameRu" required autoFocus className="field text-[13px]" />
             </label>
             <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">{t(S.structure.name)} · UZ</span>
+              <span className="t-micro field-label mb-1 block">{t(S.structure.name)} · UZ</span>
               <input name="nameUz" className="field text-[13px]" />
             </label>
           </div>
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.structure.parent)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.structure.parent)}</span>
             <span className="t-caption block text-ink-muted">
               {nodes.find((n) => n.id === adding)?.name ?? t(S.structure.root)}
             </span>
           </label>
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.structure.head)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.structure.head)}</span>
             <NewHeadPicker locale={locale} people={people} />
           </label>
           <div className="flex justify-end gap-2 pt-2">
@@ -422,11 +422,11 @@ export function CompanyStructure({
           <input type="hidden" name="departmentId" value={renaming?.id ?? ""} />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">{t(S.structure.name)} · RU</span>
+              <span className="t-micro field-label mb-1 block">{t(S.structure.name)} · RU</span>
               <input name="nameRu" required autoFocus defaultValue={renaming?.name ?? ""} className="field text-[13px]" />
             </label>
             <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">{t(S.structure.name)} · UZ</span>
+              <span className="t-micro field-label mb-1 block">{t(S.structure.name)} · UZ</span>
               <input name="nameUz" defaultValue={renaming?.name ?? ""} className="field text-[13px]" />
             </label>
           </div>

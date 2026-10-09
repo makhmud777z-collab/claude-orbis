@@ -187,7 +187,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
             >
               {t(S.team.workdayToday)}
             </SectionTitle>
-            <div className="card divide-y divide-hairline-soft">
+            <div className="card divide-y divide-hairline-soft overflow-hidden">
               {sessions.length ? (
                 sessions.slice(0, 8).map((s) => (
                   // На телефоне строка отметки переносится, а не режется.
@@ -218,7 +218,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
 
           <section>
             <SectionTitle>{t(S.nav.tasks)}</SectionTitle>
-            <div className="card divide-y divide-hairline-soft">
+            <div className="card divide-y divide-hairline-soft overflow-hidden">
               {tasks.length ? (
                 tasks.slice(0, 8).map((task) => {
                   const status = TASK_STATUS[task.status];
@@ -250,7 +250,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
             >
               {t(S.crm.deals)}
             </SectionTitle>
-            <div className="card divide-y divide-hairline-soft">
+            <div className="card divide-y divide-hairline-soft overflow-hidden">
               {deals.length ? (
                 deals.slice(0, 8).map((deal) => {
                   const stage = stageOf(pipelineById(deal.pipelineId), deal.stage);

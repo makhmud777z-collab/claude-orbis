@@ -183,7 +183,7 @@ function ItemDialog({
         {row ? <input type="hidden" name="itemId" value={row.id} /> : null}
 
         <label className="mb-3.5 block">
-          <span className="t-caption mb-1.5 block text-ink-muted">{t(S.checklist.nameRu)}</span>
+          <span className="t-caption field-label mb-1.5 block">{t(S.checklist.nameRu)}</span>
           <input
             autoFocus
             name="ru"

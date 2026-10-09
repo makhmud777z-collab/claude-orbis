@@ -137,7 +137,7 @@ export default async function FinancePage({
         <>
           <section className="mt-9">
             <SectionTitle>{t(S.finance.byManager)}</SectionTitle>
-            <div className="card divide-y divide-hairline-soft">
+            <div className="card divide-y divide-hairline-soft overflow-hidden">
               {byManager.map((row) => (
                 <div key={row.user.id} className="flex flex-wrap items-center gap-4 px-5 py-4">
                   <Avatar name={row.user.name} size={30} />

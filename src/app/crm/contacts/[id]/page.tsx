@@ -299,7 +299,7 @@ export default async function ContactPage({
 
           <section>
             <SectionTitle>{t(S.crm.dealsOfContact)}</SectionTitle>
-            <div className="card divide-y divide-hairline-soft">
+            <div className="card divide-y divide-hairline-soft overflow-hidden">
               {apps.length ? (
                 apps.map((a) => {
                   const uni = universityById(a.universityId);
@@ -396,7 +396,7 @@ export default async function ContactPage({
 
           <section>
             <SectionTitle>{t(S.students.relatedTasks)}</SectionTitle>
-            <div className="card divide-y divide-hairline-soft">
+            <div className="card divide-y divide-hairline-soft overflow-hidden">
               {tasks.length ? (
                 tasks.map((task) => (
                   <div key={task.id} className="flex items-center gap-3 px-5 py-3.5">

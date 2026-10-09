@@ -1,25 +1,37 @@
 import Link from "next/link";
+import { DeadlinesBoard, type DeadlineGroup } from "@/components/DeadlinesBoard";
+import { ListColumns } from "@/components/ListColumns";
+import { NumCell, PersonCell, RecordList, TagCell, TextCell } from "@/components/RecordList";
 import { SectionFilter } from "@/components/SectionFilter";
+import { ViewSwitch } from "@/components/ViewSwitch";
 import { moduleGate } from "@/components/guard";
 import { IconCalendar } from "@/components/icons";
-import { Avatar, Crumbs, EmptyState, PageHeader, SectionTitle, StatusDot } from "@/components/ui";
+import { Crumbs, EmptyState, PageHeader } from "@/components/ui";
 import { userById } from "@/lib/data/users";
 import { FILTER_TEXT, matchesFilter, readFilter, readQuery, type FilterRow } from "@/lib/filters";
 import { daysUntil, formatters } from "@/lib/format";
 import { translator, type Loc } from "@/lib/i18n";
 import { DEADLINE_KIND } from "@/lib/labels";
+import { DEFAULT_LIST_COLUMNS, listCatalog, listColumns } from "@/lib/list-columns";
 import { scopedDeadlines, scopedTeam } from "@/lib/queries";
 import { deadlineFields, simplePresets } from "@/lib/section-filters";
 import { getSession } from "@/lib/session";
+import { listFieldsOf } from "@/lib/store";
 import { P, S } from "@/lib/strings";
+import { readView } from "@/lib/view";
 import type { Deadline } from "@/lib/types";
 
-const GROUPS: { key: string; title: Loc; test: (d: number) => boolean }[] = [
-  { key: "overdue", title: S.deadlines.groupOverdue, test: (d) => d < 0 },
-  { key: "today", title: S.deadlines.groupToday, test: (d) => d >= 0 && d <= 1 },
-  { key: "week", title: S.deadlines.groupWeek, test: (d) => d > 1 && d <= 7 },
-  { key: "month", title: S.deadlines.groupMonth, test: (d) => d > 7 && d <= 30 },
-  { key: "later", title: S.deadlines.groupLater, test: (d) => d > 30 },
+/**
+ * Столбцы доски — срочность, а не вид дедлайна, и цвет идёт от красного к
+ * серому: просрочка кричит, «позже» молчит. Те же группы раскладывают и
+ * список, поэтому они описаны один раз.
+ */
+const GROUPS: { key: string; title: Loc; color: string; test: (d: number) => boolean }[] = [
+  { key: "overdue", title: S.deadlines.groupOverdue, color: "var(--color-status-risk)", test: (d) => d < 0 },
+  { key: "today", title: S.deadlines.groupToday, color: "var(--color-status-progress)", test: (d) => d >= 0 && d <= 1 },
+  { key: "week", title: S.deadlines.groupWeek, color: "var(--color-status-open)", test: (d) => d > 1 && d <= 7 },
+  { key: "month", title: S.deadlines.groupMonth, color: "var(--color-status-deal)", test: (d) => d > 7 && d <= 30 },
+  { key: "later", title: S.deadlines.groupLater, color: "var(--color-status-hold)", test: (d) => d > 30 },
 ];
 
 export default async function DeadlinesPage({
@@ -42,12 +54,43 @@ export default async function DeadlinesPage({
   const deadlines = all.filter((d) => matchesFilter(deadlineRow(d, t(d.title)), fields, values, query));
   const overdue = all.filter((d) => daysUntil(d.date) < 0).length;
 
+  const view = readView(params);
+  const picked = listFieldsOf(session.user.id, "deadlines", DEFAULT_LIST_COLUMNS.deadlines);
+  const columns = listColumns("deadlines", picked, t);
+
+  /** Дедлайн — не самостоятельная запись: ведём к той, где живёт срок. */
   const href = (d: Deadline) =>
     d.relation?.type === "deal"
       ? `/crm/deals/${d.relation.id}`
       : d.relation?.type === "student"
         ? `/crm/contacts/${d.relation.id}`
         : "/tasks";
+
+  const sourceLabel = (d: Deadline) =>
+    d.relation?.type === "deal"
+      ? t(S.crm.deal)
+      : d.relation?.type === "student"
+        ? t(S.crm.contact)
+        : t(S.nav.tasks);
+
+  const groups: DeadlineGroup[] = GROUPS.map((group) => ({
+    key: group.key,
+    title: t(group.title),
+    color: group.color,
+    cards: deadlines
+      .filter((d) => group.test(daysUntil(d.date)))
+      .map((d) => ({
+        id: d.id,
+        href: href(d),
+        title: t(d.title),
+        kindLabel: t(DEADLINE_KIND[d.kind].label),
+        kindColor: DEADLINE_KIND[d.kind].dot,
+        ownerName: userById(d.ownerId)?.name ?? "—",
+        dateLabel: f.shortDate(d.date),
+        leftLabel: f.relativeDeadline(d.date),
+        overdue: daysUntil(d.date) < 0,
+      })),
+  }));
 
   return (
     <>
@@ -56,9 +99,7 @@ export default async function DeadlinesPage({
         title={t(S.deadlines.title)}
         meta={
           <>
-            <span>
-              {f.plural(all.length, P.timelineEvents)}
-            </span>
+            <span>{f.plural(all.length, P.deadlines)}</span>
             <span className="text-ink-faint">·</span>
             <span>
               {overdue} {t(S.deadlines.overdue)}
@@ -68,9 +109,21 @@ export default async function DeadlinesPage({
           </>
         }
         actions={
-          <Link href="/calendar" className="btn btn-secondary btn-sm">
-            <IconCalendar size={15} /> {t(S.deadlines.toCalendar)}
-          </Link>
+          <>
+            <ViewSwitch view={view} locale={session.locale} />
+            {view === "list" ? (
+              <ListColumns
+                section="deadlines"
+                catalog={listCatalog("deadlines", t)}
+                picked={picked}
+                defaults={DEFAULT_LIST_COLUMNS.deadlines}
+                locale={session.locale}
+              />
+            ) : null}
+            <Link href="/calendar" className="btn btn-secondary btn-sm">
+              <IconCalendar size={15} /> {t(S.deadlines.toCalendar)}
+            </Link>
+          </>
         }
       />
 
@@ -84,63 +137,42 @@ export default async function DeadlinesPage({
         shown={deadlines.length}
       />
 
-      {!deadlines.length ? <EmptyState title={t(FILTER_TEXT.nothing)} /> : null}
-
-      <div className="space-y-8">
-        {GROUPS.map((group) => {
-          const items = deadlines.filter((d) => group.test(daysUntil(d.date)));
-          if (!items.length) return null;
-          return (
-            <section key={group.key}>
-              <SectionTitle
-                action={<span className="t-caption text-ink-faint">{items.length}</span>}
-              >
-                {t(group.title)}
-              </SectionTitle>
-              <div className="card divide-y divide-hairline-soft">
-                {items.map((d) => {
-                  const kind = DEADLINE_KIND[d.kind];
-                  const owner = userById(d.ownerId);
-                  const days = daysUntil(d.date);
-                  return (
-                    <Link
-                      key={d.id}
-                      href={href(d)}
-                      className="flex flex-wrap items-center gap-4 px-5 py-3.5 transition-colors hover:bg-surface-2"
-                    >
-                      <StatusDot color={kind.dot} />
-                      <div className="min-w-[220px] flex-1">
-                        <div className="t-body-sm">{t(d.title)}</div>
-                        <div className="t-micro text-ink-faint">{t(kind.label)}</div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Avatar name={owner?.name ?? "—"} size={22} />
-                        <span className="t-caption text-ink-muted">{owner?.name}</span>
-                      </div>
-                      <div className="w-36 text-right">
-                        <div className="t-caption t-num">{f.date(d.date)}</div>
-                        <div
-                          className="t-micro"
-                          style={{
-                            color:
-                              days < 0
-                                ? "var(--color-status-risk)"
-                                : days <= 3
-                                  ? "var(--color-status-progress)"
-                                  : "var(--color-ink-faint)",
-                          }}
-                        >
-                          {f.relativeDeadline(d.date)}
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-          );
-        })}
-      </div>
+      {!deadlines.length ? (
+        <EmptyState title={t(FILTER_TEXT.nothing)} />
+      ) : view === "list" ? (
+        <RecordList
+          nameLabel={t(S.list.name)}
+          noColumnsNote={t(S.list.noColumns)}
+          columns={columns}
+          rows={deadlines.map((d) => {
+            const kind = DEADLINE_KIND[d.kind];
+            const late = daysUntil(d.date) < 0;
+            return {
+              id: d.id,
+              href: href(d),
+              title: t(d.title),
+              // Подзаголовка нет намеренно: вид дедлайна — своя колонка, и
+              // дублировать «Задача» под каждым названием незачем.
+              subtitle: null,
+              flag: late ? "var(--color-status-risk)" : null,
+              cells: {
+                kind: <TagCell label={t(kind.label)} color={kind.dot} />,
+                owner: <PersonCell name={userById(d.ownerId)?.name ?? "—"} />,
+                date: (
+                  <NumCell
+                    value={f.shortDate(d.date)}
+                    hint={f.relativeDeadline(d.date)}
+                    accent={late ? "var(--color-status-risk)" : null}
+                  />
+                ),
+                source: <TextCell value={sourceLabel(d)} />,
+              },
+            };
+          })}
+        />
+      ) : (
+        <DeadlinesBoard groups={groups} emptyLabel={t(S.common.empty)} />
+      )}
     </>
   );
 }

@@ -312,6 +312,10 @@ export const S = {
     priorityLow: loc("Низкий", "Past"),
     priorityNormal: loc("Обычный", "Oddiy"),
     priorityHigh: loc("Высокий", "Yuqori"),
+    dragHint: loc(
+      "Перетащите задачу в другой столбец, чтобы сменить статус",
+      "Holatni o‘zgartirish uchun vazifani boshqa ustunga torting",
+    ),
   },
 
   deadlines: {
@@ -637,6 +641,8 @@ export const S = {
     ),
     contacts: loc("Связь", "Aloqa"),
     created: loc("Создан", "Yaratilgan"),
+    kind: loc("Тип", "Turi"),
+    source: loc("Откуда", "Qayerdan"),
     status: loc("Статус", "Holat"),
     project: loc("Проект", "Loyiha"),
     creator: loc("Поставил", "Qo‘ygan"),

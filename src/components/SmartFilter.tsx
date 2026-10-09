@@ -293,7 +293,7 @@ export function SmartFilter({
           {/* поля */}
           <div className="min-w-0 flex-1 p-4">
             <label className="mb-3 block">
-              <span className="t-micro mb-1 block text-ink-faint">{t(S.common.searchShort)}</span>
+              <span className="t-micro field-label mb-1 block">{t(S.common.searchShort)}</span>
               <input
                 autoFocus
                 value={query}
@@ -309,7 +309,7 @@ export function SmartFilter({
                 if (!field) return null;
                 return (
                   <label key={field.key} className="block">
-                    <span className="t-micro mb-1 block text-ink-faint">{field.label}</span>
+                    <span className="t-micro field-label mb-1 block">{field.label}</span>
 
                     {field.range ? (
                       <span className="flex items-center gap-2">
@@ -465,7 +465,7 @@ export function SmartFilter({
           <input type="hidden" name="scope" value={scope} />
           <input type="hidden" name="query" value={buildQuery(values, query, visible)} />
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(FILTER_TEXT.filterName)}</span>
+            <span className="t-micro field-label mb-1 block">{t(FILTER_TEXT.filterName)}</span>
             <input name="name" required autoFocus className="field text-[13px]" />
           </label>
           <div className="mt-5 flex justify-end gap-2">

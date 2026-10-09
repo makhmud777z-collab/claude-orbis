@@ -90,7 +90,7 @@ export function CustomFieldsCard({
       <div className="space-y-3">
         {fields.map((field) => (
           <label key={field.id} className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{field.label}</span>
+            <span className="t-micro field-label mb-1 block">{field.label}</span>
             {field.type === "select" ? (
               <select name={`cf_${field.id}`} defaultValue={field.value} className="field text-[13px]">
                 <option value="">—</option>

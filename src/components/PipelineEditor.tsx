@@ -454,19 +454,19 @@ function StageDialog({
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.pipelines.rename)} · RU</span>
+            <span className="t-micro field-label mb-1 block">{t(S.pipelines.rename)} · RU</span>
             <input name="labelRu" defaultValue={stage.labelRu} className="field text-[13px]" />
           </label>
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.pipelines.rename)} · UZ</span>
+            <span className="t-micro field-label mb-1 block">{t(S.pipelines.rename)} · UZ</span>
             <input name="labelUz" defaultValue={stage.labelUz} className="field text-[13px]" />
           </label>
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.pipelines.stageHint)} · RU</span>
+            <span className="t-micro field-label mb-1 block">{t(S.pipelines.stageHint)} · RU</span>
             <input name="hintRu" defaultValue={stage.hintRu} className="field text-[13px]" />
           </label>
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.pipelines.stageHint)} · UZ</span>
+            <span className="t-micro field-label mb-1 block">{t(S.pipelines.stageHint)} · UZ</span>
             <input name="hintUz" defaultValue={stage.hintUz} className="field text-[13px]" />
           </label>
         </div>
@@ -538,11 +538,11 @@ function AddStageDialog({
         <input type="hidden" name="color" value={color} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.pipelines.newStage)} · RU</span>
+            <span className="t-micro field-label mb-1 block">{t(S.pipelines.newStage)} · RU</span>
             <input autoFocus required name="labelRu" className="field text-[13px]" />
           </label>
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.pipelines.newStage)} · UZ</span>
+            <span className="t-micro field-label mb-1 block">{t(S.pipelines.newStage)} · UZ</span>
             <input name="labelUz" className="field text-[13px]" />
           </label>
         </div>
@@ -586,11 +586,11 @@ function AddPipelineDialog({ locale, onClose }: { locale: Locale; onClose: () =>
         <input type="hidden" name="entity" value={entity} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.pipelines.pipelineName)} · RU</span>
+            <span className="t-micro field-label mb-1 block">{t(S.pipelines.pipelineName)} · RU</span>
             <input autoFocus required name="nameRu" className="field text-[13px]" />
           </label>
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.pipelines.pipelineName)} · UZ</span>
+            <span className="t-micro field-label mb-1 block">{t(S.pipelines.pipelineName)} · UZ</span>
             <input name="nameUz" className="field text-[13px]" />
           </label>
         </div>

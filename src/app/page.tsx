@@ -233,7 +233,7 @@ export default async function DashboardPage() {
           >
             {t(S.dashboard.nearestDeadlines)}
           </SectionTitle>
-          <div className="card divide-y divide-hairline-soft">
+          <div className="card divide-y divide-hairline-soft overflow-hidden">
             {deadlines.slice(0, 6).map((d) => {
               const kind = DEADLINE_KIND[d.kind];
               const owner = userById(d.ownerId);
@@ -311,7 +311,7 @@ export default async function DashboardPage() {
           >
             {t(S.dashboard.myTasks)}
           </SectionTitle>
-          <div className="card divide-y divide-hairline-soft">
+          <div className="card divide-y divide-hairline-soft overflow-hidden">
             {myTasks.map((task) => {
               const assignee = userById(task.assigneeId);
               // Просрочено и «скоро» — не одно и то же: красим в красный только
@@ -360,7 +360,7 @@ export default async function DashboardPage() {
           </div>
 
           <SectionTitle>{t(S.dashboard.feed)}</SectionTitle>
-          <div className="card divide-y divide-hairline-soft">
+          <div className="card divide-y divide-hairline-soft overflow-hidden">
             {activity.slice(0, 7).map((e) => {
               const actor = userById(e.authorId);
               return (

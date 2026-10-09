@@ -287,6 +287,49 @@ check(await page.locator(".kan-col").nth(0).locator(".kan-card").count() === pro
 check(await page.locator(".kan-col").nth(1).locator(".kan-card").count() > 0,
   "проект не появился в столбце «На паузе»");
 
+/* дедлайны: доска по срочности и список */
+await page.evaluate(() => window.go("deadlines"));
+await page.waitForTimeout(200);
+check(await page.locator(".kan-col").count() === 5, "у доски дедлайнов не пять столбцов");
+await page.evaluate(() => window.handle("view", "deadlines:list"));
+await page.waitForTimeout(200);
+check((await heads()).length === 5, "в списке дедлайнов не четыре колонки с названием");
+await page.evaluate(() => window.handle("view", "deadlines:board"));
+await page.waitForTimeout(200);
+
+/* колонки всех досок одной ширины и с одинаковым зазором */
+await page.evaluate(() => { window.handle("view", "tasks:board"); window.handle("view", "projects:board"); });
+for (const route of ["deals", "tasks", "projects", "deadlines"]) {
+  await page.evaluate((r) => window.go(r), route);
+  await page.waitForTimeout(200);
+  const m = await page.evaluate(() => {
+    const cols = [...document.querySelectorAll(".kan-col")].map((c) => c.getBoundingClientRect());
+    const gaps = [];
+    for (let i = 1; i < cols.length; i += 1) gaps.push(Math.round(cols[i].left - cols[i - 1].right));
+    return { widths: [...new Set(cols.map((c) => Math.round(c.width)))], gaps: [...new Set(gaps)] };
+  });
+  check(m.widths.length === 1 && m.widths[0] === 280, `${route}: колонки разной ширины ${JSON.stringify(m.widths)}`);
+  check(m.gaps.length <= 1, `${route}: зазоры между колонками разные ${JSON.stringify(m.gaps)}`);
+}
+
+/* черта показывает, куда встанет карточка */
+await page.evaluate(() => { window.handle("view", "tasks:board"); window.go("tasks"); });
+await page.waitForTimeout(250);
+{
+  const card = page.locator(".kan-col").nth(0).locator(".kan-card").first();
+  const col = page.locator(".kan-col").nth(2);
+  const from = await card.boundingBox();
+  const to = await col.boundingBox();
+  await page.mouse.move(from.x + from.width / 2, from.y + 16);
+  await page.mouse.down();
+  await page.mouse.move(to.x + to.width / 2, to.y + 140, { steps: 10 });
+  await page.waitForTimeout(150);
+  check(await page.locator(".kan-col .kan-slot").count() === 1, "черта места вставки не показана");
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+  check(await page.locator(".kan-slot").count() === 0, "черта осталась после отпускания");
+}
+
 /* переключение роли перестраивает меню */
 await page.evaluate(() => window.handle("user", "u_partner1"));
 await page.waitForTimeout(150);

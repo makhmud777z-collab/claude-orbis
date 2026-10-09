@@ -391,6 +391,7 @@ const LIST_PATH: Record<ListSection, string> = {
   deals: "/crm/deals",
   tasks: "/tasks",
   projects: "/tasks/projects",
+  deadlines: "/deadlines",
 };
 
 const isListSection = (value: string): value is ListSection => value in LIST_PATH;

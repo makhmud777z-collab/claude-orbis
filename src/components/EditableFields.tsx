@@ -103,7 +103,7 @@ export function EditableFields({
       <div className="space-y-3">
         {fields.map((field) => (
           <label key={field.name} className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{field.label}</span>
+            <span className="t-micro field-label mb-1 block">{field.label}</span>
             {field.kind === "select" ? (
               <>
                 <input type="hidden" name={field.name} value={valueOf(field)} />

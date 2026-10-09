@@ -163,11 +163,11 @@ function AddFieldDialog({ locale, onClose }: { locale: Locale; onClose: () => vo
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.customFields.nameRu)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.customFields.nameRu)}</span>
             <input autoFocus required name="labelRu" className="field text-[13px]" />
           </label>
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.customFields.nameUz)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.customFields.nameUz)}</span>
             <input name="labelUz" className="field text-[13px]" />
           </label>
         </div>
@@ -191,7 +191,7 @@ function AddFieldDialog({ locale, onClose }: { locale: Locale; onClose: () => vo
 
         {type === "select" ? (
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.customFields.options)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.customFields.options)}</span>
             <textarea
               name="options"
               rows={4}

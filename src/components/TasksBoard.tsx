@@ -1,8 +1,9 @@
 "use client";
 
 import { moveTaskAction } from "@/app/actions";
+import { Board, BoardColumn } from "./BoardColumn";
 import { useBoardDrag } from "./board";
-import { Avatar, StatusDot } from "./ui";
+import { Avatar } from "./ui";
 import { TASK_STATUS } from "@/lib/labels";
 import { formatters } from "@/lib/format";
 import { translator, type Locale } from "@/lib/i18n";
@@ -50,7 +51,7 @@ export function TasksBoard({
   // Тот же механизм, что на досках лидов и сделок, — см. board.ts. Раньше
   // этой доске перетаскивания не досталось вовсе: колонки рисовались,
   // карточки не двигались.
-  const { columnFor, columnProps, cardProps, over } = useBoardDrag(
+  const { columnFor, columnProps, cardProps, dropIndex, over } = useBoardDrag(
     tasks,
     (task) => task.status,
     (id, status) => {
@@ -63,56 +64,28 @@ export function TasksBoard({
   );
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <Board hint={canEdit ? t(S.tasks.dragHint) : null}>
       {COLUMNS.map((status) => {
         const meta = TASK_STATUS[status];
         const items = tasks.filter((task) => columnFor(task) === status);
-        const active = over === status;
-        return (
-          <section
-            key={status}
-            {...columnProps(status)}
-            className="relative flex flex-col overflow-hidden rounded-[18px] border border-hairline bg-surface-2 transition-colors duration-150"
-            style={{
-              background: active
-                ? `color-mix(in srgb, ${meta.dot} 6%, var(--color-surface-2))`
-                : undefined,
-            }}
-          >
-            {active ? (
-              <span
-                aria-hidden
-                className="kan-drop-ring pointer-events-none absolute inset-0 rounded-[18px]"
-                style={{ boxShadow: `inset 0 0 0 2px ${meta.dot}` }}
-              />
-            ) : null}
-            <div className="h-[3px] w-full flex-none" style={{ background: meta.dot }} />
-            <header className="flex-none border-b border-hairline-soft bg-surface-1 px-3.5 pb-3 pt-3">
-              <div className="flex items-center gap-2">
-                <StatusDot color={meta.dot} />
-                <span className="t-caption min-w-0 flex-1 truncate font-semibold" style={{ color: meta.dot }}>
-                  {t(meta.label)}
-                </span>
-                <span className="t-micro t-num rounded-full bg-surface-3 px-1.5 py-0.5 font-semibold text-ink-muted">
-                  {items.length}
-                </span>
-              </div>
-            </header>
 
-            <div className="flex flex-1 flex-col gap-2.5 p-2.5">
-              {items.map((task) => (
-                <TaskItem key={task.id} task={task} locale={locale} drag={cardProps(task.id)} />
-              ))}
-              {!items.length ? (
-                <div className="rounded-[12px] border border-dashed border-hairline px-3 py-7 text-center text-ink-faint t-micro">
-                  {t(S.common.empty)}
-                </div>
-              ) : null}
-            </div>
-          </section>
+        return (
+          <BoardColumn
+            key={status}
+            color={meta.dot}
+            title={t(meta.label)}
+            count={items.length}
+            active={over === status}
+            dropAt={dropIndex(status)}
+            drop={columnProps(status)}
+            emptyLabel={t(S.common.empty)}
+            cards={items.map((task) => (
+              <TaskItem key={task.id} task={task} locale={locale} drag={cardProps(task.id)} />
+            ))}
+          />
         );
       })}
-    </div>
+    </Board>
   );
 }
 

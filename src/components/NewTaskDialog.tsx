@@ -52,18 +52,18 @@ export function NewTaskDialog({
           <input type="hidden" name="priority" value={priority} />
 
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.tasks.taskTitle)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.tasks.taskTitle)}</span>
             <input name="title" required autoFocus className="field text-[13px]" />
           </label>
 
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.crm.comment)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.crm.comment)}</span>
             <textarea name="description" rows={2} className="field resize-none text-[13px]" />
           </label>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">{t(S.tasks.assignee)}</span>
+              <span className="t-micro field-label mb-1 block">{t(S.tasks.assignee)}</span>
               <Select
                 locale={locale}
                 width="100%"
@@ -73,7 +73,7 @@ export function NewTaskDialog({
               />
             </label>
             <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">{t(S.tasks.due)}</span>
+              <span className="t-micro field-label mb-1 block">{t(S.tasks.due)}</span>
               <DatePicker name="dueAt" value={defaultDue} locale={locale} width="100%" />
             </label>
           </div>

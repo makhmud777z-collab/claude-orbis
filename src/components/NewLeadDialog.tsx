@@ -101,13 +101,13 @@ export function NewLeadDialog({
           <input type="hidden" name="ownerId" value={ownerId} />
 
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.common.fullName)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.common.fullName)}</span>
             <input name="name" required className="field text-[13px]" autoComplete="off" />
           </label>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">{t(S.crm.phone)}</span>
+              <span className="t-micro field-label mb-1 block">{t(S.crm.phone)}</span>
               <input
                 name="phone"
                 required
@@ -120,7 +120,7 @@ export function NewLeadDialog({
               />
             </label>
             <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">Email</span>
+              <span className="t-micro field-label mb-1 block">Email</span>
               <input
                 name="email"
                 type="email"
@@ -135,11 +135,11 @@ export function NewLeadDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">{t(S.crm.source)}</span>
+              <span className="t-micro field-label mb-1 block">{t(S.crm.source)}</span>
               <Select locale={locale} width="100%" value={source} options={sources} onChange={setSource} />
             </label>
             <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">{t(S.crm.channel)}</span>
+              <span className="t-micro field-label mb-1 block">{t(S.crm.channel)}</span>
               <Select
                 locale={locale}
                 width="100%"
@@ -152,12 +152,12 @@ export function NewLeadDialog({
           </div>
 
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.pipelines.fieldOwner)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.pipelines.fieldOwner)}</span>
             <Select locale={locale} width="100%" value={ownerId} options={owners} onChange={setOwnerId} />
           </label>
 
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.crm.comment)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.crm.comment)}</span>
             <textarea name="comment" rows={3} className="field resize-none text-[13px]" />
           </label>
 

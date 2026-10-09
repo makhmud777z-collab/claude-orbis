@@ -5,6 +5,7 @@ const DEFAULT_LIST_FIELDS = {
   deals: ["stage", "owner", "amount", "deadline", "contacts"],
   tasks: ["status", "assignee", "due", "priority"],
   projects: ["status", "lead", "due", "progress"],
+  deadlines: ["kind", "owner", "date", "source"],
 };
 
 const S = {
@@ -61,7 +62,7 @@ const S = {
   deptHidden: [],      // удалённые подразделения
   // Канбан или список — на каждый раздел свой, как в продукте: человек
   // смотрит сделки доской, а задачи списком, и одно не сбивает другое.
-  views: { leads: "board", deals: "board", tasks: "board", projects: "board" },
+  views: { leads: "board", deals: "board", tasks: "board", projects: "board", deadlines: "board" },
   listFields: structuredClone(DEFAULT_LIST_FIELDS),
   taskMoved: {},       // taskId → статус после переноса по доске
   projectMoved: {},    // projectId → статус после переноса по доске

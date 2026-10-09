@@ -50,27 +50,27 @@ export function InviteDialog({
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">{t(S.team.fullName)}</span>
+              <span className="t-micro field-label mb-1 block">{t(S.team.fullName)}</span>
               <input name="name" required autoFocus className="field text-[13px]" />
             </label>
             <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">Email</span>
+              <span className="t-micro field-label mb-1 block">Email</span>
               <input name="email" type="email" required className="field text-[13px]" />
             </label>
           </div>
 
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.team.position)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.team.position)}</span>
             <input name="title" className="field text-[13px]" />
           </label>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">{t(S.admin.changeRole)}</span>
+              <span className="t-micro field-label mb-1 block">{t(S.admin.changeRole)}</span>
               <Select locale={locale} width="100%" value={role} options={roles} onChange={setRole} />
             </label>
             <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">{t(S.settings.branches)}</span>
+              <span className="t-micro field-label mb-1 block">{t(S.settings.branches)}</span>
               <Select locale={locale} width="100%" value={branch} options={branches} onChange={setBranch} />
             </label>
           </div>

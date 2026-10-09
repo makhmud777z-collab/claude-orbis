@@ -100,7 +100,7 @@ export function RequestDocumentDialog({
 
           {defaultStudentId ? null : (
             <label className="block">
-              <span className="t-micro mb-1 block text-ink-faint">{t(S.documents.student)}</span>
+              <span className="t-micro field-label mb-1 block">{t(S.documents.student)}</span>
               <Select
                 locale={locale}
                 width="100%"
@@ -113,7 +113,7 @@ export function RequestDocumentDialog({
           )}
 
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">{t(S.documents.docKind)}</span>
+            <span className="t-micro field-label mb-1 block">{t(S.documents.docKind)}</span>
             {free.length ? (
               <Select
                 locale={locale}
@@ -130,7 +130,7 @@ export function RequestDocumentDialog({
           </label>
 
           <label className="block">
-            <span className="t-micro mb-1 block text-ink-faint">
+            <span className="t-micro field-label mb-1 block">
               {t(S.documents.noteForStudent)}
             </span>
             <textarea name="note" rows={2} className="field resize-none text-[13px]" />
