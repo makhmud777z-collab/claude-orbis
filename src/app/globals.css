@@ -289,6 +289,21 @@
     transform: translateY(0);
     transition-duration: 60ms;
   }
+  /*
+   * Тёмная карточка-акцент: одна на экран, под главную цифру. Цвета
+   * перевёрнуты через токены, поэтому в тёмной теме она становится светлой
+   * и всё так же выделяется, а не тонет в фоне.
+   */
+  .card-ink {
+    background: var(--color-ink);
+    color: var(--color-canvas);
+    border: 1px solid var(--color-ink);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-raised);
+  }
+  .card-ink .ink-soft {
+    color: color-mix(in srgb, var(--color-canvas) 68%, var(--color-ink));
+  }
   /* Шапка блока: отделяет заголовок от содержимого без лишней рамки. */
   .card-head {
     display: flex;
@@ -503,6 +518,11 @@
   :root[data-backdrop] .card-raised {
     background: color-mix(in srgb, var(--color-surface-1) 78%, transparent);
     backdrop-filter: blur(16px) saturate(1.1);
+  }
+  /* акцентная карточка остаётся сплошной: на стекле главная цифра теряет контраст */
+  :root[data-backdrop] .card-ink {
+    background: var(--color-ink);
+    backdrop-filter: none;
   }
   :root[data-backdrop] .card-head,
   :root[data-backdrop] .topbar-control,

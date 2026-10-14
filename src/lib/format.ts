@@ -103,6 +103,27 @@ export function usd(value: number): string {
   return `$${new Intl.NumberFormat("ru-RU").format(Math.round(value))}`;
 }
 
+/**
+ * Воны — так вузы Кореи публикуют цены. Крупные суммы короче: «2,44 млн ₩»
+ * читается быстрее, чем «2 442 000 ₩», а точная цифра остаётся в
+ * подсказке и в карточке вуза.
+ */
+export function krw(value: number, opts: { compact?: boolean; locale?: Locale } = {}): string {
+  const mln = (opts.locale ?? "ru") === "ru" ? "млн" : "mln";
+  if (opts.compact && value >= 1_000_000) {
+    const v = (value / 1_000_000).toFixed(2).replace(/0$/, "").replace(/\.$/, "").replace(".", ",");
+    return `${v} ${mln} ₩`;
+  }
+  return `${new Intl.NumberFormat("ru-RU").format(Math.round(value))} ₩`;
+}
+
+/** Вилка в вонах: «5,2–8,1 млн ₩» или одна цифра, если вилки нет. */
+export function krwRange(range: { min: number; max: number }, opts: { compact?: boolean; locale?: Locale } = {}): string {
+  if (range.min === range.max) return krw(range.min, opts);
+  const left = krw(range.min, opts).replace(/ (млн|mln) ₩$/, "").replace(/ ₩$/, "");
+  return `${left}–${krw(range.max, opts)}`;
+}
+
 export function usdToSom(value: number, rate: number): number {
   return Math.round((value * rate) / 100_000) * 100_000;
 }
@@ -123,6 +144,10 @@ export interface Formatters {
   usdWithSom: (value: number, rate: number) => string;
   /** «4 / 14 млн сум» — оплачено и сумма договора без повтора валюты */
   somPair: (paid: number, total: number) => string;
+  krw: (value: number, opts?: { compact?: boolean }) => string;
+  krwRange: (range: { min: number; max: number }, opts?: { compact?: boolean }) => string;
+  /** «$3 650–$4 970» — годовая вилка в долларах */
+  usdRange: (min: number, max: number) => string;
 }
 
 export function formatters(locale: Locale): Formatters {
@@ -191,6 +216,9 @@ export function formatters(locale: Locale): Formatters {
     usd,
     usdWithSom: (value: number, rate: number) =>
       `${usd(value)} · ${som(usdToSom(value, rate), { compact: true, locale })}`,
+    krw: (value, opts = {}) => krw(value, { ...opts, locale }),
+    krwRange: (range, opts = {}) => krwRange(range, { ...opts, locale }),
+    usdRange: (min: number, max: number) => (min === max ? usd(max) : `${usd(min)}–${usd(max)}`),
     somPair: (paid: number, total: number) => {
       const w = SOM_WORDS[locale];
       const mln = (v: number) => Math.round(v / 1_000_000);

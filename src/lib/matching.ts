@@ -1,5 +1,7 @@
-import { TODAY } from "./format";
+import { windowsFor } from "./data/universities";
+import { daysUntil, TODAY, TODAY_ISO } from "./format";
 import { loc, type Loc } from "./i18n";
+import { VISA_FUNDS_HOLD_DAYS, visaFor, visaFundsKrw, visaFundsUsd } from "./rules";
 import type { Program, Student, University } from "./types";
 
 /**
@@ -23,8 +25,11 @@ export interface MatchResult {
   score: number;
   verdict: MatchVerdict;
   reasons: MatchReason[];
-  /** полная стоимость первого года: обучение + общежитие + вступительный взнос */
-  yearCost: number;
+  /**
+   * Полная стоимость первого года: обучение (верхняя граница вилки) +
+   * общежитие + сбор за подачу. null — вуз не публикует стоимость обучения.
+   */
+  yearCost: number | null;
 }
 
 /** Три состояния из дорожной карты: Suitable / Possible / Not suitable. */
@@ -46,6 +51,16 @@ export function verdictDot(v: MatchVerdict): string {
   }[v];
 }
 
+/** «9 июля» / «9 iyul» — для причин подбора, без зависимости от форматтеров. */
+const MONTHS: Record<"ru" | "uz", string[]> = {
+  ru: ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"],
+  uz: ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"],
+};
+function shortDate(iso: string, lang: "ru" | "uz"): string {
+  const [, m, d] = iso.split("-").map(Number);
+  return `${d} ${MONTHS[lang][m - 1]}`;
+}
+
 export function matchProgram(
   student: Student,
   university: University,
@@ -56,10 +71,14 @@ export function matchProgram(
   let score = 100;
   let blocked = false;
 
-  const yearCost =
-    program.tuitionPerYear +
+  // Всё, что вуз не публикует, считается нулём — но об этом говорит
+  // отдельная причина ниже, а не молчаливая «дешёвая» цифра.
+  const extras =
     (p.needsDorm && university.dormCostPerYear ? university.dormCostPerYear : 0) +
-    university.admissionFee;
+    (university.admissionFee ?? 0);
+  const yearCost = program.tuitionPerYear === null ? null : program.tuitionPerYear + extras;
+  const yearCostMin =
+    program.tuitionPerYearMin === null ? yearCost : program.tuitionPerYearMin + extras;
 
   // ── уровень обучения — жёсткий фильтр
   if (program.degreeLevel !== p.degreeLevel) {
@@ -91,6 +110,29 @@ export function matchProgram(
         `TOPIK ${p.topik} против требуемого ${program.topikMin}`,
         `TOPIK ${p.topik}, talab ${program.topikMin}`,
       ), level: "block" });
+  }
+
+  // ── срок действия TOPIK: сертификат действует два года с объявления
+  // результатов. Истёкший вуз не примет, а истекающий до конца подачи —
+  // это пересдача, о которой семья должна узнать сейчас, а не в окне подачи.
+  if (program.topikMin > 0 && p.topik >= program.topikMin && p.topikExpiresAt) {
+    const upcoming = windowsFor(university, program.degreeLevel)
+      .filter((w) => w.intake === p.intake && w.closes >= TODAY_ISO)
+      .sort((a, b) => a.closes.localeCompare(b.closes))[0];
+    if (p.topikExpiresAt < TODAY_ISO) {
+      score -= 40;
+      blocked = true;
+      reasons.push({ key: "topik_valid", label: loc(
+        `TOPIK истёк ${shortDate(p.topikExpiresAt, "ru")} — нужен новый экзамен`,
+        `TOPIK muddati ${shortDate(p.topikExpiresAt, "uz")} tugagan — yangi imtihon kerak`,
+      ), level: "block" });
+    } else if (upcoming && p.topikExpiresAt < upcoming.closes) {
+      score -= 15;
+      reasons.push({ key: "topik_valid", label: loc(
+        `TOPIK истекает ${shortDate(p.topikExpiresAt, "ru")} — раньше конца подачи`,
+        `TOPIK ${shortDate(p.topikExpiresAt, "uz")} tugaydi — topshirish tugashidan oldin`,
+      ), level: "warn" });
+    }
   }
 
   // ── IELTS
@@ -128,24 +170,44 @@ export function matchProgram(
     }
   }
 
-  // ── бюджет семьи: почти всегда решающий фактор
-  if (yearCost <= p.budgetPerYear) {
+  // ── бюджет семьи: почти всегда решающий фактор.
+  // Вуз называет вилку по специальностям, поэтому и сравнение — с вилкой:
+  // верх вилки в бюджете — подходит; в бюджет попадает только низ — смотря
+  // какая специальность; даже низ дороже бюджета — не подходит.
+  const usd = (n: number) => `$${n.toLocaleString("ru-RU")}`;
+  if (yearCost === null || yearCostMin === null) {
+    score -= 8;
     reasons.push({ key: "budget", label: loc(
-        `Укладывается в бюджет: $${yearCost.toLocaleString("ru-RU")} в год`,
-        `Byudjetga sig‘adi: yiliga $${yearCost.toLocaleString("ru-RU")}`,
+        "Вуз не публикует стоимость — уточнить до подачи",
+        "Universitet narxni e’lon qilmaydi — topshirishdan oldin aniqlang",
+      ), level: "warn" });
+  } else if (yearCost <= p.budgetPerYear) {
+    reasons.push({ key: "budget", label: loc(
+        yearCostMin < yearCost
+          ? `Укладывается в бюджет: ${usd(yearCostMin)}–${usd(yearCost)} в год`
+          : `Укладывается в бюджет: ${usd(yearCost)} в год`,
+        yearCostMin < yearCost
+          ? `Byudjetga sig‘adi: yiliga ${usd(yearCostMin)}–${usd(yearCost)}`
+          : `Byudjetga sig‘adi: yiliga ${usd(yearCost)}`,
       ), level: "ok" });
-  } else if (yearCost <= p.budgetPerYear * 1.15) {
+  } else if (yearCostMin <= p.budgetPerYear) {
+    score -= 10;
+    reasons.push({ key: "budget", label: loc(
+        `${usd(yearCostMin)}–${usd(yearCost)} в год: в бюджет входят не все специальности`,
+        `Yiliga ${usd(yearCostMin)}–${usd(yearCost)}: hamma yo‘nalish byudjetga sig‘maydi`,
+      ), level: "warn" });
+  } else if (yearCostMin <= p.budgetPerYear * 1.15) {
     score -= 15;
     reasons.push({ key: "budget", label: loc(
-        `Дороже бюджета на $${(yearCost - p.budgetPerYear).toLocaleString("ru-RU")}`,
-        `Byudjetdan $${(yearCost - p.budgetPerYear).toLocaleString("ru-RU")} qimmat`,
+        `Дороже бюджета минимум на ${usd(yearCostMin - p.budgetPerYear)}`,
+        `Byudjetdan kamida ${usd(yearCostMin - p.budgetPerYear)} qimmat`,
       ), level: "warn" });
   } else {
     score -= 35;
     blocked = true;
     reasons.push({ key: "budget", label: loc(
-        `Бюджет $${p.budgetPerYear.toLocaleString("ru-RU")}, стоимость $${yearCost.toLocaleString("ru-RU")}`,
-        `Byudjet $${p.budgetPerYear.toLocaleString("ru-RU")}, narx $${yearCost.toLocaleString("ru-RU")}`,
+        `Бюджет ${usd(p.budgetPerYear)}, стоимость от ${usd(yearCostMin)}`,
+        `Byudjet ${usd(p.budgetPerYear)}, narx ${usd(yearCostMin)} dan`,
       ), level: "block" });
   }
 
@@ -178,15 +240,56 @@ export function matchProgram(
     reasons.push({ key: "ownership", label: loc("Не та форма собственности", "Mulkchilik shakli mos emas"), level: "warn" });
   }
 
-  // ── набор
-  if (!university.intakes.includes(p.intake)) {
+  // ── набор и сроки подачи.
+  // Мало знать, что у вуза есть набор на весну: если окно подачи уже
+  // закрылось, предлагать вуз семье — значит обещать то, чего не будет.
+  const windows = windowsFor(university, program.degreeLevel);
+  const forIntake = windows.filter((w) => w.intake === p.intake);
+  if (!windows.length) {
+    score -= 5;
+    reasons.push({ key: "intake", label: loc(
+      "Сроки подачи не сверены — уточнить на сайте вуза",
+      "Topshirish muddatlari tekshirilmagan — sayt orqali aniqlang",
+    ), level: "warn" });
+  } else if (!forIntake.length) {
     score -= 14;
     reasons.push({ key: "intake", label: loc(`Нет набора на ${p.intake}`, `${p.intake} uchun qabul yo‘q`), level: "warn" });
+  } else {
+    const ahead = forIntake
+      .filter((w) => w.closes >= TODAY_ISO)
+      .sort((a, b) => a.closes.localeCompare(b.closes))[0];
+    if (!ahead) {
+      const last = forIntake.map((w) => w.closes).sort().at(-1)!;
+      score -= 30;
+      blocked = true;
+      reasons.push({ key: "intake", label: loc(
+        `Приём на ${p.intake} закрылся ${shortDate(last, "ru")}`,
+        `${p.intake} qabuli ${shortDate(last, "uz")} yopilgan`,
+      ), level: "block" });
+    } else {
+      const left = daysUntil(ahead.closes);
+      const round = ahead.round ? ` (${ahead.round})` : "";
+      reasons.push({ key: "intake", label: loc(
+        left <= 14
+          ? `Подача до ${shortDate(ahead.closes, "ru")}${round} — осталось ${left} дн.`
+          : `Подача до ${shortDate(ahead.closes, "ru")}${round}`,
+        left <= 14
+          ? `Topshirish ${shortDate(ahead.closes, "uz")}${round} gacha — ${left} kun qoldi`
+          : `Topshirish ${shortDate(ahead.closes, "uz")}${round} gacha`,
+      ), level: left <= 14 ? "warn" : "ok" });
+      if (left <= 14) score -= 4;
+    }
   }
 
   // ── грант
   if (p.needsScholarship) {
-    if (university.scholarshipMax >= 50) {
+    if (university.scholarshipMax === null) {
+      score -= 6;
+      reasons.push({ key: "scholarship", label: loc(
+        "Скидки вуза не сверены — уточнить",
+        "Universitet chegirmalari tekshirilmagan — aniqlang",
+      ), level: "warn" });
+    } else if (university.scholarshipMax >= 50) {
       reasons.push({ key: "scholarship", label: loc(`Грант до ${university.scholarshipMax}%`, `Grant ${university.scholarshipMax}% gacha`), level: "ok" });
     } else {
       score -= 10;
@@ -227,15 +330,21 @@ export function matchProgram(
     }
   }
 
-  // ── подтверждение средств: справка из банка на счёт вуза
-  const bank = university.requirements.bankBalance;
-  if (bank > p.budgetPerYear) {
+  // ── деньги на счёте для визы.
+  // Сумма — правило визы, а не требование вуза: D-2 для степени, D-4 для
+  // языковых курсов, и для столичного региона она выше, чем для провинции.
+  const visa = visaFor(program.degreeLevel);
+  const fundsKrw = visaFundsKrw(university.capitalArea, visa);
+  const fundsUsd = visaFundsUsd(university.capitalArea, visa);
+  const fundsLabel = `${(fundsKrw / 1_000_000).toLocaleString("ru-RU")} млн KRW (≈ ${usd(fundsUsd)})`;
+  const fundsLabelUz = `${(fundsKrw / 1_000_000).toLocaleString("ru-RU")} mln KRW (≈ ${usd(fundsUsd)})`;
+  if (fundsUsd > p.budgetPerYear) {
     score -= 10;
     reasons.push({
       key: "bank",
       label: loc(
-        `Нужна справка из банка на $${bank.toLocaleString("ru-RU")} — больше годового бюджета`,
-        `Bankdan $${bank.toLocaleString("ru-RU")} ma’lumotnoma kerak — yillik byudjetdan ko‘p`,
+        `Виза ${visa}: на счёте ${fundsLabel} не меньше ${VISA_FUNDS_HOLD_DAYS} дней — больше годового бюджета`,
+        `${visa} viza: hisobda ${fundsLabelUz} kamida ${VISA_FUNDS_HOLD_DAYS} kun — yillik byudjetdan ko‘p`,
       ),
       level: "warn",
     });
@@ -243,18 +352,20 @@ export function matchProgram(
     reasons.push({
       key: "bank",
       label: loc(
-        `Справка из банка: $${bank.toLocaleString("ru-RU")}`,
-        `Bankdan ma’lumotnoma: $${bank.toLocaleString("ru-RU")}`,
+        `Виза ${visa}: на счёте ${fundsLabel} не меньше ${VISA_FUNDS_HOLD_DAYS} дней`,
+        `${visa} viza: hisobda ${fundsLabelUz} kamida ${VISA_FUNDS_HOLD_DAYS} kun`,
       ),
       level: "ok",
     });
   }
 
-  // ── визовый рейтинг вуза
-  if (university.visaGrade === "restricted") {
+  // ── статус вуза в IEQAS: от него зависит, насколько просто дадут визу
+  if (university.ieqas === "restricted") {
     score -= 20;
-    reasons.push({ key: "visa", label: loc("Ограничения по студенческой визе", "Talaba vizasida cheklovlar"), level: "block" });
+    reasons.push({ key: "visa", label: loc("Вуз в списке с ограничениями по визе", "Universitet viza cheklovlari ro‘yxatida"), level: "block" });
     blocked = true;
+  } else if (university.ieqas === "excellent") {
+    reasons.push({ key: "visa", label: loc("IEQAS: «отличный» вуз — виза проще", "IEQAS: «a’lo» universitet — viza osonroq"), level: "ok" });
   }
 
   score = Math.max(0, Math.min(100, score));

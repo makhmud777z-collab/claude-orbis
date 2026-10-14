@@ -1,4 +1,14 @@
 /* ── подбор вуза: перенесён из src/lib/matching.ts без изменений ── */
+const MONTHS_RU = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
+const MONTHS_UZ = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"];
+const dayMonth = (iso, lang) => { const [, m, d] = iso.split("-").map(Number); return `${d} ${(lang === "ru" ? MONTHS_RU : MONTHS_UZ)[m - 1]}`; };
+const RULES = () => D.rules;
+const visaFor = (level) => (level === "language" ? "D-4" : "D-2");
+const visaFundsKrw = (capitalArea, visa) => RULES().visaFundsKrw[visa][capitalArea ? "capital" : "regions"];
+const krwToUsd = (krw) => Math.round(krw / RULES().krwPerUsd);
+/** Окна вуза для программы этого уровня: магистерское окно бакалавру не подходит. */
+const windowsFor = (u, level) => u.windows.filter((w) => w.level === null || w.level === level);
+
 function matchProgram(student, university, program) {
   const p = student.profile;
   const reasons = [];
@@ -6,10 +16,11 @@ function matchProgram(student, university, program) {
   let blocked = false;
   const add = (key, label, level) => reasons.push({ key, label, level });
 
-  const yearCost =
-    program.tuitionPerYear +
+  const extras =
     (p.needsDorm && university.dormCostPerYear ? university.dormCostPerYear : 0) +
-    university.admissionFee;
+    (university.admissionFee ?? 0);
+  const yearCost = program.tuitionPerYear === null ? null : program.tuitionPerYear + extras;
+  const yearCostMin = program.tuitionPerYearMin === null ? yearCost : program.tuitionPerYearMin + extras;
 
   if (program.degreeLevel !== p.degreeLevel) {
     add("degree", loc("Другой уровень обучения", "Boshqa ta’lim bosqichi"), "block");
@@ -27,6 +38,20 @@ function matchProgram(student, university, program) {
   } else {
     score -= 45; blocked = true;
     add("topik", loc(`TOPIK ${p.topik} против требуемого ${program.topikMin}`, `TOPIK ${p.topik}, talab ${program.topikMin}`), "block");
+  }
+
+  // Срок действия TOPIK — два года: истёкший вуз не примет.
+  if (program.topikMin > 0 && p.topik >= program.topikMin && p.topikExpiresAt) {
+    const upcoming = windowsFor(university, program.degreeLevel)
+      .filter((w) => w.intake === p.intake && w.closes >= TODAY_ISO)
+      .sort((a, b) => a.closes.localeCompare(b.closes))[0];
+    if (p.topikExpiresAt < TODAY_ISO) {
+      score -= 40; blocked = true;
+      add("topik_valid", loc(`TOPIK истёк ${dayMonth(p.topikExpiresAt, "ru")} — нужен новый экзамен`, `TOPIK muddati ${dayMonth(p.topikExpiresAt, "uz")} tugagan — yangi imtihon kerak`), "block");
+    } else if (upcoming && p.topikExpiresAt < upcoming.closes) {
+      score -= 15;
+      add("topik_valid", loc(`TOPIK истекает ${dayMonth(p.topikExpiresAt, "ru")} — раньше конца подачи`, `TOPIK ${dayMonth(p.topikExpiresAt, "uz")} tugaydi — topshirish tugashidan oldin`), "warn");
+    }
   }
 
   if (program.ieltsMin !== null) {
@@ -53,14 +78,23 @@ function matchProgram(student, university, program) {
     }
   }
 
-  if (yearCost <= p.budgetPerYear) {
-    add("budget", loc(`Укладывается в бюджет: $${nf.format(yearCost)} в год`, `Byudjetga sig‘adi: yiliga $${nf.format(yearCost)}`), "ok");
-  } else if (yearCost <= p.budgetPerYear * 1.15) {
+  const usd = (n) => `$${nf.format(n)}`;
+  if (yearCost === null || yearCostMin === null) {
+    score -= 8;
+    add("budget", loc("Вуз не публикует стоимость — уточнить до подачи", "Universitet narxni e’lon qilmaydi — topshirishdan oldin aniqlang"), "warn");
+  } else if (yearCost <= p.budgetPerYear) {
+    add("budget", loc(
+      yearCostMin < yearCost ? `Укладывается в бюджет: ${usd(yearCostMin)}–${usd(yearCost)} в год` : `Укладывается в бюджет: ${usd(yearCost)} в год`,
+      yearCostMin < yearCost ? `Byudjetga sig‘adi: yiliga ${usd(yearCostMin)}–${usd(yearCost)}` : `Byudjetga sig‘adi: yiliga ${usd(yearCost)}`), "ok");
+  } else if (yearCostMin <= p.budgetPerYear) {
+    score -= 10;
+    add("budget", loc(`${usd(yearCostMin)}–${usd(yearCost)} в год: в бюджет входят не все специальности`, `Yiliga ${usd(yearCostMin)}–${usd(yearCost)}: hamma yo‘nalish byudjetga sig‘maydi`), "warn");
+  } else if (yearCostMin <= p.budgetPerYear * 1.15) {
     score -= 15;
-    add("budget", loc(`Дороже бюджета на $${nf.format(yearCost - p.budgetPerYear)}`, `Byudjetdan $${nf.format(yearCost - p.budgetPerYear)} qimmat`), "warn");
+    add("budget", loc(`Дороже бюджета минимум на ${usd(yearCostMin - p.budgetPerYear)}`, `Byudjetdan kamida ${usd(yearCostMin - p.budgetPerYear)} qimmat`), "warn");
   } else {
     score -= 35; blocked = true;
-    add("budget", loc(`Бюджет $${nf.format(p.budgetPerYear)}, стоимость $${nf.format(yearCost)}`, `Byudjet $${nf.format(p.budgetPerYear)}, narx $${nf.format(yearCost)}`), "block");
+    add("budget", loc(`Бюджет ${usd(p.budgetPerYear)}, стоимость от ${usd(yearCostMin)}`, `Byudjet ${usd(p.budgetPerYear)}, narx ${usd(yearCostMin)} dan`), "block");
   }
 
   if (p.preferredCities.length) {
@@ -86,13 +120,37 @@ function matchProgram(student, university, program) {
     add("ownership", loc("Не та форма собственности", "Mulkchilik shakli mos emas"), "warn");
   }
 
-  if (!university.intakes.includes(p.intake)) {
+  // Набор и сроки: если окно подачи уже закрылось, вуз не предлагается.
+  const windows = windowsFor(university, program.degreeLevel);
+  const forIntake = windows.filter((w) => w.intake === p.intake);
+  if (!windows.length) {
+    score -= 5;
+    add("intake", loc("Сроки подачи не сверены — уточнить на сайте вуза", "Topshirish muddatlari tekshirilmagan — sayt orqali aniqlang"), "warn");
+  } else if (!forIntake.length) {
     score -= 14;
     add("intake", loc(`Нет набора на ${p.intake}`, `${p.intake} uchun qabul yo‘q`), "warn");
+  } else {
+    const ahead = forIntake.filter((w) => w.closes >= TODAY_ISO).sort((a, b) => a.closes.localeCompare(b.closes))[0];
+    if (!ahead) {
+      const last = forIntake.map((w) => w.closes).sort().at(-1);
+      score -= 30; blocked = true;
+      add("intake", loc(`Приём на ${p.intake} закрылся ${dayMonth(last, "ru")}`, `${p.intake} qabuli ${dayMonth(last, "uz")} yopilgan`), "block");
+    } else {
+      const left = daysUntil(ahead.closes);
+      const round = ahead.round ? ` (${ahead.round})` : "";
+      add("intake", loc(
+        left <= 14 ? `Подача до ${dayMonth(ahead.closes, "ru")}${round} — осталось ${left} дн.` : `Подача до ${dayMonth(ahead.closes, "ru")}${round}`,
+        left <= 14 ? `Topshirish ${dayMonth(ahead.closes, "uz")}${round} gacha — ${left} kun qoldi` : `Topshirish ${dayMonth(ahead.closes, "uz")}${round} gacha`),
+        left <= 14 ? "warn" : "ok");
+      if (left <= 14) score -= 4;
+    }
   }
 
   if (p.needsScholarship) {
-    if (university.scholarshipMax >= 50) {
+    if (university.scholarshipMax === null) {
+      score -= 6;
+      add("scholarship", loc("Скидки вуза не сверены — уточнить", "Universitet chegirmalari tekshirilmagan — aniqlang"), "warn");
+    } else if (university.scholarshipMax >= 50) {
       add("scholarship", loc(`Грант до ${university.scholarshipMax}%`, `Grant ${university.scholarshipMax}% gacha`), "ok");
     } else {
       score -= 10;
@@ -118,17 +176,24 @@ function matchProgram(student, university, program) {
     }
   }
 
-  const bank = university.requirements.bankBalance;
-  if (bank > p.budgetPerYear) {
+  // Деньги на счёте — правило визы: D-2 или D-4, столичный регион или нет.
+  const visa = visaFor(program.degreeLevel);
+  const fundsKrw = visaFundsKrw(university.capitalArea, visa);
+  const fundsUsd = krwToUsd(fundsKrw);
+  const funds = `${nf.format(fundsKrw / 1_000_000)} млн KRW (≈ ${usd(fundsUsd)})`;
+  const fundsUz = `${nf.format(fundsKrw / 1_000_000)} mln KRW (≈ ${usd(fundsUsd)})`;
+  if (fundsUsd > p.budgetPerYear) {
     score -= 10;
-    add("bank", loc(`Нужна справка из банка на $${nf.format(bank)} — больше годового бюджета`, `Bankdan $${nf.format(bank)} ma’lumotnoma kerak — yillik byudjetdan ko‘p`), "warn");
+    add("bank", loc(`Виза ${visa}: на счёте ${funds} не меньше ${RULES().holdDays} дней — больше годового бюджета`, `${visa} viza: hisobda ${fundsUz} kamida ${RULES().holdDays} kun — yillik byudjetdan ko‘p`), "warn");
   } else {
-    add("bank", loc(`Справка из банка: $${nf.format(bank)}`, `Bankdan ma’lumotnoma: $${nf.format(bank)}`), "ok");
+    add("bank", loc(`Виза ${visa}: на счёте ${funds} не меньше ${RULES().holdDays} дней`, `${visa} viza: hisobda ${fundsUz} kamida ${RULES().holdDays} kun`), "ok");
   }
 
-  if (university.visaGrade === "restricted") {
+  if (university.ieqas === "restricted") {
     score -= 20; blocked = true;
-    add("visa", loc("Ограничения по студенческой визе", "Talaba vizasida cheklovlar"), "block");
+    add("visa", loc("Вуз в списке с ограничениями по визе", "Universitet viza cheklovlari ro‘yxatida"), "block");
+  } else if (university.ieqas === "excellent") {
+    add("visa", loc("IEQAS: «отличный» вуз — виза проще", "IEQAS: «a’lo» universitet — viza osonroq"), "ok");
   }
 
   score = Math.max(0, Math.min(100, score));

@@ -13,7 +13,7 @@ import { PIPELINES } from "../../src/lib/data/pipelines";
 import { DOCUMENTS } from "../../src/lib/data/documents";
 import { STUDENTS } from "../../src/lib/data/students";
 import { TASKS } from "../../src/lib/data/tasks";
-import { UNIVERSITIES } from "../../src/lib/data/universities";
+import { UNIVERSITIES, windowsFor } from "../../src/lib/data/universities";
 import { USERS } from "../../src/lib/data/users";
 import { TENANTS } from "../../src/lib/tenants";
 import { readdirSync, readFileSync } from "node:fs";
@@ -70,7 +70,10 @@ for (const a of DEALS) {
       fail(
         `deal ${a.id}: уровень ${a.degreeLevel}, а у программы ${program.degreeLevel}`,
       );
-    if (!uni.intakes.includes(a.intake))
+    // Набор проверяем только там, где окна подачи сверены: если источники
+    // их не подтвердили, отсутствие окна — незнание, а не противоречие.
+    const windows = program ? windowsFor(uni, program.degreeLevel) : [];
+    if (windows.length && !windows.some((w) => w.intake === a.intake))
       fail(`deal ${a.id}: у вуза ${uni.id} нет набора «${a.intake}»`);
   }
   const owner = users.get(a.ownerId);
@@ -129,10 +132,28 @@ for (const u of UNIVERSITIES) {
   for (const d of u.intakeDeadlines)
     if (!u.intakes.includes(d.intake))
       fail(`university ${u.id}: дедлайн для несуществующего набора «${d.intake}»`);
-  if (u.dormAvailable && u.dormCostPerYear === null)
-    fail(`university ${u.id}: общежитие есть, стоимость не указана`);
+  // Стоимость общежития может быть не сверена — тогда она пустая, и это
+  // честнее выдуманной цифры. Противоречием считается только цена без общежития.
   if (!u.dormAvailable && u.dormCostPerYear !== null)
     fail(`university ${u.id}: общежития нет, а стоимость указана`);
+
+  // Каталог больше не выдумывает: у сверенного вуза обязаны быть источники,
+  // у программы с ценой — вилка в вонах, и пересчёт в доллары должен
+  // сходиться с ней.
+  if (u.dataStatus !== "draft" && !u.sources.length)
+    fail(`university ${u.id}: статус «${u.dataStatus}», но нет ни одного источника`);
+  for (const src of u.sources)
+    if (!/^https:\/\//.test(src.url)) fail(`university ${u.id}: источник без https-ссылки: ${src.label}`);
+  for (const p of u.programs) {
+    if ((p.tuitionKrw === null) !== (p.tuitionPerYear === null))
+      fail(`university ${u.id}: у программы ${p.id} цена в вонах и в долларах не согласованы`);
+    if (p.tuitionKrw && p.tuitionKrw.min > p.tuitionKrw.max)
+      fail(`university ${u.id}: у программы ${p.id} вилка перевёрнута`);
+  }
+  for (const w of u.windows) {
+    if (w.opens && w.opens > w.closes) fail(`university ${u.id}: окно открывается позже, чем закрывается`);
+    if (w.results && w.results < w.closes) fail(`university ${u.id}: результаты раньше закрытия подачи`);
+  }
 }
 
 

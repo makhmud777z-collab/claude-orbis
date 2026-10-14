@@ -824,7 +824,7 @@ const ACTIONS = {
       rows.map((d) => {
         const stage = stagesOf(pipelineById(d.pipelineId)).find((x) => x.key === currentStage(d));
         return [studentById(d.studentId)?.fullName ?? "", uniById(d.universityId)?.name ?? "",
-          stage ? t(stage.label) : currentStage(d), d.contractValue, d.paid, d.contractValue - d.paid];
+          stage ? t(stage.label) : currentStage(d), d.contractValue, d.paid, outstanding(d)];
       }));
   },
 

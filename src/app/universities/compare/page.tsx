@@ -3,9 +3,11 @@ import { moduleGate } from "@/components/guard";
 import { IconArrowUpRight } from "@/components/icons";
 import { Chip, Crumbs, PageHeader, StatusDot } from "@/components/ui";
 import { clearShortlist } from "@/app/actions";
+import { dataStatusView } from "@/lib/catalog";
 import {
   hasEnglishTrack,
   nextDeadline,
+  tuitionRange,
   universityById,
 } from "@/lib/data/universities";
 import { formatters } from "@/lib/format";
@@ -16,9 +18,11 @@ import {
   OWNERSHIP_LABEL,
   ref,
   REGION_LABEL,
-  VISA_GRADE_LABEL,
+  IEQAS_LABEL,
+  ieqasKey,
 } from "@/lib/labels";
 import { matchStudent, verdictDot, verdictLabel } from "@/lib/matching";
+import { visaFundsKrw } from "@/lib/rules";
 import { scopedContacts } from "@/lib/queries";
 import { getSession } from "@/lib/session";
 import { NO_STUDENT } from "@/lib/shortlist";
@@ -62,31 +66,46 @@ export default async function ComparePage({
     {
       label: S.universities.city,
       value: (u) =>
-        `${t(ref(CITY_LABEL, u.city))}, ${t(ref(REGION_LABEL, u.region))}`,
+        u.region !== u.city
+          ? `${t(ref(CITY_LABEL, u.city))}, ${t(ref(REGION_LABEL, u.region))}`
+          : t(ref(CITY_LABEL, u.city)),
     },
     { label: S.universities.ownership, value: (u) => t(OWNERSHIP_LABEL[u.ownership]) },
+    { label: S.universities.qs, value: (u) => (u.qsRank ? `#${u.qsRank}` : "—") },
     {
       label: S.universities.tuitionPerYear,
-      value: (u) =>
-        `${f.usd(Math.min(...u.programs.map((p) => p.tuitionPerYear)))} – ${f.usd(
-          Math.max(...u.programs.map((p) => p.tuitionPerYear)),
-        )}`,
+      value: (u) => {
+        const range = tuitionRange(u);
+        return range ? f.usdRange(range.min, range.max) : t(S.universities.notPublished);
+      },
     },
     {
       label: S.universities.dorm,
       value: (u) =>
-        u.dormAvailable ? f.usdWithSom(u.dormCostPerYear ?? 0, rate) : t(S.common.none),
+        u.dormAvailable
+          ? u.dormCostPerYear !== null
+            ? f.usdWithSom(u.dormCostPerYear, rate)
+            : `${t(S.common.yes)} · ${t(S.universities.toClarify)}`
+          : t(S.common.none),
     },
-    { label: S.universities.admissionFee, value: (u) => f.usd(u.admissionFee) },
+    {
+      label: S.universities.admissionFee,
+      value: (u) => (u.applicationFeeKrw !== null ? f.krw(u.applicationFeeKrw) : t(S.universities.toClarify)),
+    },
     {
       label: S.universities.scholarshipUpTo,
-      value: (u) => `${t(S.universities.upTo)} ${u.scholarshipMax}%`,
+      value: (u) =>
+        u.scholarshipMax !== null ? `${t(S.universities.upTo)} ${u.scholarshipMax}%` : t(S.universities.toClarify),
     },
     {
+      // Первый год по самой дешёвой программе: обучение, общежитие и сбор.
+      // То, чего вуз не публикует, не складывается в ноль молча — строка
+      // говорит «уточняется».
       label: S.shortlist.yearCost,
       value: (u) => {
-        const cheapest = Math.min(...u.programs.map((p) => p.tuitionPerYear));
-        const total = cheapest + (u.dormCostPerYear ?? 0) + u.admissionFee;
+        const range = tuitionRange(u);
+        if (!range) return t(S.universities.toClarify);
+        const total = range.min + (u.dormCostPerYear ?? 0) + (u.admissionFee ?? 0);
         return f.usdWithSom(total, rate);
       },
     },
@@ -99,12 +118,8 @@ export default async function ComparePage({
       value: (u) => String(u.requirements.ieltsMin ?? "—"),
     },
     {
-      label: { ru: "GPA", uz: "GPA" },
-      value: (u) => String(u.requirements.gpaMin ?? "—"),
-    },
-    {
-      label: S.universities.bankBalance,
-      value: (u) => f.usd(u.requirements.bankBalance),
+      label: S.universities.visaD2,
+      value: (u) => `${f.krw(visaFundsKrw(u.capitalArea, "D-2"), { compact: true })} · ${f.usd(u.requirements.bankBalance)}`,
     },
     {
       label: S.shortlist.englishTaught,
@@ -119,14 +134,14 @@ export default async function ComparePage({
       value: (u) => {
         const d = nextDeadline(u);
         return d
-          ? `${f.shortDate(d.deadline)} · ${t(ref(INTAKE_LABEL, d.intake))}`
+          ? `${f.shortDate(d.deadline)} · ${t(ref(INTAKE_LABEL, d.intake))}${d.round ? ` (${d.round})` : ""}`
           : t(S.shortlist.noDeadline);
       },
     },
-    { label: S.universities.visaStatus, value: (u) => t(VISA_GRADE_LABEL[u.visaGrade]) },
+    { label: S.universities.ieqas, value: (u) => t(IEQAS_LABEL[ieqasKey(u.ieqas)]) },
     {
-      label: S.universities.intakes,
-      value: (u) => u.intakes.map((i) => t(ref(INTAKE_LABEL, i))).join(", "),
+      label: S.universities.status,
+      value: (u) => dataStatusView(u, t).label,
     },
   ];
 

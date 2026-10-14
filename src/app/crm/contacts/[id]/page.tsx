@@ -371,12 +371,15 @@ export default async function ContactPage({
                   <div className="t-micro mt-3 text-ink-muted">
                     {t(verdictLabel(m.verdict))} ·{" "}
                     {t(ref(CITY_LABEL, m.university.city))} ·{" "}
-                    {f.usdWithSom(m.yearCost, rate)} {t(S.common.perYear)}
+                    {m.yearCost !== null
+                      ? `${f.usdWithSom(m.yearCost, rate)} ${t(S.common.perYear)}`
+                      : t(S.universities.notPublished)}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {m.reasons.slice(0, 3).map((r) => (
                       <Chip
                         key={r.key}
+                        className="max-w-full whitespace-normal"
                         dot={
                           r.level === "ok"
                             ? "var(--color-status-deal)"

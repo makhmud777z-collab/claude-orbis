@@ -43,12 +43,12 @@ await page.goto(`${BASE}/universities`, { waitUntil: "networkidle" });
 const before = Number((await page.locator("text=/Найдено \\d+/").first().textContent())?.match(/\d+/)?.[0]);
 await page.getByText("Фильтр + поиск").click();
 await page.waitForTimeout(300);
-await page.getByRole("button", { name: "Медицина", exact: true }).click();
+await page.getByRole("button", { name: "Дизайн и искусство", exact: true }).click();
 await page.getByRole("button", { name: "Найти", exact: true }).click();
 await page.waitForURL(/f_fields=/, { timeout: 8000 });
 await page.waitForTimeout(400);
 const after = Number((await page.locator("text=/Найдено \\d+/").first().textContent())?.match(/\d+/)?.[0]);
-check(after < before && after > 0, `фильтр «Медицина»: было ${before}, стало ${after}`);
+check(after < before && after > 0, `фильтр «Дизайн и искусство»: было ${before}, стало ${after}`);
 
 /* 4. Умный фильтр: поиск сужает выдачу и живёт в адресе страницы */
 await page.goto(`${BASE}/crm/contacts`, { waitUntil: "networkidle" });

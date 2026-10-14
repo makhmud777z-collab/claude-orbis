@@ -276,16 +276,20 @@ function dossier(studentId) {
   const done = docs.filter((d) => d.status === "verified").length;
   return { done, total: docs.length, percent: docs.length ? Math.round((done / docs.length) * 100) : 0, docs };
 }
+/** Долг по договору: у проигранной сделки его нет, переплата не в минус. */
+const outstanding = (d) => currentStage(d) === "lost" ? 0 : Math.max(0, d.contractValue - d.paid);
 function scopedDeadlines() {
   const items = [];
   const byId = new Map(scopedContacts().map((s) => [s.id, s]));
   for (const d of scopedDeals()) {
-    if (!d.deadline) continue;
+    const stage = currentStage(d);
+    if (!d.deadline || stage === "departed" || stage === "lost") continue;
     const name = byId.get(d.studentId)?.fullName ?? "—";
     items.push({
-      id: "dl_deal_" + d.id, kind: currentStage(d) === "visa" ? "visa" : "university",
-      title: currentStage(d) === "visa"
-        ? loc(`${name} — решение по визе`, `${name} — viza bo‘yicha qaror`)
+      id: "dl_deal_" + d.id, kind: stage === "visa" ? "visa" : "university",
+      title: stage === "visa" ? loc(`${name} — решение по визе`, `${name} — viza bo‘yicha qaror`)
+        : stage === "offer" ? loc(`${name} — оплата и CoA`, `${name} — to‘lov va CoA`)
+        : stage === "submitted" || stage === "university_review" ? loc(`${name} — результаты вуза`, `${name} — universitet natijalari`)
         : loc(`${name} — дедлайн подачи`, `${name} — topshirish muddati`),
       date: d.deadline, ownerId: d.ownerId, go: "deal/" + d.id,
     });

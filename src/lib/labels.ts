@@ -71,7 +71,7 @@ export const DEGREE_LABEL: Record<DegreeLevel, Loc> = {
 
 export const OWNERSHIP_LABEL: Record<Ownership, Loc> = {
   national: loc("Национальный", "Milliy"),
-  public: loc("Государственный", "Davlat"),
+  public: loc("Публичный (городской)", "Ommaviy (shahar)"),
   private: loc("Частный", "Xususiy"),
 };
 
@@ -92,11 +92,18 @@ export const PRIORITY_LABEL: Record<"low" | "normal" | "high", Loc> = {
   high: loc("высокий", "yuqori"),
 };
 
-export const VISA_GRADE_LABEL: Record<"certified" | "general" | "restricted", Loc> = {
+/**
+ * Статус вуза в IEQAS. «Не сверено» — отдельное значение, а не «обычный»:
+ * отсутствие подтверждения не говорит о том, что вуз не сертифицирован.
+ */
+export const IEQAS_LABEL: Record<"excellent" | "certified" | "general" | "restricted" | "unknown", Loc> = {
+  excellent: loc("«Отличный» — самый простой путь к визе", "«A’lo» — vizaga eng oson yo‘l"),
   certified: loc("Сертифицированный (упрощённая виза)", "Sertifikatlangan (yengil viza)"),
   general: loc("Обычный", "Oddiy"),
-  restricted: loc("С ограничениями", "Cheklovlar bilan"),
+  restricted: loc("С ограничениями по визе", "Viza cheklovlari bilan"),
+  unknown: loc("Не сверено", "Tekshirilmagan"),
 };
+export const ieqasKey = (v: string | null) => (v ?? "unknown") as keyof typeof IEQAS_LABEL;
 
 export const PROGRAM_LANGUAGE: Record<"ko" | "en" | "ko/en", Loc> = {
   ko: loc("корейский", "koreys tili"),
@@ -141,12 +148,15 @@ export const FIELD_LABEL: Record<string, Loc> = {
 
 export const CITY_LABEL: Record<string, Loc> = {
   "Сеул": loc("Сеул", "Seul"),
-  "Пусан": loc("Пусан", "Busan"),
   "Инчхон": loc("Инчхон", "Incheon"),
-  "Тэгу": loc("Тэгу", "Daegu"),
-  "Тэджон": loc("Тэджон", "Daejeon"),
-  "Кванджу": loc("Кванджу", "Gwangju"),
   "Сувон": loc("Сувон", "Suwon"),
+  "Соннам": loc("Соннам", "Seongnam"),
+  "Тэджон": loc("Тэджон", "Daejeon"),
+  "Пусан": loc("Пусан", "Busan"),
+  "Тэгу": loc("Тэгу", "Daegu"),
+  "Кванджу": loc("Кванджу", "Gwangju"),
+  "Ульсан": loc("Ульсан", "Ulsan"),
+  "Пхохан": loc("Пхохан", "Pohang"),
   "Чонджу": loc("Чонджу", "Jeonju"),
   "Ташкент": loc("Ташкент", "Toshkent"),
   "Самарканд": loc("Самарканд", "Samarqand"),
@@ -154,14 +164,21 @@ export const CITY_LABEL: Record<string, Loc> = {
   "Бишкек": loc("Бишкек", "Bishkek"),
 };
 
+/**
+ * Регион вуза. Пусан, Тэгу, Тэджон, Кванджу и Ульсан — города-метрополии,
+ * самостоятельные единицы, а не часть провинций: раньше они значились
+ * «Кёнсан-Намдо» и «Чолла-Намдо», и это было неверно. Регион важен не для
+ * красоты — от него зависит сумма на счёте для визы.
+ */
 export const REGION_LABEL: Record<string, Loc> = {
   "Столичный регион": loc("Столичный регион", "Poytaxt mintaqasi"),
-  "Кёнсан-Намдо": loc("Кёнсан-Намдо", "Gyeongsang-Namdo"),
-  "Кёнсан-Пукто": loc("Кёнсан-Пукто", "Gyeongsang-Bukto"),
-  "Чхунчхон-Намдо": loc("Чхунчхон-Намдо", "Chungcheong-Namdo"),
-  "Чолла-Намдо": loc("Чолла-Намдо", "Jeolla-Namdo"),
-  "Чолла-Пукто": loc("Чолла-Пукто", "Jeolla-Bukto"),
-  "Кёнги-До": loc("Кёнги-До", "Gyeonggi-Do"),
+  "Кёнгидо": loc("Кёнгидо (столичный регион)", "Gyeonggi-do (poytaxt mintaqasi)"),
+  "Тэджон": loc("Тэджон", "Daejeon"),
+  "Пусан": loc("Пусан", "Busan"),
+  "Тэгу": loc("Тэгу", "Daegu"),
+  "Кванджу": loc("Кванджу", "Gwangju"),
+  "Ульсан": loc("Ульсан", "Ulsan"),
+  "Кёнсан-Пукто": loc("Кёнсан-Пукто", "Gyeongsangbuk-do"),
 };
 
 export const INTAKE_LABEL: Record<string, Loc> = {

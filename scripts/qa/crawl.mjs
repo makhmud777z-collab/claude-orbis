@@ -8,7 +8,7 @@ const ROUTES = [
   "/crm/contacts", "/crm/contacts/s_001",
   "/tasks", "/tasks/projects", "/tasks/reports",
   "/documents", "/deadlines", "/calendar",
-  "/universities", "/universities/u_hallim", "/universities/compare",
+  "/universities", "/universities/u_korea", "/universities/compare",
   "/finance",
   "/team", "/team/u_nilufar", "/team/structure", "/team/reports",
   "/admin", "/admin/pipelines", "/admin/channels", "/admin/cards",

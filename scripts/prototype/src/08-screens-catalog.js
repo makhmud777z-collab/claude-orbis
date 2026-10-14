@@ -23,15 +23,18 @@ function screenUniversities() {
     const programs = u.programs.filter((p) => {
       if (v.degree && p.degreeLevel !== v.degree) return false;
       if (v.topikFrom && p.topikMin > Number(v.topikFrom)) return false;
-      if (v.tuitionFrom && p.tuitionPerYear < Number(v.tuitionFrom)) return false;
-      if (v.tuitionTo && p.tuitionPerYear > Number(v.tuitionTo)) return false;
+      // Цена сравнивается с вилкой; программа без опубликованной цены не прячется.
+      if (v.tuitionFrom && p.tuitionPerYear !== null && p.tuitionPerYear < Number(v.tuitionFrom)) return false;
+      if (v.tuitionTo && p.tuitionPerYear !== null && (p.tuitionPerYearMin ?? p.tuitionPerYear) > Number(v.tuitionTo)) return false;
       return true;
     });
-    if (!programs.length) continue;
+    const programFilters = Boolean(v.degree || v.topikFrom || v.tuitionFrom || v.tuitionTo);
+    if (!programs.length && (u.programs.length || programFilters)) continue;
     const match = student ? programs.map((p) => matchProgram(student, u, p)).sort((a, b) => b.score - a.score)[0] : null;
     rows.push({ u, programs, match });
   }
-  rows.sort((a, b) => (a.match && b.match ? b.match.score - a.match.score : (a.u.nationalRank ?? 999) - (b.u.nationalRank ?? 999)));
+  rows.sort((a, b) => (a.match && b.match ? b.match.score - a.match.score
+    : (a.u.qsRank ?? 999) - (b.u.qsRank ?? 999) || a.u.name.localeCompare(b.u.name)));
 
   return `
     ${head(t(loc("Каталог вузов", "Universitetlar katalogi")),
@@ -40,10 +43,10 @@ function screenUniversities() {
       `<button class="btn btn-secondary">${icon("export", 15)} ${t(loc("Выгрузить шорт-лист", "Qisqa ro‘yxatni yuklash"))}</button>`)}
 
     <div class="banner t-caption" style="margin-bottom:20px">
-      ${dot("var(--progress)")}
+      ${dot("var(--color-status-open)")}
       <span style="line-height:1.55">${t(loc(
-        "Этап 1: структура и фильтры. Карточки заполнены демо-данными и помечены как «черновик». На этапе 2 записи заполняются с официальных страниц вузов и файлов admission guideline.",
-        "1-bosqich: tuzilma va filtrlar. Kartalar demo ma’lumotlar bilan to‘ldirilgan va «qoralama» deb belgilangan. 2-bosqichda ma’lumotlar universitetlarning rasmiy sahifalaridan olinadi."))}</span>
+        "Каталог — настоящие вузы Кореи, сверка 14 октября 2026 года по открытым источникам: прессе, документам вузов и справочникам. Цены — в вонах, как их публикует вуз; доллары — по курсу 1 340 ₩. Даты и суммы перед подачей подтверждайте на сайте вуза.",
+        "Katalog — Koreyaning haqiqiy universitetlari, 2026-yil 14-oktabrda ochiq manbalar bo‘yicha tekshirilgan. Narxlar — vonda; dollar — 1 340 ₩ kursida. Sana va summalarni universitet saytida tasdiqlang."))}</span>
     </div>
 
     ${smartFilter("universities", fields, simplePresets(), { shown: rows.length, total: D.universities.length })}
@@ -76,10 +79,10 @@ function screenUniversities() {
 
         <div class="grid">
           ${rows.map(({ u, programs, match }) => {
-            const low = Math.min(...programs.map((p) => p.tuitionPerYear));
-            const high = Math.max(...programs.map((p) => p.tuitionPerYear));
+            const range = tuitionRange(programs);
             const dl = nextDeadline(u);
             const on = picked.includes(u.id);
+            const status = DATA_STATUS[u.dataStatus];
             return `<div class="card card-hover" style="padding:18px">
               <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between">
                 <div style="min-width:0">
@@ -87,27 +90,29 @@ function screenUniversities() {
                     <span style="font-size:17px;font-weight:500;letter-spacing:-.3px">${esc(u.name)}</span>
                     <span class="t-micro faint">${esc(u.nameKo)}</span>
                   </div>
-                  <div class="t-caption muted" style="margin-top:6px">${esc(t(ref(L.city, u.city)))} · ${esc(t(L.ownership[u.ownership]))} · ${u.nationalRank ? "#" + u.nationalRank + " " + t(loc("в стране", "mamlakatda")) : t(loc("без рейтинга", "reytingsiz"))}</div>
+                  <div class="t-caption muted" style="margin-top:6px">${esc(t(ref(L.city, u.city)))} · ${esc(t(L.ownership[u.ownership]))} · ${u.qsRank ? "QS #" + u.qsRank : t(loc("без рейтинга", "reytingsiz"))} · ${t(loc("основан в", "tashkil etilgan"))} ${u.founded}${u.ieqas === "excellent" ? ` <span style="color:var(--deal);font-weight:500;margin-left:6px">IEQAS ★</span>` : ""}</div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px">
-                  ${match ? `<span class="chip on">${dot(VERDICT[match.verdict].dot)}${esc(t(VERDICT[match.verdict].label))} · ${match.score}</span>` : chip(t(loc("черновик данных", "ma’lumot qoralamasi")))}
+                  ${match ? `<span class="chip on">${dot(VERDICT[match.verdict].dot)}${esc(t(VERDICT[match.verdict].label))} · ${match.score}</span>` : chip(t(status.label), status.dot)}
                   <button class="btn ${on ? "btn-primary" : "btn-secondary"}" data-act="shortlist" data-value="${u.id}">${t(on ? loc("В шорт-листе", "Ro‘yxatda") : loc("В шорт-лист", "Qisqa ro‘yxatga"))}</button>
                 </div>
               </div>
 
               <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-top:16px">
                 <span><span class="t-micro faint" style="display:block">${t(loc("Обучение в год", "Yillik o‘qish"))}</span>
-                  <span class="t-body-sm">${low === high ? usd(low) : usd(low) + " – " + usd(high)}</span>
-                  <span class="t-micro faint" style="display:block">${som(low * rate, true)}</span></span>
-                <span><span class="t-micro faint" style="display:block">${t(loc("Общежитие", "Yotoqxona"))}</span>
-                  <span class="t-body-sm">${u.dormAvailable ? usd(u.dormCostPerYear) + " / " + t(loc("год", "yil")) : t(loc("нет", "yo‘q"))}</span></span>
+                  <span class="t-body-sm">${range ? usdRange(range.min, range.max) : t(loc("не публикуется", "e’lon qilinmaydi"))}</span>
+                  <span class="t-micro faint" style="display:block">${range ? som(range.min * rate, true) : t(loc("уточняется", "aniqlanmoqda"))}</span></span>
+                <span><span class="t-micro faint" style="display:block">${t(loc("Сроки подачи", "Topshirish muddatlari"))}</span>
+                  <span class="t-body-sm">${dl ? fmtShort(dl.deadline) + (dl.round ? " · " + esc(dl.round) : "") : "—"}</span>
+                  <span class="t-micro faint" style="display:block">${dl ? t(ref(L.intake, dl.intake)) + " · " + relDeadline(dl.deadline) : t(loc("окна не сверены или закрыты", "muddatlar tekshirilmagan yoki yopilgan"))}</span></span>
                 <span><span class="t-micro faint" style="display:block">${t(loc("Требования", "Talablar"))}</span>
-                  <span class="t-body-sm">TOPIK ${u.requirements.topikMin}+${u.requirements.ieltsMin ? " · IELTS " + u.requirements.ieltsMin : ""} · GPA ${u.requirements.gpaMin ?? "—"}</span>
-                  <span class="t-micro faint" style="display:block">${dl ? t(loc("Дедлайн", "Muddat")) + ": " + fmtShort(dl.deadline) + " · " + t(ref(L.intake, dl.intake)) : t(loc("набор закрыт", "qabul yopilgan"))}</span></span>
+                  <span class="t-body-sm">TOPIK ${u.requirements.topikMin ? u.requirements.topikMin + "+" : "—"}${u.requirements.ieltsMin ? " · IELTS " + u.requirements.ieltsMin : ""}</span>
+                  <span class="t-micro faint" style="display:block">${u.scholarshipMax !== null ? t(loc("Грант до", "Grant")) + " " + u.scholarshipMax + "%" : t(loc("Грант: уточняется", "Grant: aniqlanmoqda"))}</span></span>
               </div>
 
               <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:14px">
-                ${programs.slice(0, 4).map((p) => chip(`${p.name} · ${usd(p.tuitionPerYear)}`)).join("")}
+                ${programs.length ? programs.slice(0, 4).map((p) => { const pr = programPrice(p); return chip(`${p.name}${pr ? " · " + pr.krw : ""}`); }).join("")
+                  : `<span class="t-micro faint">${t(loc("Программы и цены для иностранцев не подтвердились источниками — карточка только для справки.", "Chet elliklar uchun dasturlar va narxlar tasdiqlanmadi."))}</span>`}
                 ${programs.length > 4 ? chip(`+${programs.length - 4} ${t(loc("программ", "dastur"))}`) : ""}
               </div>
 
@@ -139,30 +144,30 @@ function screenCompare() {
   }
 
   const verdicts = new Map(student ? list.map((u) => [u.id, matchStudent(student, [u])[0]]) : []);
+  const none = t(loc("уточняется", "aniqlanmoqda"));
   const rows = [
-    [loc("Город", "Shahar"), (u) => `${t(ref(L.city, u.city))}, ${t(ref(L.region, u.region))}`],
+    [loc("Город", "Shahar"), (u) => (u.region !== u.city ? `${t(ref(L.city, u.city))}, ${t(ref(L.region, u.region))}` : t(ref(L.city, u.city)))],
     [loc("Форма собственности", "Mulkchilik shakli"), (u) => t(L.ownership[u.ownership])],
-    [loc("Обучение в год", "Yillik o‘qish"), (u) => {
-      const lo = Math.min(...u.programs.map((p) => p.tuitionPerYear)), hi = Math.max(...u.programs.map((p) => p.tuitionPerYear));
-      return lo === hi ? usd(lo) : `${usd(lo)} – ${usd(hi)}`;
+    [loc("QS", "QS"), (u) => (u.qsRank ? "#" + u.qsRank : "—")],
+    [loc("Обучение в год", "Yillik o‘qish"), (u) => { const r = tuitionRange(u.programs); return r ? usdRange(r.min, r.max) : none; }],
+    [loc("Общежитие", "Yotoqxona"), (u) => (u.dormAvailable ? (u.dormCostPerYear !== null ? usdSom(u.dormCostPerYear, rate) : `${t(loc("есть", "bor"))} · ${none}`) : t(loc("нет", "yo‘q")))],
+    [loc("Сбор за подачу", "Ariza to‘lovi"), (u) => (u.applicationFeeKrw !== null ? krwShort(u.applicationFeeKrw) : none)],
+    [loc("Грант", "Grant"), (u) => (u.scholarshipMax !== null ? `${t(loc("до", "gacha"))} ${u.scholarshipMax}%` : none)],
+    [loc("Полная стоимость года", "Yillik to‘liq narx"), (u) => {
+      const r = tuitionRange(u.programs);
+      return r ? usdSom(r.min + (u.dormCostPerYear ?? 0) + (u.admissionFee ?? 0), rate) : none;
     }],
-    [loc("Общежитие", "Yotoqxona"), (u) => (u.dormAvailable ? usdSom(u.dormCostPerYear, rate) : t(loc("нет", "yo‘q")))],
-    [loc("Вступительный взнос", "Ariza to‘lovi"), (u) => usd(u.admissionFee)],
-    [loc("Грант", "Grant"), (u) => `${t(loc("до", "gacha"))} ${u.scholarshipMax}%`],
-    [loc("Полная стоимость года", "Yillik to‘liq narx"), (u) =>
-      usdSom(Math.min(...u.programs.map((p) => p.tuitionPerYear)) + (u.dormCostPerYear ?? 0) + u.admissionFee, rate)],
     [loc("TOPIK", "TOPIK"), (u) => String(u.requirements.topikMin || t(loc("не требуется", "talab qilinmaydi")))],
     [loc("IELTS", "IELTS"), (u) => String(u.requirements.ieltsMin ?? "—")],
-    [loc("GPA", "GPA"), (u) => String(u.requirements.gpaMin ?? "—")],
-    [loc("Счёт в банке", "Bankdagi hisob"), (u) => usd(u.requirements.bankBalance)],
+    [loc("Деньги на счёте, D-2", "Hisobdagi pul, D-2"), (u) => `${krwShort(visaFundsKrw(u.capitalArea, "D-2"))} · ${usd(u.requirements.bankBalance)}`],
     [loc("Программы на английском", "Ingliz tilidagi dasturlar"), (u) => t(hasEnglish(u) ? loc("есть", "bor") : loc("нет", "yo‘q"))],
     [loc("Языковой центр", "Til markazi"), (u) => t(u.hasLanguageCenter ? loc("есть", "bor") : loc("нет", "yo‘q"))],
     [loc("Дедлайн подачи", "Topshirish muddati"), (u) => {
       const d = nextDeadline(u);
-      return d ? `${fmtShort(d.deadline)} · ${t(ref(L.intake, d.intake))}` : t(loc("набор закрыт", "qabul yopilgan"));
+      return d ? `${fmtShort(d.deadline)} · ${t(ref(L.intake, d.intake))}${d.round ? " (" + d.round + ")" : ""}` : t(loc("окна не сверены или закрыты", "muddatlar tekshirilmagan yoki yopilgan"));
     }],
-    [loc("Визовый статус", "Viza maqomi"), (u) => t(L.visaGrade[u.visaGrade])],
-    [loc("Наборы", "Qabullar"), (u) => u.intakes.map((i) => t(ref(L.intake, i))).join(", ")],
+    [loc("Статус IEQAS", "IEQAS maqomi"), (u) => t(L.ieqas[u.ieqas ?? "unknown"])],
+    [loc("Сверка данных", "Ma’lumot tekshiruvi"), (u) => t(DATA_STATUS[u.dataStatus].label)],
   ];
 
   return `
@@ -410,7 +415,7 @@ function screenFinance() {
     <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr))">
       ${tile(t(loc("Законтрактовано", "Shartnomalar summasi")), som(contracted, true), "", "var(--accent)")}
       ${tile(t(loc("Оплачено", "To‘langan")), som(paid, true), `${Math.round((paid / Math.max(1, contracted)) * 100)}% ${t(loc("от суммы договоров", "shartnoma summasidan"))}`, "var(--deal)")}
-      ${tile(t(loc("Дебиторка", "Qarzdorlik")), som(contracted - paid, true), "", "var(--progress)")}
+      ${tile(t(loc("Дебиторка", "Qarzdorlik")), som(apps.reduce((n, a) => n + outstanding(a), 0), true), "", "var(--progress)")}
       ${tile(t(loc("Закрыто успешно", "Muvaffaqiyatli yopilgan")), String(won.length), `${som(won.reduce((n, a) => n + a.paid, 0), true)} ${t(loc("получено", "olingan"))}`, "var(--violet)")}
     </div>
 

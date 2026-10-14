@@ -16,7 +16,7 @@ const BASE = process.env.QA_BASE_URL ?? "http://localhost:3000";
 const ROUTES = [
   "/", "/crm/leads", "/crm/deals", "/crm/contacts", "/crm/contacts/s_001",
   "/crm/deals/d_001", "/crm/leads/l_001", "/tasks", "/tasks/projects", "/tasks/reports",
-  "/documents", "/deadlines", "/calendar", "/universities", "/universities/u_hallim",
+  "/documents", "/deadlines", "/calendar", "/universities", "/universities/u_korea",
   "/universities/compare", "/finance", "/team", "/team/u_nilufar", "/team/structure",
   "/team/reports", "/settings", "/admin", "/admin/pipelines", "/admin/channels",
   "/admin/cards", "/admin/users", "/admin/permissions", "/admin/portal",
@@ -71,6 +71,10 @@ for (const route of ROUTES) {
   for (const match of text.matchAll(/(\d+)[  ]+([А-Яа-яЁё]+)/g)) {
     const forms = dictionary.get(match[2].toLowerCase());
     if (!forms) continue;
+    // «14 октября 2026 года» — дата, а не количество лет: год в датах
+    // стоит в родительном падеже независимо от числа.
+    const n = Number(match[1]);
+    if (forms[0] === "год" && n >= 1900 && n <= 2100) continue;
     const want = form(Number(match[1]), forms);
     if (want !== match[2].toLowerCase()) {
       broken.add(`${route}: «${match[0]}» → надо «${match[1]} ${want}»`);

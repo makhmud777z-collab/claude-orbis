@@ -24,13 +24,16 @@ import {
   BRANCH_LABEL, CITY_LABEL, DEADLINE_KIND, DEGREE_LABEL, DOCUMENT_CHECKLIST,
   DOCUMENT_STATUS, FIELD_LABEL,
   INTAKE_LABEL, OWNERSHIP_LABEL, PRIORITY_LABEL, PROGRAM_LANGUAGE, REGION_LABEL,
-  SOURCE_LABEL, STUDENT_STATUS, TASK_STATUS, VISA_GRADE_LABEL,
+  SOURCE_LABEL, STUDENT_STATUS, TASK_STATUS, IEQAS_LABEL,
 } from "../../src/lib/labels";
 import {
   ACTION_LABEL, MODULE_ACTIONS, MODULE_GROUPS, MODULE_LABEL, SEED_ROLES,
 } from "../../src/lib/rbac";
 import { EDITIONS } from "../../src/lib/edition";
 import { TENANTS } from "../../src/lib/tenants";
+import {
+  KRW_PER_USD, KRW_RATE_DATE, VISA_FUNDS_HOLD_DAYS, VISA_FUNDS_KRW,
+} from "../../src/lib/rules";
 
 const payload = {
   tenants: TENANTS,
@@ -50,6 +53,9 @@ const payload = {
   documents: DOCUMENTS,
   checklist: DOCUMENT_CHECKLIST,
   universities: UNIVERSITIES,
+  // Правила визы и курс — те же, что в продукте: прототип считает по ним
+  // деньги на счёте и пересчитывает воны в доллары.
+  rules: { krwPerUsd: KRW_PER_USD, krwRateDate: KRW_RATE_DATE, visaFundsKrw: VISA_FUNDS_KRW, holdDays: VISA_FUNDS_HOLD_DAYS },
   editions: EDITIONS,
   roles: SEED_ROLES,
   moduleGroups: MODULE_GROUPS,
@@ -63,7 +69,7 @@ const payload = {
     ownership: OWNERSHIP_LABEL,
     studentStatus: STUDENT_STATUS,
     priority: PRIORITY_LABEL,
-    visaGrade: VISA_GRADE_LABEL,
+    ieqas: IEQAS_LABEL,
     programLanguage: PROGRAM_LANGUAGE,
     field: FIELD_LABEL,
     city: CITY_LABEL,

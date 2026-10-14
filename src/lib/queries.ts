@@ -6,7 +6,7 @@ import { loc } from "./i18n";
 import type { Session } from "./session";
 import * as store from "./store";
 import type {
-  Deadline, Deal, Lead, Project, Student, StudentDocument, Task,
+  Deadline, Deal, DealStage, Lead, Project, Student, StudentDocument, Task,
 } from "./types";
 
 /**
@@ -82,6 +82,25 @@ export function scopedActivity(session: Session) {
 export const activeLeads = (session: Session) => scopedLeads(session).filter(isActiveLead);
 
 /**
+ * Что значит дата сделки, зависит от этапа: до подачи это последний день
+ * окна приёма, после подачи — день результатов, после оффера — оплата и
+ * CoA. Называть всё «дедлайном подачи» — значит торопить уже поданное.
+ */
+function dealDeadlineTitle(stage: DealStage, name: string) {
+  switch (stage) {
+    case "visa":
+      return loc(`${name} — решение по визе`, `${name} — viza bo‘yicha qaror`);
+    case "offer":
+      return loc(`${name} — оплата и CoA`, `${name} — to‘lov va CoA`);
+    case "submitted":
+    case "university_review":
+      return loc(`${name} — результаты вуза`, `${name} — universitet natijalari`);
+    default:
+      return loc(`${name} — дедлайн подачи`, `${name} — topshirish muddati`);
+  }
+}
+
+/**
  * Дедлайны не хранятся отдельно — они вычисляются из сделок, документов и задач.
  * Один источник правды: изменилась сделка → изменился календарь.
  */
@@ -90,16 +109,14 @@ export function scopedDeadlines(session: Session): Deadline[] {
   const items: Deadline[] = [];
 
   for (const deal of scopedDeals(session)) {
-    if (!deal.deadline) continue;
+    // Закрытая сделка сроков не держит: студент улетел или отказался.
+    if (!deal.deadline || deal.stage === "departed" || deal.stage === "lost") continue;
     const name = contacts.get(deal.studentId)?.fullName ?? "—";
     items.push({
       id: `dl_deal_${deal.id}`,
       tenantId: deal.tenantId,
       kind: deal.stage === "visa" ? "visa" : "university",
-      title:
-        deal.stage === "visa"
-          ? loc(`${name} — решение по визе`, `${name} — viza bo‘yicha qaror`)
-          : loc(`${name} — дедлайн подачи`, `${name} — topshirish muddati`),
+      title: dealDeadlineTitle(deal.stage, name),
       date: deal.deadline,
       ownerId: deal.ownerId,
       relation: { type: "deal", id: deal.id },

@@ -103,7 +103,7 @@ interface State {
  * кода, и новое поле оказалось бы undefined — поэтому состояние с чужой
  * версией пересоздаётся целиком.
  */
-const STATE_VERSION = 14;
+const STATE_VERSION = 15;
 
 const globalStore = globalThis as unknown as { __orbisStore?: State };
 

@@ -17,7 +17,7 @@ const BASE = process.env.QA_BASE_URL ?? "http://localhost:3000";
 const ROUTES = [
   "/", "/crm/leads", "/crm/deals", "/crm/contacts", "/crm/contacts/s_001", "/crm/deals/d_001",
   "/tasks", "/tasks/projects", "/tasks/reports", "/documents", "/deadlines", "/calendar",
-  "/universities", "/universities/u_hallim", "/universities/compare", "/finance",
+  "/universities", "/universities/u_korea", "/universities/compare", "/finance",
   "/team", "/team/u_nilufar", "/team/structure", "/team/reports",
   "/admin", "/admin/pipelines", "/admin/channels", "/admin/cards",
   "/admin/users", "/admin/permissions", "/admin/portal", "/admin/demo",

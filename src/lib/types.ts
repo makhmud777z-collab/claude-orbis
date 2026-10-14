@@ -699,17 +699,63 @@ export interface Deadline {
 
 /* ── Каталог вузов ───────────────────────────────────────────── */
 
+/**
+ * Программа вуза.
+ *
+ * Деньги хранятся так, как их публикует вуз: в вонах и за тот период, за
+ * который он их называет, — семестр, 10-недельная четверть языковых курсов
+ * или год. Пересчёт в доллары делается по курсу каталога (см. rules.ts) и
+ * лежит рядом, чтобы бюджет семьи сравнивался с одной и той же цифрой.
+ *
+ * Вилка — не вольность, а то, как вуз пишет: «от 5.2 до 8.1 млн в семестр
+ * в зависимости от специальности». Для бюджета берётся верхняя граница:
+ * семья должна узнать о дороговизне до подачи, а не после.
+ */
 export interface Program {
   id: string;
   name: string;
   field: string;
   degreeLevel: DegreeLevel;
-  /** стоимость года обучения, USD */
-  tuitionPerYear: number;
   language: "ko" | "en" | "ko/en";
   topikMin: number;
   ieltsMin: number | null;
+  /** стоимость в вонах за tuitionPeriod; null — вуз не публикует или не сверено */
+  tuitionKrw: { min: number; max: number } | null;
+  tuitionPeriod: "semester" | "term" | "year";
+  /** USD за год обучения, верхняя граница вилки */
+  tuitionPerYear: number | null;
+  /** USD за год обучения, нижняя граница вилки */
+  tuitionPerYearMin: number | null;
 }
+
+/** Окно подачи на набор: у многих вузов их два-три раунда. */
+export interface ApplicationWindow {
+  intake: string;
+  /** «Раунд 1», «Ранний» — когда вуз делит набор */
+  round: string | null;
+  /** для какого уровня окно; null — для всех программ вуза */
+  level: DegreeLevel | null;
+  opens: string | null;
+  /** последний день онлайн-подачи */
+  closes: string;
+  results: string | null;
+}
+
+/** Откуда взят факт. Без источника цифра в каталог не попадает. */
+export interface SourceRef {
+  label: string;
+  url: string;
+  /** official — сайт или guideline вуза/ведомства; press — СМИ; guide — справочник или агрегатор */
+  kind: "official" | "press" | "guide";
+}
+
+/**
+ * Статус вуза в системе IEQAS (International Education Quality Assurance
+ * System) Минобразования и Минюста Кореи. «Отличный» и «сертифицированный»
+ * упрощают выдачу студенческой визы, «ограниченный» — вуз, студентам
+ * которого визу выдают с ограничениями.
+ */
+export type IeqasStatus = "excellent" | "certified" | "general" | "restricted";
 
 export interface University {
   id: string;
@@ -717,31 +763,57 @@ export interface University {
   nameKo: string;
   city: string;
   region: string;
+  /** Сеул, Инчхон и Кёнгидо: от этого зависит сумма на счёте для визы */
+  capitalArea: boolean;
   ownership: Ownership;
   founded: number;
-  nationalRank: number | null;
-  /** статус визового доверия Минобразования Кореи */
-  visaGrade: "certified" | "general" | "restricted";
+  website: string;
+  /** место в мировом рейтинге QS; null — вуза нет в рейтинге или не сверено */
+  qsRank: number | null;
+  /** null — статус не подтверждён источником, а не «обычный» */
+  ieqas: IeqasStatus | null;
   hasLanguageCenter: boolean;
   dormAvailable: boolean;
+  /** USD в год; null — вуз не публикует или не сверено */
   dormCostPerYear: number | null;
-  admissionFee: number;
-  scholarshipMax: number;
+  /** сбор за подачу в вонах */
+  applicationFeeKrw: number | null;
+  /** то же в USD */
+  admissionFee: number | null;
+  /** максимальная скидка на обучение, %; null — не сверено */
+  scholarshipMax: number | null;
+  /** на каких условиях эта скидка: «TOPIK 6 — 100% первого семестра» */
+  scholarshipNote: string | null;
   requirements: {
+    /** минимальный TOPIK для поступления на корейские программы */
     topikMin: number;
+    /** английский путь, если есть */
     ieltsMin: number | null;
     gpaMin: number | null;
+    /** USD на счёте для студенческой визы — по правилу региона, см. rules.ts */
     bankBalance: number;
     graduationWithinYears: number | null;
+    /** условия, которые не укладываются в одну цифру */
+    notes: string[];
   };
+  windows: ApplicationWindow[];
+  /** наборы, на которые есть окна подачи (выводится из windows) */
   intakes: string[];
-  /** дедлайн подачи документов по каждому набору — ключевая дата для оператора */
-  intakeDeadlines: { intake: string; deadline: string }[];
+  /** дедлайн подачи по каждому окну — ключевая дата для оператора */
+  intakeDeadlines: { intake: string; deadline: string; round: string | null }[];
   fields: string[];
   programs: Program[];
-  /** пока каталог заполняется вручную: draft → verified после сверки с guideline */
-  dataStatus: "draft" | "verified";
+  /**
+   * draft — не сверено; checked — сверено по открытым источникам (пресса,
+   * справочники, документы вуза, найденные поиском); verified — сверено с
+   * действующим guideline вуза. Перед подачей «checked» подтверждают на
+   * сайте вуза.
+   */
+  dataStatus: "draft" | "checked" | "verified";
+  sources: SourceRef[];
+  /** главная ссылка: официальная страница приёма или guideline */
   sourceUrl: string | null;
+  /** когда сверяли */
   updatedAt: string;
 }
 

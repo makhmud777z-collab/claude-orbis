@@ -3,10 +3,11 @@ import { moduleGate } from "@/components/guard";
 import { CatalogExplorer, type Filters } from "@/components/CatalogExplorer";
 import { SectionFilter } from "@/components/SectionFilter";
 import { Banner, Crumbs, PageHeader } from "@/components/ui";
-import { UNIVERSITIES } from "@/lib/data/universities";
+import { dataStatusView } from "@/lib/catalog";
+import { nextDeadline, tuitionRange, UNIVERSITIES } from "@/lib/data/universities";
 import { readFilter, readQuery } from "@/lib/filters";
 import { translator } from "@/lib/i18n";
-import { CITY_LABEL, OWNERSHIP_LABEL, ref } from "@/lib/labels";
+import { CITY_LABEL, IEQAS_LABEL, ieqasKey, OWNERSHIP_LABEL, ref } from "@/lib/labels";
 import { allow } from "@/lib/rbac";
 import { simplePresets, universityFields } from "@/lib/section-filters";
 import { S } from "@/lib/strings";
@@ -85,26 +86,34 @@ export default async function UniversitiesPage({
             label={t(S.universities.exportCatalog)}
             filename="orbis-vuzy"
             headers={[
-              t(S.universities.colName), t(S.students.colCity), t(S.universities.ownership),
-              t(S.universities.colRank), "TOPIK", "IELTS", "GPA",
-              t(S.universities.colTuition), t(S.universities.colDorm),
+              t(S.universities.colName), "한국어", t(S.students.colCity), t(S.universities.ownership),
+              t(S.universities.colRank), "IEQAS", "TOPIK", "IELTS",
+              `${t(S.universities.colTuition)}, USD`, t(S.shortlist.deadline),
+              t(S.universities.status), t(S.universities.website),
             ]}
-            rows={UNIVERSITIES.map((u) => [
-              u.name,
-              t(ref(CITY_LABEL, u.city)),
-              t(OWNERSHIP_LABEL[u.ownership]),
-              u.nationalRank ?? "",
-              u.requirements.topikMin,
-              u.requirements.ieltsMin ?? "",
-              u.requirements.gpaMin ?? "",
-              Math.min(...u.programs.map((p) => p.tuitionPerYear)),
-              u.dormAvailable ? u.dormCostPerYear : "",
-            ])}
+            rows={UNIVERSITIES.map((u) => {
+              const range = tuitionRange(u);
+              const next = nextDeadline(u);
+              return [
+                u.name,
+                u.nameKo,
+                t(ref(CITY_LABEL, u.city)),
+                t(OWNERSHIP_LABEL[u.ownership]),
+                u.qsRank ?? "",
+                t(IEQAS_LABEL[ieqasKey(u.ieqas)]),
+                u.requirements.topikMin,
+                u.requirements.ieltsMin ?? "",
+                range ? (range.min === range.max ? range.max : `${range.min}–${range.max}`) : "",
+                next ? next.deadline : "",
+                dataStatusView(u, t).label,
+                u.website,
+              ];
+            })}
           />
         }
       />
 
-      <Banner tone="warn">{t(S.universities.draftBanner)}</Banner>
+      <Banner tone="neutral">{t(S.universities.draftBanner)}</Banner>
 
       <SectionFilter
         scope="universities"

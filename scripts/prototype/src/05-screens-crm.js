@@ -10,13 +10,24 @@ function screenDashboard() {
   const soon = dls.filter((d) => isSoon(d.date, 7));
   const contracted = pipeline.reduce((n, d) => n + d.contractValue, 0);
   const collected = pipeline.reduce((n, d) => n + d.paid, 0);
-  const board = stagesOf(defaultPipeline("deal")).filter((s) => !s.final);
-  const max = Math.max(1, ...board.map((s) => deals.filter((d) => currentStage(d) === s.key).length));
-  const myTasks = scopedTasks().filter((x) => x.status !== "done").sort((a, b) => a.dueAt.localeCompare(b.dueAt)).slice(0, 5);
-  // Воронка нарочно не показывает финальные стадии — у графика свой смысл.
-  // Но то, что компания теряет, не может быть невидимым.
+  const paidShare = Math.round((collected / Math.max(1, contracted)) * 100);
+  const board = stagesOf(defaultPipeline("deal")).filter((s) => !s.final)
+    .map((s) => ({ ...s, count: deals.filter((d) => currentStage(d) === s.key).length }));
+  const funnelTotal = Math.max(1, board.reduce((n, s) => n + s.count, 0));
+  // «Мои задачи» — только назначенные мне; у руководителя своих может не
+  // быть, тогда блок честно называется «Задачи команды».
+  const openTasks = scopedTasks().filter((x) => x.status !== "done").sort((a, b) => a.dueAt.localeCompare(b.dueAt));
+  const ownTasks = openTasks.filter((x) => x.assigneeId === S.userId);
+  const myTasks = (ownTasks.length ? ownTasks : openTasks).slice(0, 5);
+  // задачи уже в соседнем блоке — здесь сроки вузов, виз и документов
+  const keyDeadlines = dls.filter((d) => d.kind !== "task").slice(0, 6);
+  // Воронка не показывает финальные стадии, но потери не могут быть невидимы.
   const lostRecently = deals.filter((d) => currentStage(d) === "lost" && idleDaysOf(d.stageEnteredAt) <= 30);
   const lostValue = lostRecently.reduce((n, d) => n + d.contractValue, 0);
+  const blockHead = (title, go, action) => `<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:20px 22px 8px">
+    <h2 style="margin:0;font-size:17px;font-weight:600;letter-spacing:-.4px">${esc(title)}</h2>
+    ${go ? `<button class="t-caption muted" style="background:none;border:0;cursor:pointer;flex:none" data-go="${go}">${esc(action)} ${icon("arrow", 12)}</button>` : ""}
+  </div>`;
 
   return `
     ${head(`${t(loc("Добрый день", "Xayrli kun"))}, ${user().name.split(" ")[0]}`,
@@ -25,87 +36,86 @@ function screenDashboard() {
        <span>${plural(pipeline.length, ["сделка", "сделки", "сделок"], "bitim")} ${t(loc("в работе", "ishda"))} · ${plural(soon.length, ["дедлайн", "дедлайна", "дедлайнов"], "muddat")} ${t(loc("на неделе", "shu haftada"))}</span>`,
       `<button class="btn btn-primary" data-go="leads">${icon("plus", 15)} ${t(loc("Новый лид", "Yangi lid"))}</button>`)}
 
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr))">
-      ${tile(t(loc("Контакты в работе", "Ishdagi kontaktlar")), String(active), `${t(loc("всего в базе", "bazada jami"))} ${contacts.length}`, "var(--accent)")}
-      ${tile(t(loc("Сделки в воронке", "Voronkadagi bitimlar")), String(pipeline.length),
-        `${deals.filter((d) => currentStage(d) === "offer").length} ${t(loc("с offer", "offer bilan"))} · ${deals.filter((d) => currentStage(d) === "visa").length} ${t(loc("на визе", "vizada"))}`, "var(--violet)")}
-      ${tile(t(loc("Дедлайны ≤ 7 дней", "Muddatlar ≤ 7 kun")), String(soon.length),
+    <div class="bento">
+      <a class="card-ink card-hover hero" data-go="finance" style="display:flex;flex-direction:column;justify-content:space-between;gap:30px;padding:26px;min-width:0">
+        <span style="display:flex;justify-content:space-between;gap:12px">
+          <span class="t-caption ink-soft">${t(loc("Договоры в работе", "Ishdagi shartnomalar"))}</span>
+          <span class="t-caption ink-soft" style="display:flex;align-items:center;gap:4px">${t(loc("Финансы", "Moliya"))} ${icon("arrow", 12)}</span>
+        </span>
+        <span style="display:block;min-width:0">
+          <span class="num" style="display:block;font-size:clamp(40px,5vw,56px);font-weight:500;line-height:1;letter-spacing:-2.6px">${esc(som(contracted, true))}</span>
+          <span style="display:flex;height:8px;border-radius:999px;overflow:hidden;margin-top:22px;background:color-mix(in srgb, var(--canvas) 18%, transparent)">
+            <span style="width:${Math.max(2, Math.min(100, paidShare))}%;background:var(--canvas);border-radius:999px"></span>
+          </span>
+          <span style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+            <span><span class="t-micro ink-soft" style="display:block">${t(loc("оплачено", "to‘langan"))} · ${paidShare}%</span><span class="num" style="display:block;font-size:18px;font-weight:500;margin-top:4px">${esc(som(collected, true))}</span></span>
+            <span><span class="t-micro ink-soft" style="display:block">${t(loc("ждём", "kutilmoqda"))}</span><span class="num" style="display:block;font-size:18px;font-weight:500;margin-top:4px">${esc(som(Math.max(0, contracted - collected), true))}</span></span>
+          </span>
+        </span>
+      </a>
+      <div class="cell">${tile(t(loc("Контакты в работе", "Ishdagi kontaktlar")), String(active), `${t(loc("всего в базе", "bazada jami"))} ${contacts.length}`)}</div>
+      <div class="cell">${tile(t(loc("Сделки в воронке", "Voronkadagi bitimlar")), String(pipeline.length),
+        `${deals.filter((d) => currentStage(d) === "offer").length} ${t(loc("с offer", "offer bilan"))} · ${deals.filter((d) => currentStage(d) === "visa").length} ${t(loc("на визе", "vizada"))}`)}</div>
+      <div class="cell">${tile(t(loc("Дедлайны ≤ 7 дней", "Muddatlar ≤ 7 kun")), String(soon.length),
         overdue.length ? `${overdue.length} ${t(loc("просрочено", "kechikkan"))}` : soon[0] ? `${t(loc("ближайший", "eng yaqini"))} — ${fmtShort(soon[0].date)}` : t(loc("всё спокойно", "hammasi joyida")),
-        overdue.length ? "var(--risk)" : "var(--progress)", overdue.length > 0)}
-      ${tile(t(loc("Законтрактовано", "Shartnomalar summasi")), som(contracted, true),
-        `${t(loc("оплачено", "to‘langan"))} ${som(collected, true)} · ${Math.round((collected / Math.max(1, contracted)) * 100)}%`, "var(--deal)")}
+        "", overdue.length > 0)}</div>
+      <a class="cell" data-go="deals" style="display:block">${tile(t(loc("Отказы за 30 дней", "30 kundagi rad javoblari")), String(lostRecently.length),
+        lostRecently.length ? (lostValue ? `${t(loc("на сумму", "summasi"))} ${som(lostValue, true)}` : t(loc("Посмотреть", "Ko‘rish"))) : t(loc("отказов не было", "rad javoblari bo‘lmadi")),
+        "", lostRecently.length > 0)}</a>
     </div>
 
-    ${lostRecently.length ? `<a class="card card-hover" data-go="deals" style="margin-top:16px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px 18px;
-        border-color:color-mix(in srgb, var(--risk) 35%, var(--hairline));background:color-mix(in srgb, var(--risk) 6%, var(--surface-1))">
-      <span style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:999px;
-        background:color-mix(in srgb, var(--risk) 16%, transparent);color:var(--risk)">${icon("arrow", 14)}</span>
-      <span class="t-body-sm" style="font-weight:600;color:var(--risk)">${plural(lostRecently.length, ["отказ", "отказа", "отказов"], "rad javobi")} ${t(loc("за 30 дней", "so‘nggi 30 kunda"))}</span>
-      ${lostValue ? `<span class="t-caption num" style="color:var(--risk)">${t(loc("на сумму", "summasi"))} ${som(lostValue, true)}</span>` : ""}
-      <span class="t-caption" style="margin-left:auto;color:var(--risk)">${t(loc("Посмотреть", "Ko‘rish"))} ${icon("arrow", 12)}</span>
-    </a>` : ""}
-
-    <section style="margin-top:34px">
-      ${sectionTitle(t(loc("Воронка сделок", "Bitimlar voronkasi")),
-        `<button class="t-caption muted" style="background:none;border:0;cursor:pointer" data-go="deals">${t(loc("Открыть доску", "Doskani ochish"))} ${icon("arrow", 12)}</button>`)}
-      <div class="card grid" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0">
-        ${board.map((s, i) => {
-          const count = deals.filter((d) => currentStage(d) === s.key).length;
-          return `<button data-go="deals" style="background:none;border:0;border-right:${i < board.length - 1 ? "1px solid var(--hairline-soft)" : "0"};text-align:left;padding:18px;cursor:pointer;color:inherit">
-            <span class="t-micro muted nowrap" style="display:flex;align-items:center;gap:8px">${dot(s.color)}${esc(t(s.label))}</span>
-            <span class="num" style="display:block;font-size:24px;font-weight:500;letter-spacing:-1.1px;margin:10px 0">${count}</span>
-            ${bar((count / max) * 100, s.color)}
-          </button>`;
-        }).join("")}
+    <section class="card" style="margin-top:16px;padding:22px 24px">
+      <div style="display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:12px">
+        <span style="display:flex;align-items:baseline;gap:12px">
+          <h2 style="margin:0;font-size:17px;font-weight:600;letter-spacing:-.4px">${t(loc("Воронка сделок", "Bitimlar voronkasi"))}</h2>
+          <span class="t-caption faint">${plural(pipeline.length, ["сделка", "сделки", "сделок"], "bitim")} ${t(loc("в работе", "ishda"))}</span>
+        </span>
+        <button class="t-caption muted" style="background:none;border:0;cursor:pointer" data-go="deals">${t(loc("Открыть доску", "Doskani ochish"))} ${icon("arrow", 12)}</button>
+      </div>
+      <div class="funnel-bar">
+        ${board.filter((s) => s.count).map((s) => `<span style="width:${(s.count / funnelTotal) * 100}%;background:${s.color}"></span>`).join("")}
+      </div>
+      <div class="funnel-legend">
+        ${board.map((s) => `<button data-go="deals" style="background:none;border:0;padding:0;text-align:left;cursor:pointer;color:inherit;min-width:0">
+          <span class="num" style="display:block;font-size:24px;font-weight:500;line-height:1;letter-spacing:-1px;${s.count ? "" : "color:var(--ink-faint)"}">${s.count}</span>
+          <span class="t-micro muted" style="display:flex;align-items:flex-start;gap:6px;margin-top:8px">${dot(s.color)}${esc(t(s.label))}</span>
+        </button>`).join("")}
       </div>
     </section>
 
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr));margin-top:34px;align-items:start">
-      <section>
-        ${sectionTitle(t(loc("Ближайшие дедлайны", "Eng yaqin muddatlar")),
-          `<button class="t-caption muted" style="background:none;border:0;cursor:pointer" data-go="deadlines">${t(loc("Все дедлайны", "Barcha muddatlar"))}</button>`)}
-        <div class="card divide">
-          ${dls.slice(0, 6).map((d) => {
+    <div class="dash-lists">
+      <section class="card" style="overflow:hidden;min-width:0">
+        ${blockHead(t(loc("Ближайшие дедлайны", "Eng yaqin muddatlar")), "deadlines", t(loc("Все дедлайны", "Barcha muddatlar")))}
+        <div class="divide">
+          ${keyDeadlines.map((d) => {
             const k = L.deadlineKind[d.kind];
             const late = isPast(d.date);
-            return `<a class="row" href="#" data-go="${esc(d.go)}" style="${late ? "background:color-mix(in srgb, var(--risk) 6%, transparent)" : ""}">
+            return `<a class="row" href="#" data-go="${esc(d.go)}">
               ${dot(late ? "var(--risk)" : k.dot)}
               <span style="flex:1;min-width:0">
                 <span class="t-body-sm truncate" style="display:block">${esc(t(d.title))}</span>
                 <span class="t-micro faint">${esc(t(k.label))} · ${esc(userById(d.ownerId)?.name ?? "—")}</span>
               </span>
-              <span style="text-align:right">
+              <span style="text-align:right;flex:none">
                 <span class="t-caption num" style="display:block;${late ? "color:var(--risk)" : ""}">${esc(fmtShort(d.date))}</span>
                 <span class="t-micro" style="color:${late ? "var(--risk)" : "var(--ink-faint)"};font-weight:${late ? 600 : 400}">${esc(relDeadline(d.date))}</span>
               </span>
             </a>`;
           }).join("")}
         </div>
-
-        <a class="card card-hover" data-go="universities" style="margin-top:18px;display:flex;align-items:center;gap:14px;padding:18px">
-          <span style="display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:999px;background:var(--surface-2);color:var(--ink-muted);flex:none">
-            ${icon("bank", 18)}
-          </span>
-          <span style="flex:1;min-width:0">
-            <span class="t-body-sm" style="display:block">${t(loc("Соберите шорт-лист по TOPIK, бюджету, городу и направлению — за один проход по каталогу.", "TOPIK, byudjet, shahar va yo‘nalish bo‘yicha qisqa ro‘yxatni bir o‘tishda tuzing."))}</span>
-            <span class="t-micro faint" style="display:block;margin-top:2px">${t(loc("Подбор вузов", "Universitet tanlash"))}</span>
-          </span>
-          <span class="t-caption muted" style="flex:none;display:flex;align-items:center;gap:4px">${t(loc("Открыть каталог", "Katalogni ochish"))} ${icon("arrow", 13)}</span>
-        </a>
       </section>
 
-      <section>
-        ${sectionTitle(t(loc("Мои задачи", "Mening vazifalarim")),
-          `<button class="t-caption muted" style="background:none;border:0;cursor:pointer" data-go="tasks">${t(loc("Все задачи", "Barcha vazifalar"))}</button>`)}
-        <div class="card divide">
+      <section class="card" style="overflow:hidden;min-width:0">
+        ${blockHead(t(ownTasks.length ? loc("Мои задачи", "Mening vazifalarim") : loc("Задачи команды", "Jamoa vazifalari")), "tasks", t(loc("Все задачи", "Barcha vazifalar")))}
+        <div class="divide">
           ${myTasks.map((task) => {
             const late = isPast(task.dueAt);
             const near = !late && isSoon(task.dueAt, 2);
-            return `<div class="row" style="align-items:flex-start;${late ? "background:color-mix(in srgb, var(--risk) 6%, transparent)" : ""}">
+            return `<div class="row" style="align-items:flex-start">
             ${checkbox(false)}
             <span style="flex:1;min-width:0">
               <span class="t-body-sm" style="display:block">${esc(task.title)}</span>
-              <span class="t-micro faint" style="display:flex;gap:8px;align-items:center;margin-top:5px">
+              <span class="t-micro faint" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:5px">
                 ${avatar(userById(task.assigneeId)?.name ?? "—", 18)}${esc(userById(task.assigneeId)?.name ?? "—")}<span>·</span>
                 <span style="color:${late ? "var(--risk)" : near ? "var(--progress)" : "inherit"};font-weight:${late ? 600 : 400}">${esc(relDeadline(task.dueAt))}</span>
               </span>
@@ -114,10 +124,12 @@ function screenDashboard() {
           </div>`;
           }).join("")}
         </div>
+      </section>
 
-        ${sectionTitle(t(loc("Лента агентства", "Agentlik lentasi")))}
-        <div class="card divide">
-          ${scopedActivity().slice(0, 7).map((e) => `<div class="row" style="align-items:flex-start">
+      <section class="card wide" style="overflow:hidden;min-width:0">
+        ${blockHead(t(loc("Лента агентства", "Agentlik lentasi")))}
+        <div class="feed-grid">
+          ${scopedActivity().slice(0, 6).map((e) => `<div class="row" style="align-items:flex-start">
             ${avatar(userById(e.authorId)?.name ?? "—", 26)}
             <span style="flex:1;min-width:0">
               <span class="t-body-sm" style="display:block">${esc(userById(e.authorId)?.name ?? "—")} <span class="muted">${esc(t(e.title))}</span></span>
@@ -504,7 +516,7 @@ function screenContact(id) {
                 </span>
                 <span class="chip">${dot(VERDICT[m.verdict].dot)}${m.score}</span>
               </span>
-              <span class="t-micro muted" style="display:block;margin-top:10px">${esc(t(VERDICT[m.verdict].label))} · ${esc(usdSom(m.yearCost, rate))}</span>
+              <span class="t-micro muted" style="display:block;margin-top:10px">${esc(t(VERDICT[m.verdict].label))} · ${esc(m.yearCost !== null ? usdSom(m.yearCost, rate) : t(loc("цена не публикуется", "narx e’lon qilinmaydi")))}</span>
             </a>`).join("")}
           </div>
         </div>` : ""}

@@ -153,7 +153,7 @@ await page.evaluate(() => window.handle("pin", "deals"));
 await page.waitForTimeout(150);
 check((await page.locator("#rail a[data-go='deals']").count()) >= 2, "закреплённый пункт не появился в корне меню");
 await page.evaluate(() => window.handle("rail"));
-await page.waitForTimeout(250);
+await page.waitForFunction(() => document.querySelector("#rail").getBoundingClientRect().width < 110, null, { timeout: 2000 }).catch(() => {});
 const railWidth = await page.locator("#rail").evaluate((el) => el.getBoundingClientRect().width);
 check(railWidth < 110, `рельса не свернулась: ${Math.round(railWidth)}px`);
 await page.evaluate(() => window.handle("rail"));

@@ -71,6 +71,28 @@ function som(v, compact) {
   return `${nf.format(Math.round(v))} ${w.u}`;
 }
 const usdSom = (v, rate) => `${usd(v)} · ${som(Math.round((v * rate) / 1e5) * 1e5, true)}`;
+/** Воны — так публикуют цены вузы Кореи: «2,44 млн ₩». */
+const krwShort = (v) => (v >= 1e6 ? `${(v / 1e6).toFixed(2).replace(/0$/, "").replace(/\.$/, "").replace(".", ",")} ${S.locale === "ru" ? "млн" : "mln"} ₩` : `${nf.format(v)} ₩`);
+const krwRange = (r) => (r.min === r.max ? krwShort(r.min) : `${krwShort(r.min).replace(/ (млн|mln) ₩$/, "")}–${krwShort(r.max)}`);
+const usdRange = (lo, hi) => (lo === hi ? usd(hi) : `${usd(lo)}–${usd(hi)}`);
+/** Цена программы: воны за период вуза и год в долларах. */
+function programPrice(p) {
+  if (!p.tuitionKrw || p.tuitionPerYear === null) return null;
+  const period = p.tuitionPeriod === "semester" ? loc("за семестр", "semestr uchun")
+    : p.tuitionPeriod === "term" ? loc("за 10 недель", "10 hafta uchun") : loc("за год", "yiliga");
+  return { krw: `${krwRange(p.tuitionKrw)} ${t(period)}`, usd: `${usdRange(p.tuitionPerYearMin ?? p.tuitionPerYear, p.tuitionPerYear)} ${t(loc("в год", "yiliga"))}` };
+}
+/** Самая дешёвая и самая дорогая цена года среди программ, USD. */
+function tuitionRange(programs) {
+  const known = programs.filter((p) => p.tuitionPerYear !== null);
+  if (!known.length) return null;
+  return { min: Math.min(...known.map((p) => p.tuitionPerYearMin ?? p.tuitionPerYear)), max: Math.max(...known.map((p) => p.tuitionPerYear)) };
+}
+const DATA_STATUS = {
+  verified: { label: loc("сверено с guideline", "guideline bilan tekshirilgan"), dot: "var(--deal)" },
+  checked: { label: loc("сверено по открытым источникам", "ochiq manbalar bo‘yicha tekshirilgan"), dot: "var(--color-status-open)" },
+  draft: { label: loc("не сверено", "tekshirilmagan"), dot: "var(--progress)" },
+};
 const somPair = (paid, total) => {
   const w = S.locale === "ru" ? { u: "сум", m: "млн" } : { u: "so‘m", m: "mln" };
   return total >= 1e6

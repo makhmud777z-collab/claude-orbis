@@ -38,7 +38,7 @@ export default async function FinancePage({
   );
   const contracted = apps.reduce((n, a) => n + a.contractValue, 0);
   const paid = apps.reduce((n, a) => n + a.paid, 0);
-  const debt = contracted - paid;
+  const debt = apps.reduce((n, a) => n + outstanding(a), 0);
   const won = apps.filter((a) => a.stage === "departed");
 
   const byManager = scopedTeam(session)
@@ -87,7 +87,7 @@ export default async function FinancePage({
                 studentById(a.studentId)?.fullName ?? "",
                 universityById(a.universityId)?.name ?? "",
                 stage ? t(stage.label) : a.stage,
-                a.contractValue, a.paid, a.contractValue - a.paid,
+                a.contractValue, a.paid, outstanding(a),
               ];
             })}
           />
@@ -211,12 +211,12 @@ export default async function FinancePage({
                             className="t-body-sm t-num px-5 py-3"
                             style={{
                               color:
-                                a.contractValue - a.paid > 0
+                                outstanding(a) > 0
                                   ? "var(--color-status-progress)"
                                   : "var(--color-ink-faint)",
                             }}
                           >
-                            {f.som(a.contractValue - a.paid)}
+                            {f.som(outstanding(a))}
                           </td>
                         </tr>
                       );
@@ -230,6 +230,15 @@ export default async function FinancePage({
       ) : null}
     </>
   );
+}
+
+/**
+ * Сколько ещё должны по договору. Проигранная сделка долга не держит —
+ * эти деньги никто не заплатит, и в дебиторке они только врут; переплата
+ * не уменьшает долг других договоров.
+ */
+function outstanding(deal: Deal): number {
+  return deal.stage === "lost" ? 0 : Math.max(0, deal.contractValue - deal.paid);
 }
 
 /** Плоское представление договора для фильтра. */

@@ -16,6 +16,7 @@ import {
 } from "@/lib/labels";
 import { P, S } from "@/lib/strings";
 import { toggleShortlist } from "@/app/actions";
+import { dataStatusView, programPrice } from "@/lib/catalog";
 import { hasEnglishTrack, nextDeadline } from "@/lib/data/universities";
 import { NO_STUDENT, SHORTLIST_LIMIT, type ShortlistMap } from "@/lib/shortlist";
 import { matchProgram, verdictDot, verdictLabel, type MatchResult } from "@/lib/matching";
@@ -147,9 +148,9 @@ export function CatalogExplorer({
       if (filters.cities.length && !filters.cities.includes(u.city)) continue;
       if (filters.ownership.length && !filters.ownership.includes(u.ownership)) continue;
       if (filters.dorm && !u.dormAvailable) continue;
-      if (filters.scholarship && u.scholarshipMax < 50) continue;
+      if (filters.scholarship && (u.scholarshipMax ?? 0) < 50) continue;
       if (filters.languageCenter && !u.hasLanguageCenter) continue;
-      if (filters.certifiedOnly && u.visaGrade !== "certified") continue;
+      if (filters.certifiedOnly && u.ieqas !== "excellent") continue;
       if (filters.englishTaught && !hasEnglishTrack(u)) continue;
       if (filters.intake !== "all" && !u.intakes.includes(filters.intake)) continue;
 
@@ -159,17 +160,26 @@ export function CatalogExplorer({
         if (filters.topik !== "all" && p.topikMin > filters.topik) return false;
         if (filters.ielts !== "all" && p.ieltsMin !== null && p.ieltsMin > filters.ielts)
           return false;
-        if (filters.budget !== "all") {
+        // Бюджет сравнивается с нижней границей вилки: если в бюджет не
+        // входит даже самая дешёвая специальность, программа не подходит.
+        // Программу без опубликованной цены не прячем — она покажет
+        // «не публикуется», и оператор решит сам.
+        if (filters.budget !== "all" && p.tuitionPerYear !== null) {
           const total =
-            p.tuitionPerYear +
+            (p.tuitionPerYearMin ?? p.tuitionPerYear) +
             (filters.dorm && u.dormCostPerYear ? u.dormCostPerYear : 0) +
-            u.admissionFee;
+            (u.admissionFee ?? 0);
           if (total > filters.budget * 1.15) return false;
         }
         return true;
       });
 
-      if (!programs.length) continue;
+      // Вуз без подтверждённых программ остаётся в каталоге, пока не включены
+      // фильтры по программам: его ищут по имени, а не по специальности.
+      const programFilters =
+        filters.degree !== "all" || filters.fields.length > 0 || filters.topik !== "all" ||
+        filters.ielts !== "all" || filters.budget !== "all";
+      if (!programs.length && (u.programs.length || programFilters)) continue;
 
       const match =
         student
@@ -181,10 +191,12 @@ export function CatalogExplorer({
       result.push({ university: u, programs, match });
     }
 
+    // Без студента — по рейтингу QS, вузы без рейтинга — по алфавиту после них.
     return result.sort((a, b) =>
       a.match && b.match
         ? b.match.score - a.match.score
-        : (a.university.nationalRank ?? 999) - (b.university.nationalRank ?? 999),
+        : (a.university.qsRank ?? 999) - (b.university.qsRank ?? 999) ||
+          a.university.name.localeCompare(b.university.name),
     );
   }, [universities, filters, student]);
 
@@ -274,13 +286,16 @@ export function CatalogExplorer({
                   </Link>
                   <div className="t-caption mt-1.5 text-ink-muted">
                     {t(ref(CITY_LABEL, u.city))} · {t(OWNERSHIP_LABEL[u.ownership])} ·{" "}
-                    {u.nationalRank
-                      ? `#${u.nationalRank} ${t(S.universities.inCountry)}`
-                      : t(S.universities.noRank)}{" "}
+                    {u.qsRank ? `QS #${u.qsRank}` : t(S.universities.noRank)}{" "}
                     · {t(S.universities.founded)} {u.founded}
+                    {u.ieqas === "excellent" ? (
+                      <span className="ml-2 font-medium" style={{ color: "var(--color-status-deal)" }}>
+                        IEQAS ★
+                      </span>
+                    ) : null}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {match ? (
                     <span className="chip chip-active">
                       <StatusDot color={verdictDot(match.verdict)} />
@@ -288,11 +303,8 @@ export function CatalogExplorer({
                     </span>
                   ) : (
                     <span className="chip">
-                      {t(
-                        u.dataStatus === "draft"
-                          ? S.universities.draft
-                          : S.universities.verified,
-                      )}
+                      <StatusDot color={dataStatusView(u, t).color} />
+                      {dataStatusView(u, t).label}
                     </span>
                   )}
                   <form action={toggleShortlist}>
@@ -317,43 +329,60 @@ export function CatalogExplorer({
                 <Metric
                   label={t(S.universities.tuitionPerYear)}
                   value={(() => {
-                    const low = Math.min(...programs.map((p) => p.tuitionPerYear));
-                    const high = Math.max(...programs.map((p) => p.tuitionPerYear));
-                    return low === high ? f.usd(low) : `${f.usd(low)} – ${f.usd(high)}`;
+                    const known = programs.filter((p) => p.tuitionPerYear !== null);
+                    if (!known.length) return t(S.universities.notPublished);
+                    const low = Math.min(...known.map((p) => p.tuitionPerYearMin ?? p.tuitionPerYear!));
+                    const high = Math.max(...known.map((p) => p.tuitionPerYear!));
+                    return f.usdRange(low, high);
                   })()}
-                  hint={f.som(
-                    Math.min(...programs.map((p) => p.tuitionPerYear)) * usdRate,
-                    { compact: true },
-                  )}
+                  hint={(() => {
+                    const known = programs.filter((p) => p.tuitionPerYear !== null);
+                    if (!known.length) return t(S.universities.toClarify);
+                    const low = Math.min(...known.map((p) => p.tuitionPerYearMin ?? p.tuitionPerYear!));
+                    return `${f.som(low * usdRate, { compact: true })} · ${t(S.common.perYear)}`;
+                  })()}
                 />
                 <Metric
-                  label={t(S.universities.dorm)}
-                  value={
-                    u.dormAvailable
-                      ? `${f.usd(u.dormCostPerYear ?? 0)} ${t(S.common.perYear)}`
-                      : t(S.common.none)
-                  }
-                />
-                <Metric
-                  label={t(S.universities.requirements)}
-                  value={`TOPIK ${u.requirements.topikMin}+${
-                    u.requirements.ieltsMin ? ` · IELTS ${u.requirements.ieltsMin}` : ""
-                  } · GPA ${u.requirements.gpaMin ?? "—"}`}
+                  label={t(S.universities.windows)}
+                  value={(() => {
+                    const d = nextDeadline(u);
+                    return d ? `${f.shortDate(d.deadline)}${d.round ? ` · ${d.round}` : ""}` : "—";
+                  })()}
                   hint={(() => {
                     const d = nextDeadline(u);
                     return d
-                      ? `${t(S.universities.deadlineSoon)}: ${f.shortDate(d.deadline)} · ${t(ref(INTAKE_LABEL, d.intake))}`
+                      ? `${t(ref(INTAKE_LABEL, d.intake))} · ${f.relativeDeadline(d.deadline)}`
                       : t(S.shortlist.noDeadline);
                   })()}
+                />
+                <Metric
+                  label={t(S.universities.requirements)}
+                  value={`TOPIK ${u.requirements.topikMin ? `${u.requirements.topikMin}+` : "—"}${
+                    u.requirements.ieltsMin ? ` · IELTS ${u.requirements.ieltsMin}` : ""
+                  }`}
+                  hint={
+                    u.scholarshipMax !== null
+                      ? `${t(S.universities.scholarshipUpTo)} ${t(S.universities.upTo)} ${u.scholarshipMax}%`
+                      : `${t(S.universities.scholarshipUpTo)}: ${t(S.universities.toClarify)}`
+                  }
                 />
               </div>
 
               <div className="mt-4 flex flex-wrap gap-1.5">
-                {programs.slice(0, 4).map((p) => (
-                  <Chip key={p.id}>
-                    {p.name} · {f.usd(p.tuitionPerYear)}
-                  </Chip>
-                ))}
+                {programs.length ? (
+                  programs.slice(0, 4).map((p) => {
+                    const price = programPrice(p, f, t);
+                    return (
+                      // длинные названия программ переносятся, а не тянут карточку за экран
+                      <Chip key={p.id} className="max-w-full whitespace-normal">
+                        {p.name}
+                        {price ? ` · ${price.krw}` : ""}
+                      </Chip>
+                    );
+                  })
+                ) : (
+                  <span className="t-micro text-ink-faint">{t(S.universities.noPrograms)}</span>
+                )}
                 {programs.length > 4 ? (
                   <Chip>
                     +{f.plural(programs.length - 4, P.programs)}
@@ -366,6 +395,7 @@ export function CatalogExplorer({
                   {match.reasons.slice(0, 4).map((r) => (
                     <Chip
                       key={r.key}
+                      className="max-w-full whitespace-normal"
                       dot={
                         r.level === "ok"
                           ? "var(--color-status-deal)"
